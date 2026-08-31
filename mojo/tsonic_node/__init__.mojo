@@ -12,6 +12,7 @@ from .filesystem import (
     read_directory,
     read_file,
     read_text_file,
+    read_text_file_encoded,
     real_path,
     remove_path,
     rename_path,

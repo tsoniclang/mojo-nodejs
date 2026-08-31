@@ -116,6 +116,12 @@ def read_text_file(path: String) raises -> String:
     return Path(path).read_text()
 
 
+def read_text_file_encoded(path: String, encoding: String) raises -> String:
+    if encoding != "utf8":
+        raise Error("Only the exact 'utf8' text encoding is supported")
+    return read_text_file(path)
+
+
 def write_file(path: String, buffer: Buffer) raises:
     var bytes = buffer.copy_bytes()
     Path(path).write_bytes(Span(bytes))

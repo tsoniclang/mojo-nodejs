@@ -11,6 +11,7 @@ from tsonic_node import (
     read_directory,
     read_file,
     read_text_file,
+    read_text_file_encoded,
     real_path,
     remove_path,
     rename_path,
@@ -30,6 +31,7 @@ def main() raises:
     var text_path = nested + "/message.txt"
     write_text_file(text_path, "hello")
     assert_equal(read_text_file(text_path), "hello")
+    assert_equal(read_text_file_encoded(text_path, "utf8"), "hello")
     assert_true(stat(text_path).is_file())
     assert_equal(stat(text_path).size, 5)
 

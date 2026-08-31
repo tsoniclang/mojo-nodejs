@@ -21,14 +21,19 @@
     "entry": "."
   },
   "scripts": {
-    "test": "bash scripts/test.sh"
+    "build": "bash scripts/build.sh",
+    "test": "npm run build && node --test nodejs/test/*.test.mjs && bash scripts/test.sh",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "@tsonic/target-mojo": "*",
     "@tsonic/mojo-runtime": "0.0.1"
   },
   "devDependencies": {
-    "@tsonic/mojo-runtime": "file:../mojo-runtime"
+    "@tsonic/target-mojo": "file:../tsonic-mojo",
+    "@tsonic/mojo-runtime": "file:../mojo-runtime",
+    "@types/node": "^22.19.21",
+    "typescript": "^5.6.0"
   },
   "engines": {
     "node": ">=22.0.0"
