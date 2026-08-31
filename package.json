@@ -1,0 +1,36 @@
+{
+  "name": "@tsonic/mojo-nodejs",
+  "version": "0.0.1",
+  "description": "Node.js capability for the Tsonic Mojo target",
+  "type": "module",
+  "files": [
+    "dist",
+    "mojo",
+    "pixi.toml",
+    "pixi.lock",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "tsonic": {
+    "kind": "plugin",
+    "contractVersion": 1,
+    "entry": "."
+  },
+  "scripts": {
+    "test": "bash scripts/test.sh"
+  },
+  "peerDependencies": {
+    "@tsonic/target-mojo": "*",
+    "@tsonic/mojo-runtime": "0.0.1"
+  },
+  "devDependencies": {
+    "@tsonic/mojo-runtime": "file:../mojo-runtime"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
