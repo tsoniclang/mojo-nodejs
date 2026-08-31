@@ -21,5 +21,9 @@ export function bufferModule(): MojoProviderModuleDefinition {
 }
 
 export function bufferTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({ exportId: bufferId, targetType: bufferCarrier })]);
+  return Object.freeze([Object.freeze({
+    exportId: bufferId,
+    sourceGenericParameters: Object.freeze([]),
+    targetType: bufferCarrier,
+  })]);
 }

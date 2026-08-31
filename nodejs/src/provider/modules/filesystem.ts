@@ -96,7 +96,11 @@ export function filesystemModule(): MojoProviderModuleDefinition {
 }
 
 export function filesystemTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({ exportId: statsId, targetType: statsCarrier })]);
+  return Object.freeze([Object.freeze({
+    exportId: statsId,
+    sourceGenericParameters: Object.freeze([]),
+    targetType: statsCarrier,
+  })]);
 }
 
 export function filesystemOperations(): readonly MojoProviderOperationDefinition[] {
