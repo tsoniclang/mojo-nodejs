@@ -116,7 +116,10 @@ export function functionCall(
       kind: "function-call",
       modulePath: Object.freeze(["tsonic_node", moduleName]),
       name: targetName,
-      arguments: Object.freeze(parameterTypes.map(() => "immutable-reference" as const)),
+      arguments: Object.freeze(parameterTypes.map(() => Object.freeze({
+        convention: "imm" as const,
+        position: "positional-or-keyword" as const,
+      }))),
     }),
     parameterTypes: Object.freeze([...parameterTypes]),
     resultType,
@@ -142,8 +145,11 @@ export function instanceCall(
     target: Object.freeze({
       kind: "instance-call",
       name: targetName,
-      receiver: "immutable-reference",
-      arguments: Object.freeze(parameterTypes.map(() => "immutable-reference" as const)),
+      receiver: "imm",
+      arguments: Object.freeze(parameterTypes.map(() => Object.freeze({
+        convention: "imm" as const,
+        position: "positional-or-keyword" as const,
+      }))),
     }),
     receiverType,
     parameterTypes: Object.freeze([...parameterTypes]),
