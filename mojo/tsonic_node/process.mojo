@@ -4,7 +4,7 @@ from std.ffi import c_int, c_long, external_call
 from std.io import FileDescriptor
 from std.os import chdir, setenv, unsetenv
 from std.pathlib import Path, cwd
-from std.sys import argv
+from std.sys import CompilationTarget, argv
 from std.sys import exit as native_exit
 from std.time import monotonic
 from tsonic_runtime import GlobalCell

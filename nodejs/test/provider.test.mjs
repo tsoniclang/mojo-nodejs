@@ -98,3 +98,36 @@ test("Node aliases materialize the canonical declaration identities", () => {
   assert.equal(model.moduleSpecifier, "path");
   assert.ok(model.exports.some((entry) => entry.id === "node:path::normalize"));
 });
+
+test("Node parity rows expose exact closed contracts and omit unsupported open streams", () => {
+  const capability = createMojoNodejsCapability();
+  const [contribution] = capability.createTargetContributions({});
+  const { definition } = contribution;
+  const modules = new Map(definition.modules.map((module) => [module.moduleSpecifier, module]));
+  const operations = new Set(definition.operations.map((operation) => operation.exportId));
+
+  assert.equal(modules.has("node:stream"), false);
+  assert.equal(modules.has("node:events"), false);
+  assert.equal(modules.get("node:fs").exports.some((entry) => entry.name === "watch"), false);
+  assert.equal(modules.get("node:process").exports.some((entry) => entry.name === "stdin"), false);
+
+  for (const exportId of [
+    "node:process::argv0",
+    "node:process::hrtime",
+    "node:process::memoryUsage",
+    "node:process::stdout",
+    "node:process::stderr",
+  ]) assert.equal(operations.has(exportId), true, exportId);
+
+  const buffer = modules.get("node:buffer").exports.find((entry) => entry.name === "Buffer");
+  assert.ok(buffer);
+  const bufferMembers = new Set(buffer.members.map((member) => member.name));
+  for (const member of [
+    "copy", "slice", "swap16", "swap32", "swap64", "readUInt8", "readInt8",
+    "readUInt16LE", "readUInt16BE", "readInt16LE", "readInt16BE",
+    "readUInt32LE", "readUInt32BE", "readInt32LE", "readInt32BE",
+  ]) assert.equal(bufferMembers.has(member), true, member);
+
+  assert.equal(operations.has("node:util::inspect"), false);
+  assert.equal(operations.has("node:util::format"), false);
+});

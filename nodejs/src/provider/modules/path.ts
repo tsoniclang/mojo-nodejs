@@ -8,6 +8,7 @@ import {
   constantValue,
   nativeString,
   overloadedFunctionExport,
+  stringArrayType,
   stringType,
   valueExport,
   variadicFunctionCall,
@@ -20,8 +21,8 @@ export function pathModule(): MojoProviderModuleDefinition {
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.path",
     exports: Object.freeze([
-      fnExport(moduleSpecifier, "join", [{ name: "paths", type: stringType, rest: true }], stringType),
-      fnExport(moduleSpecifier, "resolve", [{ name: "paths", type: stringType, rest: true }], stringType),
+      fnExport(moduleSpecifier, "join", [{ name: "paths", type: stringArrayType, rest: true }], stringType),
+      fnExport(moduleSpecifier, "resolve", [{ name: "paths", type: stringArrayType, rest: true }], stringType),
       fnExport(moduleSpecifier, "normalize", [{ name: "path", type: stringType }], stringType),
       fnExport(moduleSpecifier, "isAbsolute", [{ name: "path", type: stringType }], { kind: "boolean" }),
       fnExport(moduleSpecifier, "dirname", [{ name: "path", type: stringType }], stringType),

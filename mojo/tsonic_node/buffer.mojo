@@ -1,6 +1,6 @@
 from std.collections import List
 from std.base64 import b64decode, b64encode
-from std.memory import ArcPointer
+from std.memory import ArcPointer, bitcast
 
 
 struct Buffer(ImplicitlyCopyable, Sized):
@@ -290,9 +290,9 @@ struct Buffer(ImplicitlyCopyable, Sized):
         var result = UInt64(0)
         for index in range(width):
             var shift = 8 * (index if little_endian else width - index - 1)
-            result |= (
-                UInt64(self._bytes[][self._offset + offset + index]) << shift
-            )
+            result |= UInt64(
+                self._bytes[][self._offset + offset + index]
+            ) << UInt64(shift)
         return result
 
     def _read_int(
@@ -300,8 +300,8 @@ struct Buffer(ImplicitlyCopyable, Sized):
     ) raises -> Int64:
         var value = self._read_uint(offset, width, little_endian)
         var bits = width * 8
-        if bits < 64 and (value & (UInt64(1) << (bits - 1))):
-            return Int64(value) - (Int64(1) << bits)
+        if bits < 64 and (value & (UInt64(1) << UInt64(bits - 1))):
+            return Int64(value) - (Int64(1) << Int64(bits))
         return Int64(value)
 
     def _write_uint(
@@ -315,7 +315,7 @@ struct Buffer(ImplicitlyCopyable, Sized):
         for index in range(width):
             var shift = 8 * (index if little_endian else width - index - 1)
             self._bytes[][self._offset + offset + index] = Byte(
-                UInt8((value >> shift) & 0xFF)
+                UInt8((value >> UInt64(shift)) & 0xFF)
             )
 
     def _swap(mut self, width: Int) raises -> Self:
