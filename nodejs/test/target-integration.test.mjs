@@ -51,6 +51,41 @@ export function main(): void { basename("/one/two.txt"); }
   assert.match(artifactTexts(result).map(({ text }) => text).join("\n"), /tsonic_node\.path\.basename/u);
 });
 
+test("filesystem promises retain source Promise and native Future contracts", () => {
+  const result = compileNode(`
+import { Buffer } from "node:buffer";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+
+export async function main(): Promise<void> {
+  await mkdir("work", { recursive: true });
+  await writeFile("work/value.txt", Buffer.from("value"));
+  const bytes = await readFile("work/value.txt");
+  bytes.toString();
+  const text = await readFile("work/value.txt", "utf8");
+  const entries = await readdir("work");
+  const metadata = await stat("work/value.txt");
+  metadata.isFile();
+  await rename("work/value.txt", "work/next.txt");
+  if (text.length + entries.length === 0) return;
+  await rm("work", { recursive: true, force: true });
+}
+`);
+  assert.deepEqual(result.diagnostics, []);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  for (const operation of [
+    "filesystem_promises.make_directory",
+    "filesystem_promises.write_file",
+    "filesystem_promises.read_file",
+    "filesystem_promises.read_text_file",
+    "filesystem_promises.read_directory",
+    "filesystem_promises.stat",
+    "filesystem_promises.rename_path",
+    "filesystem_promises.remove_path",
+  ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+  assert.match(source, /await create_raising_task\(/u);
+  assert.match(source, /async def __tsonic_async_entry\(\) raises:\n    await create_raising_task\(__tsonic_entry\(\)\)/u);
+});
+
 test("open stream and dynamic utility lanes fail at their exact boundaries", () => {
   assert.throws(
     () => compileNode(`import { Readable } from "node:stream"; export function main(): void { Readable; }`),

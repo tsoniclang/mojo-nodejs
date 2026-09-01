@@ -15,6 +15,10 @@ import {
   filesystemOperations,
   filesystemTypes,
 } from "./modules/filesystem.js";
+import {
+  filesystemPromisesModule,
+  filesystemPromisesOperations,
+} from "./modules/filesystem-promises.js";
 import { httpModule, httpOperations, httpTypes } from "./modules/http.js";
 import { osModule, osOperations } from "./modules/os.js";
 import { pathModule, pathOperations } from "./modules/path.js";
@@ -42,6 +46,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       { moduleSpecifier: "child_process", canonicalModuleSpecifier: "node:child_process" },
       { moduleSpecifier: "crypto", canonicalModuleSpecifier: "node:crypto" },
       { moduleSpecifier: "fs", canonicalModuleSpecifier: "node:fs" },
+      { moduleSpecifier: "fs/promises", canonicalModuleSpecifier: "node:fs/promises" },
       { moduleSpecifier: "http", canonicalModuleSpecifier: "node:http" },
       { moduleSpecifier: "os", canonicalModuleSpecifier: "node:os" },
       { moduleSpecifier: "path", canonicalModuleSpecifier: "node:path" },
@@ -56,6 +61,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       childProcessModule(),
       cryptoModule(),
       filesystemModule(),
+      filesystemPromisesModule(),
       httpModule(),
       osModule(),
       pathModule(),
@@ -81,6 +87,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       ...childProcessOperations(),
       ...cryptoOperations(),
       ...filesystemOperations(),
+      ...filesystemPromisesOperations(),
       ...httpOperations(),
       ...osOperations(),
       ...pathOperations(),

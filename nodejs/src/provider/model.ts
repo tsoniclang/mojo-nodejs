@@ -1,5 +1,6 @@
 import {
   mojoCallableTargetType,
+  mojoFutureTargetType,
   mojoListTargetType,
   mojoNamedTargetType,
   mojoOptionalTargetType,
@@ -40,6 +41,9 @@ export const optionalInt32Carrier = mojoOptionalTargetType(int32Carrier);
 export const optionalBoolCarrier = mojoOptionalTargetType(boolCarrier);
 export const optionalFloat64Carrier = mojoOptionalTargetType(float64Carrier);
 export const optionalStringCarrier = mojoOptionalTargetType(nativeString);
+export const nativeStringFutureCarrier = mojoFutureTargetType(nativeString, "native", true);
+export const unitFutureCarrier = mojoFutureTargetType(unitCarrier, "native", true);
+export const stringListFutureCarrier = mojoFutureTargetType(stringListCarrier, "native", true);
 export const bufferCarrier = mojoNamedTargetType(
   "tsonic.mojo.node.Buffer",
   ["tsonic_node", "buffer"],
@@ -169,6 +173,16 @@ export function providerRef(
     moduleSpecifier,
     exportName,
     ...(typeArguments.length === 0 ? {} : { typeArguments: Object.freeze([...typeArguments]) }),
+  });
+}
+
+export function sourcePromise(
+  value: ProviderTypeExpression,
+): ProviderTypeExpression {
+  return Object.freeze({
+    kind: "source-global",
+    name: "Promise",
+    typeArguments: Object.freeze([value]),
   });
 }
 

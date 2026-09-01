@@ -21,6 +21,7 @@ test("Node capability closes source, target, and runtime contracts together", ()
       "node:child_process",
       "node:crypto",
       "node:fs",
+      "node:fs/promises",
       "node:http",
       "node:os",
       "node:path",
@@ -42,6 +43,13 @@ test("Node capability closes source, target, and runtime contracts together", ()
     definition.operations.find((operation) => operation.exportId === "node:fs::readFileSync" && operation.signatureId?.endsWith("path,encoding)"))?.raises,
     true,
   );
+  const promisedRead = definition.operations.find((operation) =>
+    operation.exportId === "node:fs/promises::readFile" &&
+    operation.signatureId?.endsWith("path,encoding)"));
+  assert.equal(promisedRead?.resultType.kind, "future");
+  assert.equal(promisedRead?.resultType.output.kind, "native-string");
+  assert.equal(promisedRead?.resultType.raises, true);
+  assert.equal(promisedRead?.raises, true);
   assert.equal(
     definition.operations.find((operation) => operation.exportId === "node:crypto::createHash")?.target.kind,
     "function-call",
@@ -109,6 +117,7 @@ test("Node parity rows expose exact closed contracts and omit unsupported open s
   assert.equal(modules.has("node:stream"), false);
   assert.equal(modules.has("node:events"), false);
   assert.equal(modules.get("node:fs").exports.some((entry) => entry.name === "watch"), false);
+  assert.equal(modules.get("node:fs/promises").exports.some((entry) => entry.name === "readFile"), true);
   assert.equal(modules.get("node:process").exports.some((entry) => entry.name === "stdin"), false);
 
   for (const exportId of [
@@ -117,6 +126,15 @@ test("Node parity rows expose exact closed contracts and omit unsupported open s
     "node:process::memoryUsage",
     "node:process::stdout",
     "node:process::stderr",
+    "node:fs/promises::readFile",
+    "node:fs/promises::writeFile",
+    "node:fs/promises::readdir",
+    "node:fs/promises::stat",
+    "node:fs/promises::mkdir",
+    "node:fs/promises::rm",
+    "node:fs/promises::unlink",
+    "node:fs/promises::copyFile",
+    "node:fs/promises::rename",
   ]) assert.equal(operations.has(exportId), true, exportId);
 
   const buffer = modules.get("node:buffer").exports.find((entry) => entry.name === "Buffer");

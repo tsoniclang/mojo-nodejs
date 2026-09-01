@@ -259,9 +259,12 @@ def copy_file(source: String, destination: String) raises:
     Path(destination).write_bytes(Span(bytes))
 
 
-def rename_path(var source: String, var destination: String) raises:
+def rename_path(source: String, destination: String) raises:
+    var source_buffer = source
+    var destination_buffer = destination
     var status = external_call["rename", c_int](
-        source.as_c_string_slice(), destination.as_c_string_slice()
+        source_buffer.as_c_string_slice(),
+        destination_buffer.as_c_string_slice(),
     )
     if status != 0:
         raise Error("Unable to rename path; errno ", get_errno())
