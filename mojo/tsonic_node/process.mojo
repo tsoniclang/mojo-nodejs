@@ -14,7 +14,6 @@ from .os_info import arch as os_arch
 from .os_info import platform as os_platform
 
 
-@fieldwise_init
 struct ProcessEnv(Copyable):
     def __init__(out self):
         pass
