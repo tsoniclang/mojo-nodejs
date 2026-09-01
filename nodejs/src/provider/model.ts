@@ -1,4 +1,5 @@
 import {
+  mojoListTargetType,
   mojoNamedTargetType,
   mojoPrimitiveTargetType,
   mojoStringTargetType,
@@ -23,7 +24,11 @@ export const voidType = Object.freeze({ kind: "void" as const });
 export const nativeString = mojoStringTargetType();
 export const boolCarrier = mojoPrimitiveTargetType("bool");
 export const nativeIntCarrier = mojoPrimitiveTargetType("native-int");
+export const float64Carrier = mojoPrimitiveTargetType("float64");
+export const int32Carrier = mojoPrimitiveTargetType("int32");
+export const uint8Carrier = mojoPrimitiveTargetType("uint8");
 export const unitCarrier = mojoUnitTargetType();
+export const stringListCarrier = mojoListTargetType(nativeString);
 export const bufferCarrier = mojoNamedTargetType(
   "tsonic.mojo.node.Buffer",
   ["tsonic_node", "buffer"],
@@ -33,6 +38,18 @@ export const statsCarrier = mojoNamedTargetType(
   "tsonic.mojo.node.Stats",
   ["tsonic_node", "filesystem"],
   "Stats",
+);
+
+export const mkdirOptionsCarrier = mojoNamedTargetType(
+  "tsonic.mojo.node.MkdirOptions",
+  ["tsonic_node", "filesystem"],
+  "MkdirOptions",
+);
+
+export const rmOptionsCarrier = mojoNamedTargetType(
+  "tsonic.mojo.node.RmOptions",
+  ["tsonic_node", "filesystem"],
+  "RmOptions",
 );
 
 export function providerRef(
@@ -73,7 +90,7 @@ export function overloadedFunctionExport(
     signatures: Object.freeze(overloads.map((overload) => Object.freeze({
       id: `${id}(${overload.signatureSuffix ?? overload.parameters.map((parameter) => parameter.name).join(",")})`,
       name,
-      parameters: Object.freeze([...overload.parameters]),
+      parameters: Object.freeze(overload.parameters.map((parameter) => Object.freeze({ ...parameter }))),
       returnType: overload.returnType,
     }))),
   });
@@ -122,6 +139,86 @@ export function functionCall(
       }))),
     }),
     parameterTypes: Object.freeze([...parameterTypes]),
+    resultType,
+    ...(raises ? { raises: true } : {}),
+  });
+}
+
+export function variadicFunctionCall(
+  exportId: string,
+  signatureId: string,
+  moduleName: string,
+  targetName: string,
+  parameterType: MojoTargetTypeRef,
+  resultType: MojoTargetTypeRef,
+  raises = false,
+): MojoProviderOperationDefinition {
+  return Object.freeze({
+    exportId,
+    signatureId,
+    operationKind: "call",
+    target: Object.freeze({
+      kind: "function-call",
+      modulePath: Object.freeze(["tsonic_node", moduleName]),
+      name: targetName,
+      arguments: Object.freeze([Object.freeze({
+        convention: "imm",
+        position: "positional-or-keyword",
+        variadic: true,
+      })]),
+    }),
+    parameterTypes: Object.freeze([parameterType]),
+    resultType,
+    ...(raises ? { raises: true } : {}),
+  });
+}
+
+export function valueExport(
+  moduleSpecifier: string,
+  name: string,
+  type: ProviderTypeExpression,
+): ProviderExportDeclaration {
+  return Object.freeze({
+    id: `${moduleSpecifier}::${name}`,
+    name,
+    kind: "value",
+    type,
+  });
+}
+
+export function constantValue(
+  exportId: string,
+  moduleName: string,
+  targetName: string,
+  resultType: MojoTargetTypeRef,
+): MojoProviderOperationDefinition {
+  return Object.freeze({
+    exportId,
+    operationKind: "property",
+    target: Object.freeze({
+      kind: "constant",
+      modulePath: Object.freeze(["tsonic_node", moduleName]),
+      name: targetName,
+    }),
+    resultType,
+  });
+}
+
+export function functionValue(
+  exportId: string,
+  moduleName: string,
+  targetName: string,
+  resultType: MojoTargetTypeRef,
+  raises = false,
+): MojoProviderOperationDefinition {
+  return Object.freeze({
+    exportId,
+    operationKind: "property",
+    target: Object.freeze({
+      kind: "function-read",
+      modulePath: Object.freeze(["tsonic_node", moduleName]),
+      name: targetName,
+    }),
     resultType,
     ...(raises ? { raises: true } : {}),
   });
