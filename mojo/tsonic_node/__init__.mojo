@@ -1,7 +1,19 @@
 from .buffer import Buffer
+from .assertions import (
+    not_strict_equal,
+    not_strict_equal_with_message,
+    ok,
+    ok_with_message,
+    strict_equal,
+    strict_equal_with_message,
+)
+from .child_process import SpawnSyncResult, spawn_sync
+from .crypto import Hash, create_hash
+from .event_loop import run_event_loop
 from .filesystem import (
     Dirent,
     MkdirOptions,
+    ReaddirOptions,
     RmOptions,
     Stats,
     append_file,
@@ -22,6 +34,7 @@ from .filesystem import (
     write_file,
     write_text_file,
 )
+from .http import IncomingMessage, Server, ServerResponse, create_server
 from .os_info import (
     arch,
     end_of_line,
@@ -54,3 +67,19 @@ from .process import (
     set_environment,
     unset_environment,
 )
+from .timers import (
+    Timeout,
+    clear_interval,
+    clear_timeout,
+    set_interval,
+    set_timeout,
+)
+from .util import (
+    TextDecoder,
+    strip_vt_control_characters,
+    style_text,
+    text_decoder_new,
+    text_decoder_new_encoding,
+    to_usv_string,
+)
+from .url import LegacyUrl, parse_legacy

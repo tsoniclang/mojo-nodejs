@@ -3,6 +3,7 @@ from std.tempfile import mkdtemp
 from tsonic_node import (
     Buffer,
     MkdirOptions,
+    ReaddirOptions,
     RmOptions,
     copy_file,
     exists,
@@ -53,7 +54,7 @@ def main() raises:
     assert_true(lstat(link_path).is_symbolic_link())
     assert_equal(real_path(link_path), real_path(text_path))
 
-    var entries = read_directory(nested)
+    var entries = read_directory(nested, ReaddirOptions())
     assert_equal(len(entries), 4)
 
     remove_path(root, RmOptions(recursive=True))

@@ -15,7 +15,20 @@ test("Node capability closes source, target, and runtime contracts together", ()
   assert.ok(Object.isFrozen(definition));
   assert.deepEqual(
     definition.modules.map((module) => module.moduleSpecifier),
-    ["node:buffer", "node:fs", "node:os", "node:path", "node:process"],
+    [
+      "node:assert",
+      "node:buffer",
+      "node:child_process",
+      "node:crypto",
+      "node:fs",
+      "node:http",
+      "node:os",
+      "node:path",
+      "node:process",
+      "node:timers",
+      "node:util",
+      "node:url",
+    ],
   );
   assert.equal(
     definition.operations.filter((operation) => operation.exportId === "node:path::basename").length,
@@ -28,6 +41,38 @@ test("Node capability closes source, target, and runtime contracts together", ()
   assert.equal(
     definition.operations.find((operation) => operation.exportId === "node:fs::readFileSync" && operation.signatureId?.endsWith("path,encoding)"))?.raises,
     true,
+  );
+  assert.equal(
+    definition.operations.find((operation) => operation.exportId === "node:crypto::createHash")?.target.kind,
+    "function-call",
+  );
+  assert.equal(
+    definition.operations.find((operation) => operation.exportId === "node:child_process::spawnSync")?.raises,
+    true,
+  );
+  assert.equal(
+    definition.operations.find((operation) => operation.exportId === "node:url::parse")?.resultType.id,
+    "tsonic.mojo.node.LegacyUrl",
+  );
+  assert.equal(
+    definition.operations.some((operation) => operation.exportId === "node:util::getSystemErrorName"),
+    false,
+  );
+  const createServer = definition.operations.find((operation) =>
+    operation.exportId === "node:http::createServer");
+  assert.equal(createServer?.parameterTypes?.[0]?.kind, "callable");
+  assert.equal(createServer?.parameterTypes?.[0]?.raises, true);
+  assert.deepEqual(
+    createServer?.parameterTypes?.[0]?.parameters.map(({ type }) => type.id),
+    ["tsonic.mojo.node.HttpIncomingMessage", "tsonic.mojo.node.HttpServerResponse"],
+  );
+  const setInterval = definition.operations.find((operation) =>
+    operation.exportId === "node:timers::setInterval");
+  assert.equal(setInterval?.parameterTypes?.[0]?.kind, "callable");
+  assert.equal(setInterval?.resultType.id, "tsonic.mojo.node.Timeout");
+  assert.deepEqual(
+    definition.binaryEpilogues.map(({ id, raises }) => [id, raises === true]),
+    [["node-event-loop", true], ["node-process-exit-code", false]],
   );
 
   const runtime = capability.runtimeContributions({}).references;

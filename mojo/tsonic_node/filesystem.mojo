@@ -16,26 +16,42 @@ from .buffer import Buffer
 
 
 struct MkdirOptions(Copyable):
-    var recursive: Bool
-    var mode: Int
+    var recursive: Optional[Bool]
+    var mode: Optional[Float64]
 
-    def __init__(out self, recursive: Bool = False, mode: Int = 0o777):
+    def __init__(
+        out self,
+        recursive: Optional[Bool] = None,
+        mode: Optional[Float64] = None,
+    ):
         self.recursive = recursive
         self.mode = mode
 
 
 struct RmOptions(Copyable):
-    var recursive: Bool
-    var force: Bool
+    var recursive: Optional[Bool]
+    var force: Optional[Bool]
 
-    def __init__(out self, recursive: Bool = False, force: Bool = False):
+    def __init__(
+        out self,
+        recursive: Optional[Bool] = None,
+        force: Optional[Bool] = None,
+    ):
         self.recursive = recursive
         self.force = force
+
+
+struct ReaddirOptions(Copyable):
+    var with_file_types: Bool
+
+    def __init__(out self, with_file_types: Bool = True):
+        self.with_file_types = with_file_types
 
 
 @fieldwise_init
 struct Stats(Copyable):
     var size: Int
+    var mtime_ms: Float64
     var mode: Int
     var device: Int
     var inode: Int
@@ -79,6 +95,7 @@ def _stats(path: String, follow_links: Bool) raises -> Stats:
     )
     return Stats(
         native.st_size,
+        Float64(native.st_mtimespec.as_nanoseconds()) / 1_000_000.0,
         native.st_mode,
         native.st_dev,
         native.st_ino,
@@ -139,14 +156,36 @@ def append_file(path: String, buffer: Buffer) raises:
     Path(path).write_bytes(Span(bytes))
 
 
+def append_text_file(path: String, value: String) raises:
+    append_file(path, Buffer.from_string(value))
+
+
+def make_directory_default(path: String) raises:
+    mkdir(Path(path), mode=0o777)
+
+
 def make_directory(path: String, options: MkdirOptions = MkdirOptions()) raises:
-    if options.recursive:
-        makedirs(Path(path), mode=options.mode, exist_ok=True)
+    var recursive = options.recursive.value() if options.recursive else False
+    var mode = Int(options.mode.value()) if options.mode else 0o777
+    if recursive:
+        makedirs(Path(path), mode=mode, exist_ok=True)
     else:
-        mkdir(Path(path), mode=options.mode)
+        mkdir(Path(path), mode=mode)
 
 
-def read_directory(path: String) raises -> List[Dirent]:
+def read_directory_names(path: String) raises -> List[String]:
+    var result = List[String]()
+    for child in Path(path).listdir():
+        result.append(child.name())
+    return result^
+
+
+def read_directory(
+    path: String,
+    options: ReaddirOptions,
+) raises -> List[Dirent]:
+    if not options.with_file_types:
+        raise Error("Dirent results require withFileTypes: true")
     var result = List[Dirent]()
     var parent = Path(path)
     for child in parent.listdir():
@@ -164,10 +203,14 @@ def read_directory(path: String) raises -> List[Dirent]:
     return result^
 
 
-def remove_path(path: String, options: RmOptions = RmOptions()) raises:
+def remove_path_default(path: String) raises:
+    remove_path(path, RmOptions())
+
+
+def remove_path(path: String, options: RmOptions) raises:
     var path_value = Path(path)
     if not std.os.path.lexists(path_value):
-        if options.force:
+        if options.force and options.force.value():
             return
         raise Error("Path does not exist: ", path)
 
@@ -176,18 +219,35 @@ def remove_path(path: String, options: RmOptions = RmOptions()) raises:
         return
 
     if path_value.is_dir():
-        if not options.recursive:
+        if not options.recursive or not options.recursive.value():
             rmdir(path_value)
             return
         for child in path_value.listdir():
             remove_path(
                 String(path_value / child),
-                RmOptions(recursive=True, force=options.force),
+                RmOptions(
+                    recursive=Optional[Bool](True),
+                    force=options.force,
+                ),
             )
         rmdir(path_value)
         return
 
     remove(path_value)
+
+
+def make_temp_directory(prefix: String) raises -> String:
+    var process = Int(external_call["getpid", c_int]())
+    for attempt in range(1024):
+        var candidate = prefix + String(process) + "-" + String(attempt)
+        if exists(candidate):
+            continue
+        try:
+            mkdir(Path(candidate), mode=0o700)
+            return candidate^
+        except:
+            pass
+    raise Error("Unable to create a unique temporary directory")
 
 
 def unlink(path: String) raises:
