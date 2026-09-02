@@ -511,6 +511,7 @@ export function propertyWrite(
   targetName: string,
   receiverType: MojoTargetTypeRef,
   valueType: MojoTargetTypeRef,
+  access: "member" | "method" = "member",
 ): MojoProviderOperationDefinition {
   return Object.freeze({
     exportId,
@@ -518,8 +519,8 @@ export function propertyWrite(
     operationKind: "property-set",
     target: Object.freeze({
       kind: "property-write",
-      access: Object.freeze({ kind: "member", name: targetName }),
-      receiver: "mut",
+      access: Object.freeze({ kind: access, name: targetName }),
+      receiver: access === "method" ? "imm" : "mut",
       value: Object.freeze({
         convention: "imm",
         position: "positional-or-keyword",

@@ -168,7 +168,7 @@ export function httpOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(incomingId, `${incomingId}.readAll`, `${incomingId}.readAll()`, "read_all", httpIncomingMessageCarrier, [], nativeString, true),
     instanceCall(incomingId, `${incomingId}.readAllBuffer`, `${incomingId}.readAllBuffer()`, "read_all_buffer", httpIncomingMessageCarrier, [], bufferCarrier),
     propertyRead(responseId, `${responseId}.statusCode`, "status_code", httpServerResponseCarrier, int32Carrier, "method"),
-    propertyWrite(responseId, `${responseId}.statusCode`, "set_status_code", httpServerResponseCarrier, int32Carrier),
+    propertyWrite(responseId, `${responseId}.statusCode`, "set_status_code", httpServerResponseCarrier, int32Carrier, "method"),
     instanceCall(responseId, `${responseId}.setHeader`, `${responseId}.setHeader(name,value)`, "set_header", httpServerResponseCarrier, [nativeString, nativeString], unitCarrier, true),
     instanceCall(responseId, `${responseId}.writeHead`, `${responseId}.writeHead(statusCode,statusMessage)`, "write_head", httpServerResponseCarrier, [int32Carrier, nativeString], unitCarrier, true),
     instanceCall(responseId, `${responseId}.write`, `${responseId}.write(chunk)`, "write_buffer", httpServerResponseCarrier, [bufferCarrier], boolCarrier, true),

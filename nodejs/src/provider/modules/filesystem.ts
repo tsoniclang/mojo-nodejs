@@ -15,6 +15,7 @@ import {
   functionCall,
   instanceCall,
   mkdirOptionsCarrier,
+  nativeIntCarrier,
   nativeString,
   numberType,
   optionalBoolCarrier,
@@ -251,7 +252,7 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
     operation("unlinkSync", "path", "unlink", [nativeString], unitCarrier),
     ...methodOperations(statsId, statsCarrier),
     ...methodOperations(direntId, direntCarrier),
-    propertyRead(statsId, `${statsId}.size`, "size", statsCarrier, float64Carrier),
+    propertyRead(statsId, `${statsId}.size`, "size", statsCarrier, nativeIntCarrier),
     propertyRead(statsId, `${statsId}.mtimeMs`, "mtime_ms", statsCarrier, float64Carrier),
     propertyRead(direntId, `${direntId}.name`, "name", direntCarrier, nativeString),
     ...optionFieldOperations(mkdirOptionsId, mkdirOptionsCarrier, [
