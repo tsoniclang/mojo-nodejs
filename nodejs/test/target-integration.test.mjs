@@ -133,6 +133,27 @@ export async function main(): Promise<void> {
   assert.match(source, /async def __tsonic_async_entry\(\) raises:\n    await create_raising_task\(__tsonic_entry\(\)\)/u);
 });
 
+test("long-lived Node callbacks erase closed source errors only at the provider ABI", () => {
+  const result = compileNode(`
+import { setInterval } from "node:timers";
+
+function read(): string {
+  throw new Error("failed");
+}
+
+export function main(): void {
+  setInterval(() => {
+    read();
+  }, 10);
+}
+`);
+  assert.deepEqual(result.diagnostics, []);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  assert.match(source, /tsonic_runtime\.erase_callable_error/u);
+  assert.match(source, /RaisingCallable/u);
+  assert.match(source, /tsonic_node\.timers\.set_interval/u);
+});
+
 test("open stream and dynamic utility lanes fail at their exact boundaries", () => {
   assert.throws(
     () => compileNode(`import { Readable } from "node:stream"; export function main(): void { Readable; }`),
