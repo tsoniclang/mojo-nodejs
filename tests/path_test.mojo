@@ -1,4 +1,3 @@
-from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from tsonic_node import (
     basename,
@@ -20,12 +19,7 @@ def main() raises:
     assert_true(is_absolute("/alpha"))
     assert_false(is_absolute("alpha"))
 
-    var parts = List[String]()
-    parts.append("alpha")
-    parts.append("beta")
-    parts.append("..")
-    parts.append("gamma")
-    assert_equal(join(parts^), "alpha/gamma")
+    assert_equal(join("alpha", "beta", "..", "gamma"), "alpha/gamma")
 
     assert_equal(dirname("/alpha/beta.txt"), "/alpha")
     assert_equal(basename("/alpha/beta.txt"), "beta.txt")

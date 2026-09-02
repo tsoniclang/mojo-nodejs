@@ -61,7 +61,7 @@ def normalize(path: String) -> String:
     return result^
 
 
-def join(parts: List[String]) -> String:
+def join(*parts: String) -> String:
     if not len(parts):
         return "."
     var combined = String()
@@ -72,7 +72,7 @@ def join(parts: List[String]) -> String:
     return normalize(combined^)
 
 
-def resolve(parts: List[String]) raises -> String:
+def resolve(*parts: String) raises -> String:
     var resolved = String()
     var index = len(parts) - 1
     while index >= -1:
@@ -168,8 +168,8 @@ def relative(from_path: String, to_path: String) raises -> String:
     source_paths.append(from_path.copy())
     var target_paths = List[String]()
     target_paths.append(to_path.copy())
-    var source = _components(resolve(source_paths^))
-    var target = _components(resolve(target_paths^))
+    var source = _components(resolve(from_path))
+    var target = _components(resolve(to_path))
     var shared = 0
     while (
         shared < len(source)

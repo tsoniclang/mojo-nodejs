@@ -12,6 +12,16 @@ from tsonic_node import (
     temp_directory,
     unset_environment,
 )
+from tsonic_node.process import (
+    argument_zero,
+    hrtime,
+    hrtime_since,
+    memory_usage,
+    process_id,
+    stderr,
+    stdout,
+    uptime,
+)
 
 
 def main() raises:
@@ -23,6 +33,14 @@ def main() raises:
     assert_equal(end_of_line(), "\n")
     assert_true(current_directory())
     assert_true(len(arguments()) >= 1)
+    assert_true(argument_zero())
+    assert_equal(len(hrtime()), 2)
+    assert_equal(len(hrtime_since(hrtime())), 2)
+    assert_true(memory_usage().rss >= 0)
+    assert_true(process_id() > 0)
+    assert_true(uptime() >= 0)
+    assert_equal(stdout().fd(), 1)
+    assert_equal(stderr().fd(), 2)
 
     var name = "TSONIC_MOJO_NODE_TEST_VALUE"
     unset_environment(name)

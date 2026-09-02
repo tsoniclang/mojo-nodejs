@@ -9,6 +9,7 @@ const moduleSpecifier = "node:os";
 const functions = Object.freeze([
   ["platform", "platform", false],
   ["arch", "arch", false],
+  ["eol", "end_of_line", false],
   ["hostname", "host_name", true],
   ["tmpdir", "temp_directory", true],
   ["homedir", "home_directory", true],
