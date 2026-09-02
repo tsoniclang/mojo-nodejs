@@ -61,6 +61,34 @@ export function main(): void {
   assert.equal(source.match(/tsonic_node\.process\.set_exit_code/gu)?.length, 2);
 });
 
+test("provider reads and writes retain source carriers before target ABI conversion", () => {
+  const result = compileMojo({
+    capabilities: [createMojoNodejsCapability()],
+    surfaces: ["js"],
+    files: {
+      "index.ts": `
+import type { int32 } from "@tsonic/core/types.js";
+import type { ServerResponse } from "node:http";
+import process from "node:process";
+
+export function selectArguments(response: ServerResponse, statusCode: int32): string[] {
+  response.statusCode = statusCode;
+  return process.argv.slice(2);
+}
+
+export function main(): void {}
+`,
+    },
+  });
+  assert.deepEqual(result.diagnostics, []);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  assert.match(source, /tsonic_node\.http\.ServerResponse/u);
+  assert.match(source, /\.set_status_code\(Int32\(/u);
+  assert.match(source, /tsonic_node\.process\.arguments\(\)/u);
+  assert.match(source, /tsonic_js\.JsArray\[tsonic_js\.JsString\]/u);
+  assert.match(source, /\.slice\(Float64\(2\)\)/u);
+});
+
 test("bare Node aliases retain canonical provider identities", () => {
   const result = compileNode(`
 import { basename } from "path";
