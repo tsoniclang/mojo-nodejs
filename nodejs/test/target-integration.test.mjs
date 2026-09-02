@@ -42,6 +42,25 @@ export function main(): void {
   ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
 });
 
+test("writable process state seals source-nullable to native-optional conversion", () => {
+  const result = compileNode(`
+import process from "node:process";
+
+export function main(): void {
+  process.exitCode = 2;
+  process.exitCode = null;
+}
+`);
+  assert.deepEqual(result.diagnostics, []);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  assert.match(source, /tsonic_node\.process\.set_exit_code/u);
+  assert.match(source, /Variant\[tsonic_runtime\.Null, Float64\]\(Float64\(2\)\)/u);
+  assert.match(source, /\.isa\[Float64\]\(\)/u);
+  assert.match(source, /Optional\[Int32\]\(Int32\(/u);
+  assert.match(source, /Variant\[tsonic_runtime\.Null, Float64\]\(tsonic_runtime\.Null\(\)\)/u);
+  assert.equal(source.match(/tsonic_node\.process\.set_exit_code/gu)?.length, 2);
+});
+
 test("bare Node aliases retain canonical provider identities", () => {
   const result = compileNode(`
 import { basename } from "path";

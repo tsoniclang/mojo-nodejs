@@ -9,6 +9,7 @@ from tsonic_node import (
     strip_vt_control_characters,
     style_text,
 )
+from tsonic_node.process import exit_code, set_exit_code
 
 
 def main() raises:
@@ -27,3 +28,8 @@ def main() raises:
     assert_equal(result.stdout.to_string(), "left:right")
     assert_equal(result.stderr.to_string(), "")
     assert_true(len(result.stdout) == 10)
+
+    set_exit_code(Optional[Int32](2))
+    assert_equal(exit_code().value(), Int32(2))
+    set_exit_code(Optional[Int32]())
+    assert_true(not Bool(exit_code()))
