@@ -7,8 +7,8 @@ from tsonic_runtime import GlobalCell, RaisingCallable
 from .buffer import Buffer
 
 
-alias EmptyCallback = RaisingCallable[Tuple[], NoneType]
-alias ConnectionCallback = RaisingCallable[Tuple[Socket], NoneType]
+comptime EmptyCallback = RaisingCallable[Tuple[], NoneType]
+comptime ConnectionCallback = RaisingCallable[Tuple[Socket], NoneType]
 
 
 @fieldwise_init
@@ -71,9 +71,10 @@ struct Socket(ImplicitlyCopyable):
 
     def end(mut self) raises:
         self._require_open()
-        if external_call["shutdown", c_int](
-            self._state[].descriptor, c_int(1)
-        ) != 0:
+        if (
+            external_call["shutdown", c_int](self._state[].descriptor, c_int(1))
+            != 0
+        ):
             raise Error("Unable to end network socket")
 
     def end_buffer(mut self, value: Buffer) raises:
@@ -109,19 +110,29 @@ struct Socket(ImplicitlyCopyable):
 
     def set_no_delay(mut self, value: Bool) raises -> Self:
         self._require_open()
-        if external_call["tsonic_node_net_set_no_delay", c_int](
-            self._state[].descriptor, c_int(value)
-        ) != 0:
+        if (
+            external_call["tsonic_node_net_set_no_delay", c_int](
+                self._state[].descriptor, c_int(value)
+            )
+            != 0
+        ):
             raise Error("Unable to set network no-delay state")
         return self
 
     def set_timeout(mut self, timeout: Float64) raises -> Self:
         self._require_open()
-        if timeout < 0 or timeout != timeout or timeout == FloatLiteral.infinity:
+        if (
+            timeout < 0
+            or timeout != timeout
+            or timeout == FloatLiteral.infinity
+        ):
             raise Error("Socket timeout must be a finite non-negative number")
-        if external_call["tsonic_node_net_set_timeout", c_int](
-            self._state[].descriptor, c_int(Int(timeout))
-        ) != 0:
+        if (
+            external_call["tsonic_node_net_set_timeout", c_int](
+                self._state[].descriptor, c_int(Int(timeout))
+            )
+            != 0
+        ):
             raise Error("Unable to set network socket timeout")
         return self
 
@@ -175,17 +186,13 @@ struct Server(ImplicitlyCopyable):
     def listen_port(mut self, port: Float64) raises -> Self:
         return self._listen(port, "0.0.0.0", None)
 
-    def listen_port_host(
-        mut self, port: Float64, host: String
-    ) raises -> Self:
+    def listen_port_host(mut self, port: Float64, host: String) raises -> Self:
         return self._listen(port, host, None)
 
     def listen_port_callback(
         mut self, port: Float64, callback: EmptyCallback
     ) raises -> Self:
-        return self._listen(
-            port, "0.0.0.0", Optional[EmptyCallback](callback)
-        )
+        return self._listen(port, "0.0.0.0", Optional[EmptyCallback](callback))
 
     def listen_port_host_callback(
         mut self,
@@ -221,9 +228,10 @@ struct Server(ImplicitlyCopyable):
     ) raises -> Self:
         if self._state[].listening:
             raise Error("Network server is already listening")
+        var host_buffer = String(host)
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var descriptor = external_call["tsonic_node_net_listen", c_int](
-            host.as_c_string_slice().ptr().as_unsafe_any_origin(),
+            host_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
             c_int(Int(port)),
             Pointer(to=error),
         )
@@ -238,7 +246,7 @@ struct Server(ImplicitlyCopyable):
 
 
 @fieldwise_init
-struct _PendingConnection:
+struct _PendingConnection(ImplicitlyCopyable):
     var callback: EmptyCallback
 
 
@@ -250,9 +258,7 @@ def _initial_connections() -> List[_PendingConnection]:
     return List[_PendingConnection]()
 
 
-comptime _servers = GlobalCell[
-    "tsonic.node.net.servers", _initial_servers
-]()
+comptime _servers = GlobalCell["tsonic.node.net.servers", _initial_servers]()
 comptime _pending_connections = GlobalCell[
     "tsonic.node.net.pending-connections", _initial_connections
 ]()
@@ -265,9 +271,10 @@ def create_connection(port: Float64) raises -> Socket:
 
 
 def create_connection_host(port: Float64, host: String) raises -> Socket:
+    var host_buffer = String(host)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var descriptor = external_call["tsonic_node_net_connect", c_int](
-        host.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        host_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
         c_int(Int(port)),
         Pointer(to=error),
     )
@@ -288,7 +295,9 @@ def create_connection_host_callback(
     callback: EmptyCallback,
 ) raises -> Socket:
     if len(_pending_connections.get()[]) >= _pending_limit:
-        raise Error("Pending connection callbacks exceed the finite runtime limit")
+        raise Error(
+            "Pending connection callbacks exceed the finite runtime limit"
+        )
     var socket = create_connection_host(port, host)
     _pending_connections.get()[].append(_PendingConnection(callback))
     return socket
@@ -303,9 +312,10 @@ def create_server_callback(callback: ConnectionCallback) -> Server:
 
 
 def is_ip(value: String) -> Float64:
+    var value_buffer = String(value)
     return Float64(
         external_call["tsonic_node_is_ip", c_int](
-            value.as_c_string_slice().ptr().as_unsafe_any_origin()
+            value_buffer.as_c_string_slice().ptr().as_unsafe_any_origin()
         )
     )
 
@@ -331,8 +341,8 @@ def poll_net() raises -> Bool:
     var did_work = False
     if len(_pending_connections.get()[]) != 0:
         var pending = List[_PendingConnection]()
-        for callback in _pending_connections.get()[]:
-            pending.append(callback)
+        for connection in _pending_connections.get()[]:
+            pending.append(connection)
         _pending_connections.get()[] = List[_PendingConnection]()
         for connection in pending:
             connection.callback.call(())

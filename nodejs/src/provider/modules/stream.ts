@@ -11,7 +11,6 @@ import {
   instanceCall,
   methodMember,
   nativeString,
-  propertyMember,
   providerRef,
   readableCarrier,
   stringType,

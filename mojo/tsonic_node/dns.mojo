@@ -4,10 +4,10 @@ from tsonic_js import JsValue, js_value_error, js_value_from_undefined
 from tsonic_runtime import GlobalCell, RaisingCallable
 
 
-alias LookupCallback = RaisingCallable[
+comptime LookupCallback = RaisingCallable[
     Tuple[JsValue, String, Float64], NoneType
 ]
-alias AddressListCallback = RaisingCallable[
+comptime AddressListCallback = RaisingCallable[
     Tuple[JsValue, List[String]], NoneType
 ]
 
@@ -57,13 +57,14 @@ comptime _pending_limit = 1 << 20
 
 
 def lookup(hostname: String) raises -> LookupAddress:
+    var hostname_buffer = String(hostname)
     var family = Int32(0)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var result = external_call[
         "tsonic_node_dns_lookup",
         OptionalPointer[UInt8, MutUntrackedOrigin],
     ](
-        hostname.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        hostname_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
         Pointer(to=family),
         Pointer(to=error),
     )
@@ -81,12 +82,13 @@ def resolve6(hostname: String) raises -> List[String]:
 
 
 def reverse(address: String) raises -> List[String]:
+    var address_buffer = String(address)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var result = external_call[
         "tsonic_node_dns_reverse",
         OptionalPointer[UInt8, MutUntrackedOrigin],
     ](
-        address.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        address_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
         Pointer(to=error),
     )
     if not result:
@@ -96,9 +98,7 @@ def reverse(address: String) raises -> List[String]:
     return values^
 
 
-def lookup_callback(
-    hostname: String, callback: LookupCallback
-) raises:
+def lookup_callback(hostname: String, callback: LookupCallback) raises:
     _require_capacity()
     try:
         var result = lookup(hostname)
@@ -121,21 +121,15 @@ def lookup_callback(
         )
 
 
-def resolve4_callback(
-    hostname: String, callback: AddressListCallback
-) raises:
+def resolve4_callback(hostname: String, callback: AddressListCallback) raises:
     _enqueue_addresses(hostname, 4, callback)
 
 
-def resolve6_callback(
-    hostname: String, callback: AddressListCallback
-) raises:
+def resolve6_callback(hostname: String, callback: AddressListCallback) raises:
     _enqueue_addresses(hostname, 6, callback)
 
 
-def reverse_callback(
-    address: String, callback: AddressListCallback
-) raises:
+def reverse_callback(address: String, callback: AddressListCallback) raises:
     _require_capacity()
     try:
         _pending_addresses.get()[].append(
@@ -180,9 +174,7 @@ def poll_dns() raises -> Bool:
     var lookups = _pending_lookups.get()[]^
     _pending_lookups.get()[] = List[_PendingLookup]()
     for pending in lookups^:
-        pending.callback.call(
-            (pending.error, pending.address, pending.family)
-        )
+        pending.callback.call((pending.error, pending.address, pending.family))
     var addresses = _pending_addresses.get()[]^
     _pending_addresses.get()[] = List[_PendingAddresses]()
     for pending in addresses^:
@@ -191,12 +183,13 @@ def poll_dns() raises -> Bool:
 
 
 def _resolve(hostname: String, family: Int32) raises -> List[String]:
+    var hostname_buffer = String(hostname)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var result = external_call[
         "tsonic_node_dns_resolve",
         OptionalPointer[UInt8, MutUntrackedOrigin],
     ](
-        hostname.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        hostname_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
         family,
         Pointer(to=error),
     )
@@ -233,16 +226,13 @@ def _enqueue_addresses(
 
 def _require_capacity() raises:
     if (
-        len(_pending_lookups.get()[])
-        + len(_pending_addresses.get()[])
+        len(_pending_lookups.get()[]) + len(_pending_addresses.get()[])
         >= _pending_limit
     ):
         raise Error("Pending DNS callbacks exceed the finite runtime limit")
 
 
-def _take_text(
-    pointer: OptionalPointer[UInt8, MutUntrackedOrigin]
-) -> String:
+def _take_text(pointer: OptionalPointer[UInt8, MutUntrackedOrigin]) -> String:
     var value = String(unsafe_from_utf8_ptr=pointer.value())
     external_call["tsonic_node_free", NoneType](pointer.value())
     return value^

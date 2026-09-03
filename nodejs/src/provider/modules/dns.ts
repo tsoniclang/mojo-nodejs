@@ -9,7 +9,6 @@ import {
   dnsLookupCallbackCarrier,
   float64Carrier,
   functionCall,
-  methodMember,
   nativeString,
   propertyMember,
   propertyRead,

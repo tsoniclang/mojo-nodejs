@@ -24,7 +24,9 @@ struct Readable(ImplicitlyCopyable):
 
     def __init__(out self, descriptor: Int32):
         self._state = ArcPointer(
-            _ReadableState(Optional[Int32](descriptor), List[Buffer](), False, False)
+            _ReadableState(
+                Optional[Int32](descriptor), List[Buffer](), False, False
+            )
         )
 
     def append(mut self, value: Buffer):
@@ -32,7 +34,12 @@ struct Readable(ImplicitlyCopyable):
 
     def read(mut self) raises -> Optional[Buffer]:
         if len(self._state[].chunks) != 0:
-            return Optional[Buffer](self._state[].chunks.pop(0))
+            var first = self._state[].chunks[0]
+            var remaining = List[Buffer](capacity=len(self._state[].chunks) - 1)
+            for index in range(1, len(self._state[].chunks)):
+                remaining.append(self._state[].chunks[index])
+            self._state[].chunks = remaining^
+            return Optional[Buffer](first)
         if self._state[].ended or not self._state[].descriptor:
             return None
         var bytes = List[Byte](capacity=4096)
@@ -103,7 +110,9 @@ struct Writable(ImplicitlyCopyable):
 
     def __init__(out self, descriptor: Int32):
         self._state = ArcPointer(
-            _WritableState(Optional[Int32](descriptor), List[Buffer](), False, False)
+            _WritableState(
+                Optional[Int32](descriptor), List[Buffer](), False, False
+            )
         )
 
     def write_buffer(mut self, value: Buffer) raises -> Bool:
@@ -147,9 +156,9 @@ struct Writable(ImplicitlyCopyable):
             var offset = 0
             while offset < len(bytes):
                 var written = external_call["write", c_ssize_t](
-                    c_int(descriptor),
+                    Int(descriptor).__mlir_index__(),
                     bytes.unsafe_ptr().unsafe_offset(offset),
-                    c_size_t(len(bytes) - offset),
+                    (len(bytes) - offset).__mlir_index__(),
                 )
                 if written <= 0:
                     raise Error("Unable to write stream")

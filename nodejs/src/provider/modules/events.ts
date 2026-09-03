@@ -19,7 +19,6 @@ import {
   providerRef,
   threeValueCallbackCarrier,
   twoValueCallbackCarrier,
-  unitCarrier,
   voidType,
 } from "../model.js";
 import { mojoListTargetType } from "@tsonic/target-mojo/provider";
@@ -81,6 +80,7 @@ export function eventsOperations(): readonly MojoProviderOperationDefinition[] {
   const rows: MojoProviderOperationDefinition[] = [Object.freeze({
     exportId: emitterId,
     memberId: `${emitterId}.constructor`,
+    signatureId: `${emitterId}.constructor()`,
     operationKind: "constructor",
     target: Object.freeze({ kind: "function-call", modulePath: Object.freeze(["tsonic_node", "events"]), name: "event_emitter_new", arguments: Object.freeze([]) }),
     parameterTypes: Object.freeze([]),
@@ -96,12 +96,12 @@ export function eventsOperations(): readonly MojoProviderOperationDefinition[] {
     rows.push(instance("emit", `emit_callable${arity === 0 ? "" : arity}`, `${emitterId}.emit(${arity})`, [jsValueCarrier, ...Array.from({ length: arity }, () => jsValueCarrier)], boolCarrier, true, true));
   }
   rows.push(
-    instance("listenerCount", "listener_count", undefined, [jsValueCarrier], float64Carrier, false, true),
+    instance("listenerCount", "listener_count", `${emitterId}.listenerCount(eventName)`, [jsValueCarrier], float64Carrier, false, true),
     instance("removeAllListeners", "remove_all_listeners", `${emitterId}.removeAllListeners()`, [], eventEmitterCarrier, true),
     instance("removeAllListeners", "remove_all_listeners_for", `${emitterId}.removeAllListeners(eventName)`, [jsValueCarrier], eventEmitterCarrier, true, true),
-    instance("eventNames", "event_names", undefined, [], eventNameListCarrier),
-    instance("getMaxListeners", "get_max_listeners", undefined, [], float64Carrier),
-    instance("setMaxListeners", "set_max_listeners", undefined, [float64Carrier], eventEmitterCarrier, true, true),
+    instance("eventNames", "event_names", `${emitterId}.eventNames()`, [], eventNameListCarrier),
+    instance("getMaxListeners", "get_max_listeners", `${emitterId}.getMaxListeners()`, [], float64Carrier),
+    instance("setMaxListeners", "set_max_listeners", `${emitterId}.setMaxListeners(count)`, [float64Carrier], eventEmitterCarrier, true, true),
     Object.freeze({
       exportId: `${moduleSpecifier}::listenerCount`,
       signatureId: `${moduleSpecifier}::listenerCount(emitter,eventName)`,

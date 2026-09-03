@@ -1,10 +1,11 @@
 from std.memory import ArcPointer
+from tsonic_js import JsString
 from tsonic_runtime import RaisingCallable
 
 from .stream import Readable, Writable
 
 
-alias QuestionCallback = RaisingCallable[Tuple[String], NoneType]
+comptime QuestionCallback = RaisingCallable[Tuple[String], NoneType]
 
 
 struct ReadLineOptions(Copyable):
@@ -49,9 +50,7 @@ struct Interface(ImplicitlyCopyable):
             )
         )
 
-    def question(
-        mut self, query: String, callback: QuestionCallback
-    ) raises:
+    def question(mut self, query: String, callback: QuestionCallback) raises:
         if self._state[].closed:
             raise Error("readline interface is closed")
         self.write(query)
@@ -64,7 +63,7 @@ struct Interface(ImplicitlyCopyable):
         if self._state[].output:
             _ = self._state[].output.value().write_string(text)
         self._state[].line += text
-        self._state[].cursor = len(self._state[].line)
+        self._state[].cursor = len(JsString(self._state[].line))
 
     def pause(mut self) -> Self:
         self._state[].paused = True
@@ -111,9 +110,12 @@ struct Interface(ImplicitlyCopyable):
                 break
             result += text
         if result.endswith("\r"):
-            result = String(result[byte = : result.byte_length() - 1])
+            var without_carriage_return = String(
+                result[byte = : result.byte_length() - 1]
+            )
+            result = without_carriage_return^
         self._state[].line = result
-        self._state[].cursor = len(result)
+        self._state[].cursor = len(JsString(result))
         return result
 
 

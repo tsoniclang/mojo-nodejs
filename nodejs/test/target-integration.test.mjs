@@ -154,11 +154,139 @@ export function main(): void {
   assert.match(source, /tsonic_node\.timers\.set_interval/u);
 });
 
-test("open stream and dynamic utility lanes fail at their exact boundaries", () => {
-  assert.throws(
-    () => compileNode(`import { Readable } from "node:stream"; export function main(): void { Readable; }`),
-    /Cannot find name 'node:stream'/u,
-  );
+test("events, streams, readline, and worker channels cross the target boundary", () => {
+  const result = compileNode(`
+import { EventEmitter, listenerCount } from "node:events";
+import type { Readable, Writable } from "node:stream";
+import { createInterface } from "node:readline";
+import {
+  MessageChannel,
+  getEnvironmentData,
+  isMainThread,
+  receiveMessageOnPort,
+  setEnvironmentData,
+} from "node:worker_threads";
+
+export function connectStreams(input: Readable, output: Writable): void {
+  input.pipe(output);
+  const lines = createInterface({ input, output, terminal: false, prompt: "> " });
+  lines.question("name? ", (answer) => { output.write(answer); });
+  lines.close();
+}
+
+export function main(): void {
+  const emitter = new EventEmitter();
+  emitter.on("ready", () => {});
+  emitter.emit("ready");
+  listenerCount(emitter, "ready");
+
+  const channel = new MessageChannel();
+  channel.port2.on("message", (value) => { value; });
+  channel.port1.postMessage("payload");
+  receiveMessageOnPort(channel.port2);
+  setEnvironmentData("mode", "test");
+  getEnvironmentData("mode");
+  if (!isMainThread) throw new Error("unexpected worker context");
+}
+`);
+  assert.deepEqual(result.diagnostics, []);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  for (const operation of [
+    "events.event_emitter_new",
+    ".on_callable(",
+    ".emit_callable(",
+    "events.listener_count",
+    ".pipe_to(",
+    "readline.create_interface",
+    "worker_threads.message_channel_new",
+    ".post_message(",
+    "worker_threads.receive_message_on_port",
+    "worker_threads.set_environment_data",
+    "worker_threads.get_environment_data",
+    "worker_threads.is_main_thread",
+  ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+});
+
+test("DNS, sockets, TLS, HTTPS, and compression retain their exact target carriers", () => {
+  const result = compileNode(`
+import { Buffer } from "node:buffer";
+import { lookup, resolve4 } from "node:dns";
+import { createConnection, createServer as createNetServer, isIP } from "node:net";
+import { connect as connectTls, createServer as createTlsServer } from "node:tls";
+import { createServer as createHttpsServer, get as httpsGet } from "node:https";
+import {
+  createGzip,
+  gzip,
+  gzipSync,
+  gunzipSync,
+} from "node:zlib";
+
+export function main(): void {
+  lookup("localhost", (error, address, family) => { error; address; family; });
+  resolve4("localhost", (error, addresses) => { error; addresses; });
+  isIP("127.0.0.1");
+  const socket = createConnection(443, "localhost", () => {});
+  socket.write("hello");
+  socket.end();
+  const netServer = createNetServer((client) => { client.end("done"); });
+  netServer.listen(8080, "127.0.0.1", () => {});
+  netServer.close();
+
+  const tls = connectTls({ host: "localhost", port: 443, rejectUnauthorized: true });
+  tls.write("hello");
+  tls.end();
+  const tlsServer = createTlsServer({ key: "key.pem", cert: "cert.pem" }, (client) => { client.end(); });
+  tlsServer.listen(8443, "127.0.0.1", () => {});
+  tlsServer.close();
+
+  const httpsServer = createHttpsServer({ key: "key.pem", cert: "cert.pem" }, (request, response) => {
+    request.url;
+    response.end("ok");
+  });
+  httpsServer.listen(8443, "127.0.0.1", () => {});
+  httpsServer.close();
+  httpsGet("https://localhost/", (response) => { response.url; });
+
+  const input = Buffer.from("payload");
+  const compressed = gzipSync(input, { level: 1, maxOutputLength: 4096 });
+  gunzipSync(compressed);
+  gzip(input, (error, output) => { error; output.toString(); });
+  const stream = createGzip();
+  stream.write(input);
+  stream.end();
+  stream.read();
+}
+`);
+  assert.deepEqual(result.diagnostics, []);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  for (const operation of [
+    "dns.lookup",
+    "dns.resolve4",
+    "net.create_connection_host_callback",
+    "net.create_server_callback",
+    "tls.connect",
+    "tls.create_server",
+    "https.create_server",
+    "https.get",
+    "zlib.gzip_sync_options",
+    "zlib.gunzip_sync",
+    "zlib.gzip_callback",
+    "zlib.create_gzip",
+  ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+});
+
+test("Worker construction rejects at its exact selected source-module boundary", () => {
+  const result = compileNode(`
+import { Worker } from "node:worker_threads";
+export function main(): void { new Worker("./worker.js"); }
+`);
+  assert.deepEqual(result.artifacts, []);
+  assert.deepEqual(result.diagnostics.map(({ code }) => code), [
+    "MOJO_NODE_WORKER_SOURCE_MODULE_CONSTRUCTION_UNAVAILABLE",
+  ]);
+});
+
+test("open resource and dynamic utility lanes fail at their exact boundaries", () => {
   assert.throws(
     () => compileNode(`import { watch } from "node:fs"; export function main(): void { watch("."); }`),
     /TS2305/u,

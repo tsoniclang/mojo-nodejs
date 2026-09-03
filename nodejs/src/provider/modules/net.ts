@@ -2,7 +2,6 @@ import type {
   MojoProviderModuleDefinition,
   MojoProviderOperationDefinition,
   MojoProviderTypeDefinition,
-  MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 import {
   booleanType,

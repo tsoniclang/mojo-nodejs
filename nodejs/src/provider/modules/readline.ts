@@ -188,6 +188,7 @@ function call(
   return Object.freeze({
     exportId: interfaceId,
     memberId: `${interfaceId}.${member}`,
+    signatureId: `${interfaceId}.${member}(${sourceParameterNames(member)})`,
     operationKind: "call",
     target: Object.freeze({
       kind: "instance-call",
@@ -203,4 +204,19 @@ function call(
     resultType: result,
     ...(raises ? { raises: true } : {}),
   });
+}
+
+function sourceParameterNames(member: string): string {
+  switch (member) {
+    case "question": return "query,callback";
+    case "write": return "text";
+    case "setPrompt": return "prompt";
+    case "pause":
+    case "resume":
+    case "isPaused":
+    case "close":
+    case "getPrompt":
+    case "prompt": return "";
+    default: throw new Error(`Unknown readline member '${member}'.`);
+  }
 }

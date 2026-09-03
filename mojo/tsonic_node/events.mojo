@@ -4,35 +4,35 @@ from tsonic_js import JsValue, js_event_key_equal
 from tsonic_runtime import RaisingCallable
 
 
-alias Listener0 = RaisingCallable[Tuple[], NoneType]
-alias Listener1 = RaisingCallable[Tuple[JsValue], NoneType]
-alias Listener2 = RaisingCallable[Tuple[JsValue, JsValue], NoneType]
-alias Listener3 = RaisingCallable[Tuple[JsValue, JsValue, JsValue], NoneType]
+comptime Listener0 = RaisingCallable[Tuple[], NoneType]
+comptime Listener1 = RaisingCallable[Tuple[JsValue], NoneType]
+comptime Listener2 = RaisingCallable[Tuple[JsValue, JsValue], NoneType]
+comptime Listener3 = RaisingCallable[Tuple[JsValue, JsValue, JsValue], NoneType]
 
 
 @fieldwise_init
-struct _Listener0:
+struct _Listener0(ImplicitlyCopyable):
     var event: JsValue
     var callback: Listener0
     var once: Bool
 
 
 @fieldwise_init
-struct _Listener1:
+struct _Listener1(ImplicitlyCopyable):
     var event: JsValue
     var callback: Listener1
     var once: Bool
 
 
 @fieldwise_init
-struct _Listener2:
+struct _Listener2(ImplicitlyCopyable):
     var event: JsValue
     var callback: Listener2
     var once: Bool
 
 
 @fieldwise_init
-struct _Listener3:
+struct _Listener3(ImplicitlyCopyable):
     var event: JsValue
     var callback: Listener3
     var once: Bool
@@ -61,120 +61,176 @@ struct EventEmitter(ImplicitlyCopyable):
             )
         )
 
-    def on_callable(mut self, event: JsValue, callback: Listener0) raises -> Self:
+    def on_callable(
+        mut self, event: JsValue, callback: Listener0
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners0.append(_Listener0(event, callback, False))
         return self
 
-    def on_callable1(mut self, event: JsValue, callback: Listener1) raises -> Self:
+    def on_callable1(
+        mut self, event: JsValue, callback: Listener1
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners1.append(_Listener1(event, callback, False))
         return self
 
-    def on_callable2(mut self, event: JsValue, callback: Listener2) raises -> Self:
+    def on_callable2(
+        mut self, event: JsValue, callback: Listener2
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners2.append(_Listener2(event, callback, False))
         return self
 
-    def on_callable3(mut self, event: JsValue, callback: Listener3) raises -> Self:
+    def on_callable3(
+        mut self, event: JsValue, callback: Listener3
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners3.append(_Listener3(event, callback, False))
         return self
 
-    def once_callable(mut self, event: JsValue, callback: Listener0) raises -> Self:
+    def once_callable(
+        mut self, event: JsValue, callback: Listener0
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners0.append(_Listener0(event, callback, True))
         return self
 
-    def once_callable1(mut self, event: JsValue, callback: Listener1) raises -> Self:
+    def once_callable1(
+        mut self, event: JsValue, callback: Listener1
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners1.append(_Listener1(event, callback, True))
         return self
 
-    def once_callable2(mut self, event: JsValue, callback: Listener2) raises -> Self:
+    def once_callable2(
+        mut self, event: JsValue, callback: Listener2
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners2.append(_Listener2(event, callback, True))
         return self
 
-    def once_callable3(mut self, event: JsValue, callback: Listener3) raises -> Self:
+    def once_callable3(
+        mut self, event: JsValue, callback: Listener3
+    ) raises -> Self:
         self._validate_event(event)
         self._state[].listeners3.append(_Listener3(event, callback, True))
         return self
 
-    def prepend_callable(mut self, event: JsValue, callback: Listener0) raises -> Self:
+    def prepend_callable(
+        mut self, event: JsValue, callback: Listener0
+    ) raises -> Self:
         self._prepend0(_Listener0(event, callback, False))
         return self
 
-    def prepend_callable1(mut self, event: JsValue, callback: Listener1) raises -> Self:
+    def prepend_callable1(
+        mut self, event: JsValue, callback: Listener1
+    ) raises -> Self:
         self._prepend1(_Listener1(event, callback, False))
         return self
 
-    def prepend_callable2(mut self, event: JsValue, callback: Listener2) raises -> Self:
+    def prepend_callable2(
+        mut self, event: JsValue, callback: Listener2
+    ) raises -> Self:
         self._prepend2(_Listener2(event, callback, False))
         return self
 
-    def prepend_callable3(mut self, event: JsValue, callback: Listener3) raises -> Self:
+    def prepend_callable3(
+        mut self, event: JsValue, callback: Listener3
+    ) raises -> Self:
         self._prepend3(_Listener3(event, callback, False))
         return self
 
-    def prepend_once_callable(mut self, event: JsValue, callback: Listener0) raises -> Self:
+    def prepend_once_callable(
+        mut self, event: JsValue, callback: Listener0
+    ) raises -> Self:
         self._prepend0(_Listener0(event, callback, True))
         return self
 
-    def prepend_once_callable1(mut self, event: JsValue, callback: Listener1) raises -> Self:
+    def prepend_once_callable1(
+        mut self, event: JsValue, callback: Listener1
+    ) raises -> Self:
         self._prepend1(_Listener1(event, callback, True))
         return self
 
-    def prepend_once_callable2(mut self, event: JsValue, callback: Listener2) raises -> Self:
+    def prepend_once_callable2(
+        mut self, event: JsValue, callback: Listener2
+    ) raises -> Self:
         self._prepend2(_Listener2(event, callback, True))
         return self
 
-    def prepend_once_callable3(mut self, event: JsValue, callback: Listener3) raises -> Self:
+    def prepend_once_callable3(
+        mut self, event: JsValue, callback: Listener3
+    ) raises -> Self:
         self._prepend3(_Listener3(event, callback, True))
         return self
 
-    def off_callable(mut self, event: JsValue, callback: Listener0) raises -> Self:
+    def off_callable(
+        mut self, event: JsValue, callback: Listener0
+    ) raises -> Self:
         self._validate_event(event)
         var next = List[_Listener0]()
         var removed = False
         for listener in self._state[].listeners0:
-            if not removed and _same_event(listener.event, event) and listener.callback.same(callback):
+            if (
+                not removed
+                and _same_event(listener.event, event)
+                and listener.callback.same(callback)
+            ):
                 removed = True
             else:
                 next.append(listener)
         self._state[].listeners0 = next^
         return self
 
-    def off_callable1(mut self, event: JsValue, callback: Listener1) raises -> Self:
+    def off_callable1(
+        mut self, event: JsValue, callback: Listener1
+    ) raises -> Self:
         self._validate_event(event)
         var next = List[_Listener1]()
         var removed = False
         for listener in self._state[].listeners1:
-            if not removed and _same_event(listener.event, event) and listener.callback.same(callback):
+            if (
+                not removed
+                and _same_event(listener.event, event)
+                and listener.callback.same(callback)
+            ):
                 removed = True
             else:
                 next.append(listener)
         self._state[].listeners1 = next^
         return self
 
-    def off_callable2(mut self, event: JsValue, callback: Listener2) raises -> Self:
+    def off_callable2(
+        mut self, event: JsValue, callback: Listener2
+    ) raises -> Self:
         self._validate_event(event)
         var next = List[_Listener2]()
         var removed = False
         for listener in self._state[].listeners2:
-            if not removed and _same_event(listener.event, event) and listener.callback.same(callback):
+            if (
+                not removed
+                and _same_event(listener.event, event)
+                and listener.callback.same(callback)
+            ):
                 removed = True
             else:
                 next.append(listener)
         self._state[].listeners2 = next^
         return self
 
-    def off_callable3(mut self, event: JsValue, callback: Listener3) raises -> Self:
+    def off_callable3(
+        mut self, event: JsValue, callback: Listener3
+    ) raises -> Self:
         self._validate_event(event)
         var next = List[_Listener3]()
         var removed = False
         for listener in self._state[].listeners3:
-            if not removed and _same_event(listener.event, event) and listener.callback.same(callback):
+            if (
+                not removed
+                and _same_event(listener.event, event)
+                and listener.callback.same(callback)
+            ):
                 removed = True
             else:
                 next.append(listener)
@@ -197,7 +253,9 @@ struct EventEmitter(ImplicitlyCopyable):
             callback.call(())
         return len(callbacks) != 0
 
-    def emit_callable1(mut self, event: JsValue, value0: JsValue) raises -> Bool:
+    def emit_callable1(
+        mut self, event: JsValue, value0: JsValue
+    ) raises -> Bool:
         self._validate_event(event)
         var callbacks = List[Listener1]()
         var retained = List[_Listener1]()
@@ -213,7 +271,9 @@ struct EventEmitter(ImplicitlyCopyable):
             callback.call((value0,))
         return len(callbacks) != 0
 
-    def emit_callable2(mut self, event: JsValue, value0: JsValue, value1: JsValue) raises -> Bool:
+    def emit_callable2(
+        mut self, event: JsValue, value0: JsValue, value1: JsValue
+    ) raises -> Bool:
         self._validate_event(event)
         var callbacks = List[Listener2]()
         var retained = List[_Listener2]()
@@ -229,7 +289,13 @@ struct EventEmitter(ImplicitlyCopyable):
             callback.call((value0, value1))
         return len(callbacks) != 0
 
-    def emit_callable3(mut self, event: JsValue, value0: JsValue, value1: JsValue, value2: JsValue) raises -> Bool:
+    def emit_callable3(
+        mut self,
+        event: JsValue,
+        value0: JsValue,
+        value1: JsValue,
+        value2: JsValue,
+    ) raises -> Bool:
         self._validate_event(event)
         var callbacks = List[Listener3]()
         var retained = List[_Listener3]()
@@ -275,7 +341,10 @@ struct EventEmitter(ImplicitlyCopyable):
 
     def set_max_listeners(mut self, count: Float64) raises -> Self:
         if count < 0 or count != count or count == FloatLiteral.infinity:
-            raise Error("EventEmitter max listeners must be a finite non-negative number")
+            raise Error(
+                "EventEmitter max listeners must be a finite non-negative"
+                " number"
+            )
         self._state[].max_listeners = Int(count)
         return self
 

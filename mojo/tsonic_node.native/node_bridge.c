@@ -12,6 +12,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#define TSONIC_NODE_MAX_HOST 1025
+
 static char *copy_text(const char *value) {
     size_t length = strlen(value);
     char *copy = (char *)malloc(length + 1);
@@ -149,7 +151,7 @@ char *tsonic_node_dns_reverse(const char *address, char **error) {
         set_error(error, "Invalid IP address");
         return NULL;
     }
-    char hostname[NI_MAXHOST];
+    char hostname[TSONIC_NODE_MAX_HOST];
     int status = getnameinfo(
         (const struct sockaddr *)&storage,
         length,

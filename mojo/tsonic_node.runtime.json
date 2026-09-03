@@ -1,16 +1,37 @@
 {
   "contractVersion": 1,
   "dependencies": {
-    "c-compiler": "==2.0.0"
+    "brotli": "==1.2.0",
+    "c-compiler": "==2.0.0",
+    "openssl": "==3.6.4",
+    "sysroot_linux-64": "==2.34",
+    "zlib": "==1.3.2"
   },
   "translationUnits": [
     {
       "language": "c",
       "standard": "c11",
       "path": "tsonic_node.native/node_bridge.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/zlib_bridge.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/tls_bridge.c"
     }
   ],
   "includeDirectories": [],
   "staticLibraries": [],
-  "dynamicLibraries": []
+  "dynamicLibraries": [
+    "brotlicommon",
+    "brotlidec",
+    "brotlienc",
+    "crypto",
+    "ssl",
+    "z"
+  ]
 }
