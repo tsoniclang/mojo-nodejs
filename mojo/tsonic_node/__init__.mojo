@@ -9,7 +9,9 @@ from .assertions import (
 )
 from .child_process import SpawnSyncResult, spawn_sync
 from .crypto import Hash, create_hash
+from .dns import LookupAddress, lookup, resolve4, resolve6, reverse
 from .event_loop import run_event_loop
+from .events import EventEmitter, event_emitter_new, listener_count
 from .filesystem import (
     Dirent,
     MkdirOptions,
@@ -50,6 +52,16 @@ from .filesystem_promises import (
     write_text_file as write_text_file_async,
 )
 from .http import IncomingMessage, Server, ServerResponse, create_server
+from .net import (
+    Server as NetServer,
+    Socket,
+    create_connection,
+    create_connection_host,
+    create_server as create_net_server,
+    is_ip,
+    is_ipv4,
+    is_ipv6,
+)
 from .os_info import (
     arch,
     end_of_line,
@@ -73,6 +85,7 @@ from .path import (
     resolve,
     separator,
 )
+from .stream import Readable, Writable, stderr, stdin, stdout
 from .process import (
     arguments,
     change_directory,
@@ -82,6 +95,7 @@ from .process import (
     set_environment,
     unset_environment,
 )
+from .readline import Interface, ReadLineOptions, create_interface
 from .timers import (
     Timeout,
     clear_interval,

@@ -1,0 +1,16 @@
+{
+  "contractVersion": 1,
+  "dependencies": {
+    "c-compiler": "==2.0.0"
+  },
+  "translationUnits": [
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/node_bridge.c"
+    }
+  ],
+  "includeDirectories": [],
+  "staticLibraries": [],
+  "dynamicLibraries": []
+}
