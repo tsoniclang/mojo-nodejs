@@ -118,12 +118,10 @@ def poll_servers() raises -> Bool:
 
 
 def _accept_request(server: Server) raises:
-    var peer_address = Array[UInt8, 128](fill=0)
-    var peer_address_length = UInt32(128)
     var descriptor = external_call["accept", c_int](
         server._state[].descriptor,
-        peer_address.unsafe_ptr(),
-        Pointer(to=peer_address_length),
+        OptionalPointer[NoneType, MutUntrackedOrigin](),
+        OptionalPointer[NoneType, MutUntrackedOrigin](),
     )
     if descriptor < 0:
         return

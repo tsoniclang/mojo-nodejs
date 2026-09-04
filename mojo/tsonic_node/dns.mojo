@@ -25,18 +25,30 @@ struct LookupAddress(Copyable):
 
 
 @fieldwise_init
-struct _PendingLookup(ImplicitlyCopyable):
+struct _PendingLookup:
     var error: JsValue
     var address: String
     var family: Float64
     var callback: LookupCallback
 
+    def invoke(deinit self) raises:
+        var callback = self.callback^
+        var error = self.error^
+        var address = self.address^
+        callback.call((error, address^, self.family))
+
 
 @fieldwise_init
-struct _PendingAddresses(ImplicitlyCopyable):
+struct _PendingAddresses:
     var error: JsValue
     var addresses: List[String]
     var callback: AddressListCallback
+
+    def invoke(deinit self) raises:
+        var callback = self.callback^
+        var error = self.error^
+        var addresses = self.addresses^
+        callback.call((error, addresses^))
 
 
 def _initial_lookup_queue() -> List[_PendingLookup]:
@@ -172,17 +184,13 @@ def poll_dns() raises -> Bool:
     if not has_pending_dns():
         return False
     var lookups = List[_PendingLookup]()
-    for pending in _pending_lookups.get()[]:
-        lookups.append(pending)
-    _pending_lookups.get()[] = List[_PendingLookup]()
+    swap(_pending_lookups.get()[], lookups)
     for var pending in lookups^:
-        pending.callback.call((pending.error, pending.address, pending.family))
+        pending^.invoke()
     var addresses = List[_PendingAddresses]()
-    for pending in _pending_addresses.get()[]:
-        addresses.append(pending)
-    _pending_addresses.get()[] = List[_PendingAddresses]()
+    swap(_pending_addresses.get()[], addresses)
     for var pending in addresses^:
-        pending.callback.call((pending.error, pending.addresses^))
+        pending^.invoke()
     return True
 
 
