@@ -11,6 +11,7 @@ import {
   int32Carrier,
   int32Type,
   methodMember,
+  nodeProviderType,
   providerCallbackType,
   providerRef,
   timeoutCarrier,
@@ -67,11 +68,9 @@ export function timersModule(): MojoProviderModuleDefinition {
 }
 
 export function timersTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({
-    exportId: timeoutId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType: timeoutCarrier,
-  })]);
+  return Object.freeze([
+    nodeProviderType(timeoutId, timeoutCarrier, "implicitly-copyable"),
+  ]);
 }
 
 export function timersOperations(): readonly MojoProviderOperationDefinition[] {

@@ -19,6 +19,7 @@ import {
   messagePortCarrier,
   methodMember,
   nativeString,
+  nodeProviderType,
   numberType,
   oneValueCallbackCarrier,
   optionalStringCarrier,
@@ -51,6 +52,13 @@ const eventNameType = Object.freeze({
     Object.freeze({ kind: "source-global" as const, name: "Symbol" }),
   ]),
 });
+const oneValueWorkerEventNames = Object.freeze([
+  "error",
+  "exit",
+  "message",
+  "messageerror",
+]);
+const oneValuePortEventNames = Object.freeze(["message", "messageerror"]);
 const optionalUnknownType = Object.freeze({
   kind: "union" as const,
   types: Object.freeze([anyType, undefinedType]),
@@ -159,15 +167,12 @@ export function workerThreadsModule(): MojoProviderModuleDefinition {
 
 export function workerThreadsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    providerType(workerId, workerCarrier),
-    Object.freeze({
-      exportId: workerOptionsId,
-      sourceGenericParameters: Object.freeze([]),
-      targetType: workerOptionsCarrier,
-      objectLiteralConstruction: Object.freeze({ kind: "struct-default" }),
+    nodeProviderType(workerId, workerCarrier, "implicitly-copyable"),
+    nodeProviderType(workerOptionsId, workerOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
     }),
-    providerType(messagePortId, messagePortCarrier),
-    providerType(messageChannelId, messageChannelCarrier),
+    nodeProviderType(messagePortId, messagePortCarrier, "implicitly-copyable"),
+    nodeProviderType(messageChannelId, messageChannelCarrier, "implicitly-copyable"),
   ]);
 }
 
@@ -235,22 +240,44 @@ function eventMembers(ownerId: string, ownerName: string) {
     id: `${ownerId}.${name}`,
     name,
     kind: "method" as const,
-    signatures: Object.freeze([0, 1].map((arity) => Object.freeze({
-      id: `${ownerId}.${name}(${arity})`,
-      name,
-      parameters: Object.freeze([
-        { name: "eventName", type: eventNameType },
-        {
-          name: "listener",
-          type: providerCallbackType(`${ownerId}.${name}(${arity})`, "listener", Array.from(
-            { length: arity },
-            (_, index) => ({ name: `value${index}`, type: anyType }),
-          )),
-        },
-      ]),
-      returnType: providerRef(moduleSpecifier, ownerName),
-    }))),
+    signatures: Object.freeze([
+      Object.freeze({
+        id: `${ownerId}.${name}(0)`,
+        name,
+        parameters: Object.freeze([
+          { name: "eventName", type: eventNameType },
+          {
+            name: "listener",
+            type: providerCallbackType(`${ownerId}.${name}(0)`, "listener", []),
+          },
+        ]),
+        returnType: providerRef(moduleSpecifier, ownerName),
+      }),
+      ...oneValueEventNames(ownerId).map((eventName) => Object.freeze({
+        id: `${ownerId}.${name}(1:${eventName})`,
+        name,
+        parameters: Object.freeze([
+          {
+            name: "eventName",
+            type: Object.freeze({ kind: "literal" as const, value: eventName }),
+          },
+          {
+            name: "listener",
+            type: providerCallbackType(
+              `${ownerId}.${name}(1:${eventName})`,
+              "listener",
+              [{ name: "value0", type: anyType }],
+            ),
+          },
+        ]),
+        returnType: providerRef(moduleSpecifier, ownerName),
+      })),
+    ]),
   }));
+}
+
+function oneValueEventNames(ownerId: string): readonly string[] {
+  return ownerId === workerId ? oneValueWorkerEventNames : oneValuePortEventNames;
 }
 
 function eventOperations(
@@ -259,7 +286,18 @@ function eventOperations(
 ): readonly MojoProviderOperationDefinition[] {
   return Object.freeze((["on", "once", "off"] as const).flatMap((name) => [
     instanceCall(ownerId, `${ownerId}.${name}`, `${ownerId}.${name}(0)`, `${name}_callable`, receiverType, [jsValueCarrier, emptyCallbackCarrier], receiverType, true, "mut"),
-    instanceCall(ownerId, `${ownerId}.${name}`, `${ownerId}.${name}(1)`, `${name}_callable1`, receiverType, [jsValueCarrier, oneValueCallbackCarrier], receiverType, true, "mut"),
+    ...oneValueEventNames(ownerId).map((eventName) =>
+      instanceCall(
+        ownerId,
+        `${ownerId}.${name}`,
+        `${ownerId}.${name}(1:${eventName})`,
+        `${name}_callable1`,
+        receiverType,
+        [jsValueCarrier, oneValueCallbackCarrier],
+        receiverType,
+        true,
+        "mut",
+      )),
   ]));
 }
 
@@ -281,17 +319,6 @@ function optionProperty(
     propertyRead(workerOptionsId, `${workerOptionsId}.${sourceName}`, targetName, workerOptionsCarrier, type),
     propertyWrite(workerOptionsId, `${workerOptionsId}.${sourceName}`, targetName, workerOptionsCarrier, type),
   ]);
-}
-
-function providerType(
-  exportId: string,
-  targetType: MojoTargetTypeRef,
-): MojoProviderTypeDefinition {
-  return Object.freeze({
-    exportId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType,
-  });
 }
 
 function functionExport(

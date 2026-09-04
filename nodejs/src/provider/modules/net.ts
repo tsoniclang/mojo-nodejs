@@ -13,6 +13,7 @@ import {
   instanceCall,
   methodMember,
   nativeString,
+  nodeProviderType,
   netConnectionCallbackCarrier,
   netServerCarrier,
   netSocketCarrier,
@@ -112,8 +113,8 @@ export function netModule(): MojoProviderModuleDefinition {
 
 export function netTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    Object.freeze({ exportId: socketId, sourceGenericParameters: Object.freeze([]), targetType: netSocketCarrier }),
-    Object.freeze({ exportId: serverId, sourceGenericParameters: Object.freeze([]), targetType: netServerCarrier }),
+    nodeProviderType(socketId, netSocketCarrier, "implicitly-copyable"),
+    nodeProviderType(serverId, netServerCarrier, "implicitly-copyable"),
   ]);
 }
 

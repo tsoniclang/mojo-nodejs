@@ -184,42 +184,24 @@ def _socket_readable(descriptor: Int32) raises -> Bool:
 def _listen_socket(port: Int32, host: String) raises -> Int32:
     if port < 0 or port > 65535:
         raise Error("HTTP server port must be between 0 and 65535")
-    var descriptor = external_call["socket", c_int](
-        c_int(2), c_int(1), c_int(0)
+    var host_buffer = String(host)
+    var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
+    var descriptor = external_call["tsonic_node_net_listen", c_int](
+        host_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        c_int(port),
+        Pointer(to=error),
     )
     if descriptor < 0:
-        raise Error("Unable to create HTTP server socket")
-    var address = Array[UInt8, 16](fill=0)
-    address[0] = 2
-    address[2] = UInt8(Int(port) >> 8)
-    address[3] = UInt8(Int(port) & 255)
-    _write_ipv4_address(address, host)
-    if (
-        external_call["bind", c_int](
-            descriptor, address.unsafe_ptr(), c_int(16)
-        )
-        != 0
-    ):
-        _ = close(descriptor)
-        raise Error("Unable to bind HTTP server socket")
-    if external_call["listen", c_int](descriptor, c_int(128)) != 0:
-        _ = close(descriptor)
-        raise Error("Unable to listen on HTTP server socket")
+        raise Error(_take_error(error, "Unable to listen for HTTP requests"))
     return descriptor
 
 
-def _write_ipv4_address(mut address: Array[UInt8, 16], host: String) raises:
-    if host == "0.0.0.0":
-        return
-    if host == "localhost" or host == "127.0.0.1":
-        address[4] = 127
-        address[7] = 1
-        return
-    var octets = host.split(".")
-    if len(octets) != 4:
-        raise Error("HTTP server host must be an IPv4 address or localhost")
-    for index in range(4):
-        var value = Int(String(octets[index]))
-        if value < 0 or value > 255:
-            raise Error("HTTP server host contains an invalid IPv4 octet")
-        address[4 + index] = UInt8(value)
+def _take_error(
+    pointer: OptionalPointer[UInt8, MutUntrackedOrigin],
+    fallback: String,
+) -> String:
+    if not pointer:
+        return fallback
+    var value = String(unsafe_from_utf8_ptr=pointer.value())
+    external_call["tsonic_node_free", NoneType](pointer.value())
+    return value^

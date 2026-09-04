@@ -25,7 +25,7 @@ struct LookupAddress(Copyable):
 
 
 @fieldwise_init
-struct _PendingLookup:
+struct _PendingLookup(ImplicitlyCopyable):
     var error: JsValue
     var address: String
     var family: Float64
@@ -33,7 +33,7 @@ struct _PendingLookup:
 
 
 @fieldwise_init
-struct _PendingAddresses:
+struct _PendingAddresses(ImplicitlyCopyable):
     var error: JsValue
     var addresses: List[String]
     var callback: AddressListCallback
@@ -171,13 +171,17 @@ def has_pending_dns() -> Bool:
 def poll_dns() raises -> Bool:
     if not has_pending_dns():
         return False
-    var lookups = _pending_lookups.get()[]^
+    var lookups = List[_PendingLookup]()
+    for pending in _pending_lookups.get()[]:
+        lookups.append(pending)
     _pending_lookups.get()[] = List[_PendingLookup]()
-    for pending in lookups^:
+    for var pending in lookups^:
         pending.callback.call((pending.error, pending.address, pending.family))
-    var addresses = _pending_addresses.get()[]^
+    var addresses = List[_PendingAddresses]()
+    for pending in _pending_addresses.get()[]:
+        addresses.append(pending)
     _pending_addresses.get()[] = List[_PendingAddresses]()
-    for pending in addresses^:
+    for var pending in addresses^:
         pending.callback.call((pending.error, pending.addresses^))
     return True
 

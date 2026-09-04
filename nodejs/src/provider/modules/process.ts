@@ -16,6 +16,7 @@ import {
   methodMember as providerMethodMember,
   nativeIntCarrier,
   nativeString,
+  nodeProviderType,
   numberArrayType,
   numberListCarrier,
   numberType,
@@ -137,9 +138,9 @@ export function processModule(): MojoProviderModuleDefinition {
 
 export function processTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    providerType(envId, processEnvCarrier),
-    providerType(memoryUsageId, processMemoryUsageCarrier),
-    providerType(writeStreamId, processWriteStreamCarrier),
+    nodeProviderType(envId, processEnvCarrier, "copyable"),
+    nodeProviderType(memoryUsageId, processMemoryUsageCarrier, "copyable"),
+    nodeProviderType(writeStreamId, processWriteStreamCarrier, "copyable"),
   ]);
 }
 
@@ -269,15 +270,4 @@ function classExport(
   members: NonNullable<MojoProviderModuleDefinition["exports"][number]["members"]>,
 ): MojoProviderModuleDefinition["exports"][number] {
   return Object.freeze({ id, name, kind: "class", members: Object.freeze(members) });
-}
-
-function providerType(
-  exportId: string,
-  targetType: MojoProviderTypeDefinition["targetType"],
-): MojoProviderTypeDefinition {
-  return Object.freeze({
-    exportId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType,
-  });
 }

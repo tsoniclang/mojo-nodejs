@@ -11,6 +11,7 @@ import {
   functionCall,
   methodMember,
   nativeString,
+  nodeProviderType,
   propertyMember,
   propertyRead,
   providerCallbackType,
@@ -98,17 +99,10 @@ export function readlineModule(): MojoProviderModuleDefinition {
 
 export function readlineTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    Object.freeze({
-      exportId: optionsId,
-      sourceGenericParameters: Object.freeze([]),
-      targetType: readlineOptionsCarrier,
-      objectLiteralConstruction: Object.freeze({ kind: "struct-default" }),
+    nodeProviderType(optionsId, readlineOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
     }),
-    Object.freeze({
-      exportId: interfaceId,
-      sourceGenericParameters: Object.freeze([]),
-      targetType: readlineInterfaceCarrier,
-    }),
+    nodeProviderType(interfaceId, readlineInterfaceCarrier, "implicitly-copyable"),
   ]);
 }
 

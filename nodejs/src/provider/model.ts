@@ -2,6 +2,7 @@ import {
   mojoCallableTargetType,
   mojoDynamicTargetType,
   mojoFutureTargetType,
+  mojoLifecycleTraitTargetType,
   mojoListTargetType,
   mojoNamedTargetType,
   mojoOptionalTargetType,
@@ -12,6 +13,7 @@ import {
 import type {
   MojoProviderModuleDefinition,
   MojoProviderOperationDefinition,
+  MojoProviderTypeDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 
@@ -20,6 +22,21 @@ type ProviderSignatureDeclaration = NonNullable<ProviderExportDeclaration["signa
 type ProviderParameterDeclaration = ProviderSignatureDeclaration["parameters"][number];
 type ProviderTypeExpression = ProviderParameterDeclaration["type"];
 type ProviderMemberDeclaration = NonNullable<ProviderExportDeclaration["members"]>[number];
+
+type NodeProviderCopySemantics = "copyable" | "implicitly-copyable";
+type NodeProviderSourceGenericParameter = MojoProviderTypeDefinition["sourceGenericParameters"][number];
+
+const providerLifecycleRoles: Readonly<Record<
+  NodeProviderCopySemantics,
+  readonly ("copyable" | "implicitly-copyable" | "movable" | "deinitializable")[]
+>> = Object.freeze({
+  copyable: Object.freeze(["copyable", "movable", "deinitializable"] as const),
+  "implicitly-copyable": Object.freeze([
+    "implicitly-copyable",
+    "movable",
+    "deinitializable",
+  ] as const),
+});
 
 export const stringType = Object.freeze({ kind: "string" as const });
 export const numberType = Object.freeze({ kind: "number" as const });
@@ -199,13 +216,37 @@ export const readlineQuestionCallbackCarrier = callbackCarrier([nativeString]);
 export const httpResponseCallbackCarrier = callbackCarrier([httpIncomingMessageCarrier]);
 export const httpRequestCallbackCarrier = mojoCallableTargetType(
   [httpIncomingMessageCarrier, httpServerResponseCarrier].map((type) => Object.freeze({
-    convention: "var" as const,
+    convention: "imm" as const,
     passing: "plain" as const,
     type,
   })),
   unitCarrier,
   true,
 );
+
+export function nodeProviderType(
+  exportId: string,
+  targetType: MojoTargetTypeRef,
+  copySemantics: NodeProviderCopySemantics,
+  options: {
+    readonly sourceGenericParameters?: readonly NodeProviderSourceGenericParameter[];
+    readonly objectLiteralConstruction?: boolean;
+  } = {},
+): MojoProviderTypeDefinition {
+  return Object.freeze({
+    exportId,
+    sourceGenericParameters: Object.freeze([...(options.sourceGenericParameters ?? [])]),
+    targetType,
+    conformances: Object.freeze(providerLifecycleRoles[copySemantics].map((lifecycleRole) =>
+      Object.freeze({
+        trait: mojoLifecycleTraitTargetType(lifecycleRole),
+        lifecycleRole,
+      }))),
+    ...(options.objectLiteralConstruction === true
+      ? { objectLiteralConstruction: Object.freeze({ kind: "struct-default" as const }) }
+      : {}),
+  });
+}
 
 function namedCarrier(name: string, moduleName: string): MojoTargetTypeRef {
   return mojoNamedTargetType(
@@ -217,7 +258,7 @@ function namedCarrier(name: string, moduleName: string): MojoTargetTypeRef {
 
 function callbackCarrier(types: readonly MojoTargetTypeRef[]): MojoTargetTypeRef {
   return mojoCallableTargetType(types.map((type) => Object.freeze({
-    convention: "var" as const,
+    convention: "imm" as const,
     passing: "plain" as const,
     type,
   })), unitCarrier, true);

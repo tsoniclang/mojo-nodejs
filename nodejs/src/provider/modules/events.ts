@@ -14,6 +14,7 @@ import {
   fnExport,
   jsValueCarrier,
   methodMember,
+  nodeProviderType,
   numberType,
   oneValueCallbackCarrier,
   providerRef,
@@ -72,7 +73,9 @@ export function eventsModule(): MojoProviderModuleDefinition {
 }
 
 export function eventsTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([{ exportId: emitterId, sourceGenericParameters: Object.freeze([]), targetType: eventEmitterCarrier }]);
+  return Object.freeze([
+    nodeProviderType(emitterId, eventEmitterCarrier, "implicitly-copyable"),
+  ]);
 }
 
 export function eventsOperations(): readonly MojoProviderOperationDefinition[] {

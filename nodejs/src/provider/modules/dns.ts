@@ -10,6 +10,7 @@ import {
   float64Carrier,
   functionCall,
   nativeString,
+  nodeProviderType,
   propertyMember,
   propertyRead,
   providerCallbackType,
@@ -131,11 +132,9 @@ export function dnsPromisesModule(): MojoProviderModuleDefinition {
 }
 
 export function dnsTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({
-    exportId: lookupAddressId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType: dnsLookupAddressCarrier,
-  })]);
+  return Object.freeze([
+    nodeProviderType(lookupAddressId, dnsLookupAddressCarrier, "copyable"),
+  ]);
 }
 
 export function dnsOperations(): readonly MojoProviderOperationDefinition[] {

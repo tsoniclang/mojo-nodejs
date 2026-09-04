@@ -120,6 +120,68 @@ test("Node aliases materialize the canonical declaration identities", () => {
   assert.ok(model.exports.some((entry) => entry.id === "node:path::normalize"));
 });
 
+test("every public Node carrier declares its exact Mojo lifecycle", () => {
+  const capability = createMojoNodejsCapability();
+  const [{ definition }] = capability.createTargetContributions({});
+  const copyable = ["copyable", "movable", "deinitializable"];
+  const implicitlyCopyable = ["implicitly-copyable", "movable", "deinitializable"];
+  const expected = new Map([
+    ["node:buffer::Buffer", implicitlyCopyable],
+    ["node:child_process::SpawnSyncReturns", copyable],
+    ["node:crypto::Hash", implicitlyCopyable],
+    ["node:dns::LookupAddress", copyable],
+    ["node:events::EventEmitter", implicitlyCopyable],
+    ["node:fs::Stats", copyable],
+    ["node:fs::Dirent", copyable],
+    ["node:fs::MakeDirectoryOptions", copyable],
+    ["node:fs::RmOptions", copyable],
+    ["node:fs::ReaddirOptions", copyable],
+    ["node:http::IncomingMessage", implicitlyCopyable],
+    ["node:http::ServerResponse", implicitlyCopyable],
+    ["node:http::Server", implicitlyCopyable],
+    ["node:https::ServerOptions", copyable],
+    ["node:https::Server", implicitlyCopyable],
+    ["node:https::ClientRequest", implicitlyCopyable],
+    ["node:net::Socket", implicitlyCopyable],
+    ["node:net::Server", implicitlyCopyable],
+    ["node:process::ProcessEnv", copyable],
+    ["node:process::MemoryUsage", copyable],
+    ["node:process::ProcessWriteStream", copyable],
+    ["node:readline::ReadLineOptions", copyable],
+    ["node:readline::Interface", implicitlyCopyable],
+    ["node:stream::Readable", implicitlyCopyable],
+    ["node:stream::Writable", implicitlyCopyable],
+    ["node:timers::Timeout", implicitlyCopyable],
+    ["node:tls::ConnectionOptions", copyable],
+    ["node:tls::TlsOptions", copyable],
+    ["node:tls::TLSSocket", implicitlyCopyable],
+    ["node:tls::Server", implicitlyCopyable],
+    ["node:util::TextDecoder", copyable],
+    ["node:url::Url", copyable],
+    ["node:url::UrlWithStringQuery", copyable],
+    ["node:worker_threads::Worker", implicitlyCopyable],
+    ["node:worker_threads::WorkerOptions", copyable],
+    ["node:worker_threads::MessagePort", implicitlyCopyable],
+    ["node:worker_threads::MessageChannel", implicitlyCopyable],
+    ["node:zlib::ZlibOptions", implicitlyCopyable],
+    ["node:zlib::Zlib", implicitlyCopyable],
+  ]);
+  assert.equal(definition.types.length, expected.size);
+  assert.deepEqual(
+    definition.types.map(({ exportId }) => exportId).sort(),
+    [...expected.keys()].sort(),
+  );
+  for (const row of definition.types) {
+    assert.deepEqual(
+      row.conformances?.map(({ lifecycleRole }) => lifecycleRole),
+      expected.get(row.exportId),
+      row.exportId,
+    );
+    assert.equal(row.conformances?.every(({ trait, lifecycleRole }) =>
+      trait.kind === "target-named" && trait.lifecycleRequirement === lifecycleRole), true);
+  }
+});
+
 test("Node parity rows expose exact closed contracts and omit unsupported open resources", () => {
   const capability = createMojoNodejsCapability();
   const [contribution] = capability.createTargetContributions({});

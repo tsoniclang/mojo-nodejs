@@ -12,6 +12,7 @@ import {
   float64Carrier,
   functionCall,
   instanceCall,
+  nodeProviderType,
   numberType,
   overloadedFunctionExport,
   propertyMember,
@@ -166,17 +167,10 @@ export function zlibModule(): MojoProviderModuleDefinition {
 
 export function zlibTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    Object.freeze({
-      exportId: optionsId,
-      sourceGenericParameters: Object.freeze([]),
-      targetType: zlibOptionsCarrier,
-      objectLiteralConstruction: Object.freeze({ kind: "struct-default" }),
+    nodeProviderType(optionsId, zlibOptionsCarrier, "implicitly-copyable", {
+      objectLiteralConstruction: true,
     }),
-    Object.freeze({
-      exportId: transformId,
-      sourceGenericParameters: Object.freeze([]),
-      targetType: zlibTransformCarrier,
-    }),
+    nodeProviderType(transformId, zlibTransformCarrier, "implicitly-copyable"),
   ]);
 }
 

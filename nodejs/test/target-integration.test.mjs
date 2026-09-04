@@ -34,7 +34,7 @@ export function main(): void {
 }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = generatedProgram(result);
   for (const operation of [
     "argument_zero", "hrtime", "hrtime_since", "memory_usage", "stdout", "stderr",
     "buffer_from_numbers", "buffer_alloc", ".copy(", ".slice(", ".swap16(",
@@ -52,13 +52,12 @@ export function main(): void {
 }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
-  assert.match(source, /tsonic_node\.process\.set_exit_code/u);
-  assert.match(source, /Variant\[tsonic_runtime\.Null, Float64\]\(Float64\(2\)\)/u);
-  assert.match(source, /\.isa\[Float64\]\(\)/u);
-  assert.match(source, /Optional\[Int32\]\(Int32\(/u);
-  assert.match(source, /Variant\[tsonic_runtime\.Null, Float64\]\(tsonic_runtime\.Null\(\)\)/u);
-  assert.equal(source.match(/tsonic_node\.process\.set_exit_code/gu)?.length, 2);
+  const source = generatedProgram(result);
+  assert.match(source, /from tsonic_node\.process import set_exit_code/u);
+  assert.match(source, /set_exit_code\(Optional\[Int32\]\(Int32\(2\)\)\)/u);
+  assert.match(source, /set_exit_code\(Optional\[Int32\]\(\)\)/u);
+  assert.doesNotMatch(source, /Variant\[tsonic_runtime\.Null, Float64\]/u);
+  assert.equal(source.match(/\bset_exit_code\(/gu)?.length, 2);
 });
 
 test("provider reads and writes retain source carriers before target ABI conversion", () => {
@@ -82,10 +81,10 @@ export function main(): void {}
   });
   assert.deepEqual(result.diagnostics, []);
   const source = artifactTexts(result).map(({ text }) => text).join("\n");
-  assert.match(source, /tsonic_node\.http\.ServerResponse/u);
-  assert.match(source, /\.set_status_code\(Int32\(/u);
-  assert.match(source, /tsonic_node\.process\.arguments\(\)/u);
-  assert.match(source, /tsonic_js\.JsArray\[tsonic_js\.JsString\]/u);
+  assert.match(source, /from tsonic_node\.http import ServerResponse/u);
+  assert.match(source, /response\.set_status_code\(status_code\)/u);
+  assert.match(source, /from tsonic_node\.process import arguments/u);
+  assert.match(source, /JsArray\[String\]/u);
   assert.match(source, /\.slice\(Float64\(2\)\)/u);
 });
 
@@ -95,7 +94,9 @@ import { basename } from "path";
 export function main(): void { basename("/one/two.txt"); }
 `);
   assert.deepEqual(result.diagnostics, []);
-  assert.match(artifactTexts(result).map(({ text }) => text).join("\n"), /tsonic_node\.path\.basename/u);
+  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  assert.match(source, /from tsonic_node\.path import basename/u);
+  assert.match(source, /\bbasename\("\/one\/two\.txt"\)/u);
 });
 
 test("filesystem promises retain source Promise and native Future contracts", () => {
@@ -120,17 +121,17 @@ export async function main(): Promise<void> {
   assert.deepEqual(result.diagnostics, []);
   const source = artifactTexts(result).map(({ text }) => text).join("\n");
   for (const operation of [
-    "filesystem_promises.make_directory",
-    "filesystem_promises.write_file",
-    "filesystem_promises.read_file",
-    "filesystem_promises.read_text_file",
-    "filesystem_promises.read_directory",
-    "filesystem_promises.stat",
-    "filesystem_promises.rename_path",
-    "filesystem_promises.remove_path",
+    "make_directory",
+    "write_file",
+    "read_file",
+    "read_text_file",
+    "read_directory",
+    "stat",
+    "rename_path",
+    "remove_path",
   ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   assert.match(source, /await create_raising_task\(/u);
-  assert.match(source, /async def __tsonic_async_entry\(\) raises:\n    await create_raising_task\(__tsonic_entry\(\)\)/u);
+  assert.match(source, /async def _async_entry\(\) raises:\n    try:\n        await create_raising_task\(_entry\(\)\)/u);
 });
 
 test("long-lived Node callbacks erase closed source errors only at the provider ABI", () => {
@@ -149,9 +150,9 @@ export function main(): void {
 `);
   assert.deepEqual(result.diagnostics, []);
   const source = artifactTexts(result).map(({ text }) => text).join("\n");
-  assert.match(source, /tsonic_runtime\.erase_callable_error/u);
+  assert.match(source, /from tsonic_runtime import \([\s\S]*erase_callable_error/u);
   assert.match(source, /RaisingCallable/u);
-  assert.match(source, /tsonic_node\.timers\.set_interval/u);
+  assert.match(source, /from tsonic_node\.timers import set_interval/u);
 });
 
 test("events, streams, readline, and worker channels cross the target boundary", () => {
@@ -190,20 +191,20 @@ export function main(): void {
 }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = generatedProgram(result);
   for (const operation of [
-    "events.event_emitter_new",
+    "event_emitter_new",
     ".on_callable(",
     ".emit_callable(",
-    "events.listener_count",
+    "listener_count",
     ".pipe_to(",
-    "readline.create_interface",
-    "worker_threads.message_channel_new",
+    "create_interface",
+    "message_channel_new",
     ".post_message(",
-    "worker_threads.receive_message_on_port",
-    "worker_threads.set_environment_data",
-    "worker_threads.get_environment_data",
-    "worker_threads.is_main_thread",
+    "receive_message_on_port",
+    "set_environment_data",
+    "get_environment_data",
+    "is_main_thread",
   ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
 });
 
@@ -258,22 +259,28 @@ export function main(): void {
 }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = generatedProgram(result);
   for (const operation of [
-    "dns.lookup",
-    "dns.resolve4",
-    "net.create_connection_host_callback",
-    "net.create_server_callback",
-    "tls.connect",
-    "tls.create_server",
-    "https.create_server",
-    "https.get",
-    "zlib.gzip_sync_options",
-    "zlib.gunzip_sync",
-    "zlib.gzip_callback",
-    "zlib.create_gzip",
+    "lookup_callback",
+    "resolve4_callback",
+    "create_connection_host_callback",
+    "create_server_callback",
+    "connect",
+    "create_server",
+    "https_create_server",
+    "get",
+    "gzip_sync_options",
+    "gunzip_sync",
+    "gzip_callback",
+    "create_gzip",
   ]) assert.match(source, new RegExp(operation.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
 });
+
+function generatedProgram(result) {
+  const source = artifactTexts(result).find(({ text }) => text.includes("def tsonic_main"));
+  assert.ok(source);
+  return source.text;
+}
 
 test("Worker construction rejects at its exact selected source-module boundary", () => {
   const result = compileNode(`

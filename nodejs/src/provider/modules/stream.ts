@@ -11,6 +11,7 @@ import {
   instanceCall,
   methodMember,
   nativeString,
+  nodeProviderType,
   providerRef,
   readableCarrier,
   stringType,
@@ -82,8 +83,8 @@ export function streamModule(): MojoProviderModuleDefinition {
 
 export function streamTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    Object.freeze({ exportId: readableId, sourceGenericParameters: Object.freeze([]), targetType: readableCarrier }),
-    Object.freeze({ exportId: writableId, sourceGenericParameters: Object.freeze([]), targetType: writableCarrier }),
+    nodeProviderType(readableId, readableCarrier, "implicitly-copyable"),
+    nodeProviderType(writableId, writableCarrier, "implicitly-copyable"),
   ]);
 }
 

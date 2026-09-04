@@ -14,6 +14,7 @@ import {
   functionCall,
   instanceCall,
   nativeString,
+  nodeProviderType,
   numberType,
   overloadedMethodMember,
   propertyMember,
@@ -188,10 +189,14 @@ export function tlsModule(): MojoProviderModuleDefinition {
 
 export function tlsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    optionType(connectOptionsId, tlsConnectOptionsCarrier),
-    optionType(serverOptionsId, tlsServerOptionsCarrier),
-    providerType(socketId, tlsSocketCarrier),
-    providerType(serverId, tlsServerCarrier),
+    nodeProviderType(connectOptionsId, tlsConnectOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
+    }),
+    nodeProviderType(serverOptionsId, tlsServerOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
+    }),
+    nodeProviderType(socketId, tlsSocketCarrier, "implicitly-copyable"),
+    nodeProviderType(serverId, tlsServerCarrier, "implicitly-copyable"),
   ]);
 }
 
@@ -253,19 +258,6 @@ function optionsDeclaration(
       readonly: false,
       optional: true,
     }))),
-  });
-}
-
-function providerType(exportId: string, targetType: MojoTargetTypeRef): MojoProviderTypeDefinition {
-  return Object.freeze({ exportId, sourceGenericParameters: Object.freeze([]), targetType });
-}
-
-function optionType(exportId: string, targetType: MojoTargetTypeRef): MojoProviderTypeDefinition {
-  return Object.freeze({
-    exportId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType,
-    objectLiteralConstruction: Object.freeze({ kind: "struct-default" }),
   });
 }
 

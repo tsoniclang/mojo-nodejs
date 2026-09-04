@@ -2,7 +2,6 @@ import type {
   MojoProviderModuleDefinition,
   MojoProviderOperationDefinition,
   MojoProviderTypeDefinition,
-  MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 import { mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
@@ -17,6 +16,7 @@ import {
   httpsServerCarrier,
   instanceCall,
   nativeString,
+  nodeProviderType,
   propertyMember,
   propertyRead,
   propertyWrite,
@@ -171,14 +171,11 @@ export function httpsModule(): MojoProviderModuleDefinition {
 
 export function httpsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    Object.freeze({
-      exportId: optionsId,
-      sourceGenericParameters: Object.freeze([]),
-      targetType: tlsServerOptionsCarrier,
-      objectLiteralConstruction: Object.freeze({ kind: "struct-default" }),
+    nodeProviderType(optionsId, tlsServerOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
     }),
-    providerType(serverId, httpsServerCarrier),
-    providerType(clientRequestId, httpsClientRequestCarrier),
+    nodeProviderType(serverId, httpsServerCarrier, "implicitly-copyable"),
+    nodeProviderType(clientRequestId, httpsClientRequestCarrier, "implicitly-copyable"),
   ]);
 }
 
@@ -197,10 +194,6 @@ export function httpsOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", httpsServerCarrier, [], httpsServerCarrier, false, "mut"),
     propertyRead(serverId, `${serverId}.listening`, "listening", httpsServerCarrier, boolCarrier, "method"),
   ]);
-}
-
-function providerType(exportId: string, targetType: MojoTargetTypeRef): MojoProviderTypeDefinition {
-  return Object.freeze({ exportId, sourceGenericParameters: Object.freeze([]), targetType });
 }
 
 function optionRows(): readonly MojoProviderOperationDefinition[] {
