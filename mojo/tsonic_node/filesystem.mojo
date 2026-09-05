@@ -149,7 +149,7 @@ def write_text_file(path: String, value: String) raises:
 
 
 def append_file(path: String, buffer: Buffer) raises:
-    var previous = read_file(path^) if exists(path^) else Buffer()
+    var previous = read_file(path) if exists(path) else Buffer()
     var bytes = previous.copy_bytes()
     for byte in buffer.copy_bytes():
         bytes.append(byte)

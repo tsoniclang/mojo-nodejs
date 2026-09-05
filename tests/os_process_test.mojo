@@ -14,6 +14,7 @@ from tsonic_node import (
 )
 from tsonic_node.process import (
     argument_zero,
+    executable_path,
     hrtime,
     hrtime_since,
     memory_usage,
@@ -34,6 +35,7 @@ def main() raises:
     assert_true(current_directory())
     assert_true(len(arguments()) >= 1)
     assert_true(argument_zero())
+    assert_true(executable_path().startswith("/"))
     assert_equal(len(hrtime()), 2)
     assert_equal(len(hrtime_since(hrtime())), 2)
     assert_true(memory_usage().rss >= 0)
