@@ -94,10 +94,14 @@ def unset_environment(var name: String) raises:
         raise Error("Unable to unset environment variable")
 
 
-def arguments() -> List[String]:
-    var result = List[String](capacity=len(argv()))
-    for argument in argv():
-        result.append(String(argument))
+def arguments() raises -> List[String]:
+    var native_arguments = argv()
+    var executable = executable_path()
+    var result = List[String](capacity=max(2, len(native_arguments) + 1))
+    result.append(executable)
+    result.append(executable)
+    for index in range(1, len(native_arguments)):
+        result.append(String(native_arguments[index]))
     return result^
 
 

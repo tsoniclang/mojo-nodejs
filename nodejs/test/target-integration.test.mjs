@@ -88,6 +88,20 @@ export function main(): void {}
   assert.match(source, /\.slice\(Float64\(2\)\)/u);
 });
 
+test("named and default process argv reads retain native lookup fallibility", () => {
+  const result = compileNode(`
+import process, { argv } from "node:process";
+export function named(): string[] { return argv; }
+export function fromDefault(): string[] { return process.argv; }
+export function main(): void {}
+`);
+  assert.deepEqual(result.diagnostics, []);
+  const source = generatedProgram(result);
+  assert.match(source, /def named\(\) raises Error/u);
+  assert.match(source, /def from_default\(\) raises Error/u);
+  assert.equal(source.match(/\barguments\(\)/gu)?.length, 2);
+});
+
 test("bare Node aliases retain canonical provider identities", () => {
   const result = compileNode(`
 import { basename } from "path";

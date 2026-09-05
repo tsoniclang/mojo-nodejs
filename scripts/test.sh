@@ -41,3 +41,5 @@ for test_file in tests/*.mojo; do
   SSL_CERT_FILE="${PWD}/tests/fixtures/localhost-cert.pem" \
     "${NATIVE_BUILD}/${test_name}"
 done
+
+"${NATIVE_BUILD}/process_arguments_test" "first" "" "two words" "--flag" "😀"
