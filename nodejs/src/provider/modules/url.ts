@@ -7,6 +7,7 @@ import {
   fnExport,
   functionCall,
   legacyUrlCarrier,
+  nodeProviderType,
   optionalBoolCarrier,
   optionalStringCarrier,
   propertyMember,
@@ -63,11 +64,8 @@ export function urlModule(): MojoProviderModuleDefinition {
 }
 
 export function urlTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([urlId, stringQueryUrlId].map((exportId) => Object.freeze({
-    exportId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType: legacyUrlCarrier,
-  })));
+  return Object.freeze([urlId, stringQueryUrlId].map((exportId) =>
+    nodeProviderType(exportId, legacyUrlCarrier, "copyable")));
 }
 
 export function urlOperations(): readonly MojoProviderOperationDefinition[] {

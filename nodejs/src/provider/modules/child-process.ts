@@ -6,6 +6,7 @@ import type {
 import {
   bufferCarrier,
   nativeString,
+  nodeProviderType,
   optionalInt32Carrier,
   propertyMember,
   propertyRead,
@@ -66,15 +67,18 @@ export function childProcessModule(): MojoProviderModuleDefinition {
 }
 
 export function childProcessTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({
-    exportId: resultId,
-    sourceGenericParameters: Object.freeze([Object.freeze({
-      targetName: "Output",
-      targetKind: "type",
-      variadic: false,
-    })]),
-    targetType: spawnSyncResultCarrier,
-  })]);
+  return Object.freeze([nodeProviderType(
+    resultId,
+    spawnSyncResultCarrier,
+    "copyable",
+    {
+      sourceGenericParameters: Object.freeze([Object.freeze({
+        targetName: "Output",
+        targetKind: "type",
+        variadic: false,
+      })]),
+    },
+  )]);
 }
 
 export function childProcessOperations(): readonly MojoProviderOperationDefinition[] {

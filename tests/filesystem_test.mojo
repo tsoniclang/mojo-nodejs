@@ -5,6 +5,7 @@ from tsonic_node import (
     MkdirOptions,
     ReaddirOptions,
     RmOptions,
+    append_file,
     copy_file,
     exists,
     lstat,
@@ -21,6 +22,7 @@ from tsonic_node import (
     write_file,
     write_text_file,
 )
+from tsonic_node.filesystem import append_text_file
 
 
 def main() raises:
@@ -43,6 +45,10 @@ def main() raises:
     var copied_path = nested + "/copied.bin"
     copy_file(binary_path, copied_path)
     assert_equal(read_file(copied_path).to_string(), "data")
+    append_file(copied_path, Buffer.from_string("-more"))
+    append_text_file(copied_path, "-text")
+    assert_equal(read_text_file(copied_path), "data-more-text")
+    assert_equal(copied_path, nested + "/copied.bin")
 
     var renamed_path = nested + "/renamed.bin"
     rename_path(copied_path, renamed_path)

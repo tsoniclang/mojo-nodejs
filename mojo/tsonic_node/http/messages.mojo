@@ -2,6 +2,7 @@ from std.collections import List
 from std.memory import ArcPointer
 
 from ..buffer import Buffer
+from ..tls import TLSSocket
 from .transport import close_socket, send_buffer, send_string
 
 
@@ -30,6 +31,7 @@ struct IncomingMessage(ImplicitlyCopyable):
 @fieldwise_init
 struct ResponseState:
     var descriptor: Int32
+    var tls_socket: Optional[TLSSocket]
     var status_code: Int32
     var headers: List[Tuple[String, String]]
     var body: List[Byte]
@@ -43,6 +45,19 @@ struct ServerResponse(ImplicitlyCopyable):
         self._state = ArcPointer(
             ResponseState(
                 descriptor,
+                None,
+                Int32(200),
+                List[Tuple[String, String]](),
+                List[Byte](),
+                False,
+            )
+        )
+
+    def __init__(out self, socket: TLSSocket):
+        self._state = ArcPointer(
+            ResponseState(
+                -1,
+                Optional(socket),
                 Int32(200),
                 List[Tuple[String, String]](),
                 List[Byte](),
@@ -115,11 +130,23 @@ struct ServerResponse(ImplicitlyCopyable):
                 "Content-Length: " + String(len(self._state[].body)) + "\r\n"
             )
         head += "Connection: close\r\n\r\n"
-        send_string(self._state[].descriptor, head)
-        send_buffer(self._state[].descriptor, self._state[].body)
-        close_socket(self._state[].descriptor)
+        if self._state[].tls_socket:
+            var socket = self._state[].tls_socket.value()
+            _ = socket.write_string(head)
+            _ = socket.write_buffer(self._body_buffer())
+            socket.end()
+        else:
+            send_string(self._state[].descriptor, head)
+            send_buffer(self._state[].descriptor, self._state[].body)
+            close_socket(self._state[].descriptor)
         self._state[].descriptor = -1
         self._state[].finished = True
+
+    def _body_buffer(self) -> Buffer:
+        var bytes = List[Byte](capacity=len(self._state[].body))
+        for value in self._state[].body:
+            bytes.append(value)
+        return Buffer(bytes^)
 
 
 def _status_message(status: Int32) -> String:

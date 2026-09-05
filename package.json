@@ -29,7 +29,11 @@
     "@tsonic/target-mojo": "*",
     "@tsonic/mojo-runtime": "0.0.1"
   },
+  "dependencies": {
+    "@tsonic/mojo-js": "0.0.1"
+  },
   "devDependencies": {
+    "@tsonic/mojo-js": "file:../mojo-js",
     "@tsonic/target-mojo": "file:../tsonic-mojo",
     "@tsonic/mojo-runtime": "file:../mojo-runtime",
     "@types/node": "^22.19.21",

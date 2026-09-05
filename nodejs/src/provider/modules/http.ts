@@ -24,6 +24,7 @@ import {
   providerRef,
   stringType,
   nativeString,
+  nodeProviderType,
   unitCarrier,
   voidType,
 } from "../model.js";
@@ -140,9 +141,9 @@ export function httpModule(): MojoProviderModuleDefinition {
 
 export function httpTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    providerType(incomingId, httpIncomingMessageCarrier),
-    providerType(responseId, httpServerResponseCarrier),
-    providerType(serverId, httpServerCarrier),
+    nodeProviderType(incomingId, httpIncomingMessageCarrier, "implicitly-copyable"),
+    nodeProviderType(responseId, httpServerResponseCarrier, "implicitly-copyable"),
+    nodeProviderType(serverId, httpServerCarrier, "implicitly-copyable"),
   ]);
 }
 
@@ -179,15 +180,4 @@ export function httpOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,hostname,callback)`, "listen", httpServerCarrier, [int32Carrier, nativeString, emptyCallbackCarrier], httpServerCarrier, true),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpServerCarrier, [], unitCarrier),
   ]);
-}
-
-function providerType(
-  exportId: string,
-  targetType: import("@tsonic/target-mojo/provider").MojoTargetTypeRef,
-): MojoProviderTypeDefinition {
-  return Object.freeze({
-    exportId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType,
-  });
 }

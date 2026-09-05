@@ -16,6 +16,7 @@ import {
   methodMember,
   nativeIntCarrier,
   nativeString,
+  nodeProviderType,
   numberArrayType,
   numberListCarrier,
   numberType,
@@ -141,11 +142,9 @@ export function bufferModule(): MojoProviderModuleDefinition {
 }
 
 export function bufferTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({
-    exportId: bufferId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType: bufferCarrier,
-  })]);
+  return Object.freeze([
+    nodeProviderType(bufferId, bufferCarrier, "implicitly-copyable"),
+  ]);
 }
 
 function staticOperation(

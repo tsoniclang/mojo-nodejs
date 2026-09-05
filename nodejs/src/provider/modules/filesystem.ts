@@ -17,6 +17,7 @@ import {
   mkdirOptionsCarrier,
   nativeIntCarrier,
   nativeString,
+  nodeProviderType,
   numberType,
   optionalBoolCarrier,
   optionalFloat64Carrier,
@@ -203,11 +204,17 @@ export function filesystemModule(): MojoProviderModuleDefinition {
 
 export function filesystemTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    providerType(statsId, statsCarrier),
-    providerType(direntId, direntCarrier),
-    providerType(mkdirOptionsId, mkdirOptionsCarrier, true),
-    providerType(rmOptionsId, rmOptionsCarrier, true),
-    providerType(readdirOptionsId, readdirOptionsCarrier, true),
+    nodeProviderType(statsId, statsCarrier, "copyable"),
+    nodeProviderType(direntId, direntCarrier, "copyable"),
+    nodeProviderType(mkdirOptionsId, mkdirOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
+    }),
+    nodeProviderType(rmOptionsId, rmOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
+    }),
+    nodeProviderType(readdirOptionsId, readdirOptionsCarrier, "copyable", {
+      objectLiteralConstruction: true,
+    }),
   ]);
 }
 
@@ -299,21 +306,6 @@ function method(
       parameters: Object.freeze([]),
       returnType: booleanType,
     })]),
-  });
-}
-
-function providerType(
-  exportId: string,
-  targetType: MojoTargetTypeRef,
-  objectLiteralConstruction = false,
-): MojoProviderTypeDefinition {
-  return Object.freeze({
-    exportId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType,
-    ...(objectLiteralConstruction
-      ? { objectLiteralConstruction: Object.freeze({ kind: "struct-default" as const }) }
-      : {}),
   });
 }
 

@@ -121,7 +121,7 @@ def executable_path() raises -> String:
         var values = argv()
         if not len(values):
             raise Error("The executable path is unavailable")
-        return String(Path(values[0]).resolve())
+        return std.os.path.realpath(Path(values[0]))
 
 
 def platform() -> String:

@@ -1,6 +1,8 @@
 import {
   mojoCallableTargetType,
+  mojoDynamicTargetType,
   mojoFutureTargetType,
+  mojoLifecycleTraitTargetType,
   mojoListTargetType,
   mojoNamedTargetType,
   mojoOptionalTargetType,
@@ -11,6 +13,7 @@ import {
 import type {
   MojoProviderModuleDefinition,
   MojoProviderOperationDefinition,
+  MojoProviderTypeDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 
@@ -19,6 +22,21 @@ type ProviderSignatureDeclaration = NonNullable<ProviderExportDeclaration["signa
 type ProviderParameterDeclaration = ProviderSignatureDeclaration["parameters"][number];
 type ProviderTypeExpression = ProviderParameterDeclaration["type"];
 type ProviderMemberDeclaration = NonNullable<ProviderExportDeclaration["members"]>[number];
+
+type NodeProviderCopySemantics = "copyable" | "implicitly-copyable";
+type NodeProviderSourceGenericParameter = MojoProviderTypeDefinition["sourceGenericParameters"][number];
+
+const providerLifecycleRoles: Readonly<Record<
+  NodeProviderCopySemantics,
+  readonly ("copyable" | "implicitly-copyable" | "movable" | "deinitializable")[]
+>> = Object.freeze({
+  copyable: Object.freeze(["copyable", "movable", "deinitializable"] as const),
+  "implicitly-copyable": Object.freeze([
+    "implicitly-copyable",
+    "movable",
+    "deinitializable",
+  ] as const),
+});
 
 export const stringType = Object.freeze({ kind: "string" as const });
 export const numberType = Object.freeze({ kind: "number" as const });
@@ -35,6 +53,7 @@ export const float64Carrier = mojoPrimitiveTargetType("float64");
 export const int32Carrier = mojoPrimitiveTargetType("int32");
 export const uint8Carrier = mojoPrimitiveTargetType("uint8");
 export const unitCarrier = mojoUnitTargetType();
+export const jsValueCarrier = mojoDynamicTargetType("js");
 export const stringListCarrier = mojoListTargetType(nativeString);
 export const numberListCarrier = mojoListTargetType(float64Carrier);
 export const optionalInt32Carrier = mojoOptionalTargetType(int32Carrier);
@@ -152,16 +171,98 @@ export const httpServerCarrier = mojoNamedTargetType(
   "Server",
 );
 
+export const eventEmitterCarrier = namedCarrier("EventEmitter", "events");
+export const readableCarrier = namedCarrier("Readable", "stream");
+export const writableCarrier = namedCarrier("Writable", "stream");
+export const dnsLookupAddressCarrier = namedCarrier("LookupAddress", "dns");
+export const zlibOptionsCarrier = namedCarrier("ZlibOptions", "zlib");
+export const zlibTransformCarrier = namedCarrier("Zlib", "zlib");
+export const netSocketCarrier = namedCarrier("Socket", "net");
+export const netServerCarrier = namedCarrier("Server", "net");
+export const tlsConnectOptionsCarrier = namedCarrier("ConnectionOptions", "tls");
+export const tlsServerOptionsCarrier = namedCarrier("TlsOptions", "tls");
+export const tlsSocketCarrier = namedCarrier("TLSSocket", "tls");
+export const tlsServerCarrier = namedCarrier("Server", "tls");
+export const httpsServerCarrier = namedCarrier("Server", "https");
+export const httpsClientRequestCarrier = namedCarrier("ClientRequest", "https");
+export const readlineOptionsCarrier = namedCarrier("ReadLineOptions", "readline");
+export const readlineInterfaceCarrier = namedCarrier("Interface", "readline");
+export const workerCarrier = namedCarrier("Worker", "worker_threads");
+export const workerOptionsCarrier = namedCarrier("WorkerOptions", "worker_threads");
+export const messagePortCarrier = namedCarrier("MessagePort", "worker_threads");
+export const messageChannelCarrier = namedCarrier("MessageChannel", "worker_threads");
+
 export const emptyCallbackCarrier = mojoCallableTargetType([], unitCarrier, true);
+export const oneValueCallbackCarrier = callbackCarrier([jsValueCarrier]);
+export const twoValueCallbackCarrier = callbackCarrier([jsValueCarrier, jsValueCarrier]);
+export const threeValueCallbackCarrier = callbackCarrier([
+  jsValueCarrier,
+  jsValueCarrier,
+  jsValueCarrier,
+]);
+export const dnsLookupCallbackCarrier = callbackCarrier([
+  jsValueCarrier,
+  nativeString,
+  float64Carrier,
+]);
+export const dnsAddressArrayCallbackCarrier = callbackCarrier([
+  jsValueCarrier,
+  stringListCarrier,
+]);
+export const zlibCallbackCarrier = callbackCarrier([jsValueCarrier, bufferCarrier]);
+export const netConnectionCallbackCarrier = callbackCarrier([netSocketCarrier]);
+export const tlsSocketCallbackCarrier = callbackCarrier([tlsSocketCarrier]);
+export const readlineQuestionCallbackCarrier = callbackCarrier([nativeString]);
+export const httpResponseCallbackCarrier = callbackCarrier([httpIncomingMessageCarrier]);
 export const httpRequestCallbackCarrier = mojoCallableTargetType(
   [httpIncomingMessageCarrier, httpServerResponseCarrier].map((type) => Object.freeze({
-    convention: "var" as const,
+    convention: "imm" as const,
     passing: "plain" as const,
     type,
   })),
   unitCarrier,
   true,
 );
+
+export function nodeProviderType(
+  exportId: string,
+  targetType: MojoTargetTypeRef,
+  copySemantics: NodeProviderCopySemantics,
+  options: {
+    readonly sourceGenericParameters?: readonly NodeProviderSourceGenericParameter[];
+    readonly objectLiteralConstruction?: boolean;
+  } = {},
+): MojoProviderTypeDefinition {
+  return Object.freeze({
+    exportId,
+    sourceGenericParameters: Object.freeze([...(options.sourceGenericParameters ?? [])]),
+    targetType,
+    conformances: Object.freeze(providerLifecycleRoles[copySemantics].map((lifecycleRole) =>
+      Object.freeze({
+        trait: mojoLifecycleTraitTargetType(lifecycleRole),
+        lifecycleRole,
+      }))),
+    ...(options.objectLiteralConstruction === true
+      ? { objectLiteralConstruction: Object.freeze({ kind: "struct-default" as const }) }
+      : {}),
+  });
+}
+
+function namedCarrier(name: string, moduleName: string): MojoTargetTypeRef {
+  return mojoNamedTargetType(
+    `tsonic.mojo.node.${moduleName}.${name}`,
+    ["tsonic_node", moduleName],
+    name,
+  );
+}
+
+function callbackCarrier(types: readonly MojoTargetTypeRef[]): MojoTargetTypeRef {
+  return mojoCallableTargetType(types.map((type) => Object.freeze({
+    convention: "imm" as const,
+    passing: "plain" as const,
+    type,
+  })), unitCarrier, true);
+}
 
 export function providerRef(
   moduleSpecifier: string,

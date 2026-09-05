@@ -11,6 +11,7 @@ import {
   functionCall,
   instanceCall,
   nativeString,
+  nodeProviderType,
   numberType,
   overloadedMethodMember,
   propertyMember,
@@ -88,11 +89,9 @@ export function utilModule(): MojoProviderModuleDefinition {
 }
 
 export function utilTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({
-    exportId: textDecoderId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType: textDecoderCarrier,
-  })]);
+  return Object.freeze([
+    nodeProviderType(textDecoderId, textDecoderCarrier, "copyable"),
+  ]);
 }
 
 export function utilOperations(): readonly MojoProviderOperationDefinition[] {

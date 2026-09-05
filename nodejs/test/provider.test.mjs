@@ -20,15 +20,25 @@ test("Node capability closes source, target, and runtime contracts together", ()
       "node:buffer",
       "node:child_process",
       "node:crypto",
+      "node:dns",
+      "node:dns/promises",
+      "node:events",
       "node:fs",
       "node:fs/promises",
       "node:http",
+      "node:https",
+      "node:net",
       "node:os",
       "node:path",
       "node:process",
+      "node:readline",
+      "node:stream",
       "node:timers",
+      "node:tls",
       "node:util",
       "node:url",
+      "node:worker_threads",
+      "node:zlib",
     ],
   );
   assert.equal(
@@ -84,10 +94,13 @@ test("Node capability closes source, target, and runtime contracts together", ()
   );
 
   const runtime = capability.runtimeContributions({}).references;
-  assert.equal(runtime.length, 1);
+  assert.equal(runtime.length, 2);
   assert.equal(runtime[0].kind, "mojo-package-path");
   assert.equal(runtime[0].attributes.packageName, "tsonic_node");
   assert.match(runtime[0].include, /\/mojo-nodejs\/mojo$/u);
+  assert.equal(runtime[1].kind, "mojo-package-path");
+  assert.equal(runtime[1].attributes.packageName, "tsonic_js");
+  assert.match(runtime[1].include, /\/mojo-js\/mojo$/u);
 });
 
 test("Node aliases materialize the canonical declaration identities", () => {
@@ -107,15 +120,87 @@ test("Node aliases materialize the canonical declaration identities", () => {
   assert.ok(model.exports.some((entry) => entry.id === "node:path::normalize"));
 });
 
-test("Node parity rows expose exact closed contracts and omit unsupported open streams", () => {
+test("every public Node carrier declares its exact Mojo lifecycle", () => {
+  const capability = createMojoNodejsCapability();
+  const [{ definition }] = capability.createTargetContributions({});
+  const copyable = ["copyable", "movable", "deinitializable"];
+  const implicitlyCopyable = ["implicitly-copyable", "movable", "deinitializable"];
+  const expected = new Map([
+    ["node:buffer::Buffer", implicitlyCopyable],
+    ["node:child_process::SpawnSyncReturns", copyable],
+    ["node:crypto::Hash", implicitlyCopyable],
+    ["node:dns::LookupAddress", copyable],
+    ["node:events::EventEmitter", implicitlyCopyable],
+    ["node:fs::Stats", copyable],
+    ["node:fs::Dirent", copyable],
+    ["node:fs::MakeDirectoryOptions", copyable],
+    ["node:fs::RmOptions", copyable],
+    ["node:fs::ReaddirOptions", copyable],
+    ["node:http::IncomingMessage", implicitlyCopyable],
+    ["node:http::ServerResponse", implicitlyCopyable],
+    ["node:http::Server", implicitlyCopyable],
+    ["node:https::ServerOptions", copyable],
+    ["node:https::Server", implicitlyCopyable],
+    ["node:https::ClientRequest", implicitlyCopyable],
+    ["node:net::Socket", implicitlyCopyable],
+    ["node:net::Server", implicitlyCopyable],
+    ["node:process::ProcessEnv", copyable],
+    ["node:process::MemoryUsage", copyable],
+    ["node:process::ProcessWriteStream", copyable],
+    ["node:readline::ReadLineOptions", copyable],
+    ["node:readline::Interface", implicitlyCopyable],
+    ["node:stream::Readable", implicitlyCopyable],
+    ["node:stream::Writable", implicitlyCopyable],
+    ["node:timers::Timeout", implicitlyCopyable],
+    ["node:tls::ConnectionOptions", copyable],
+    ["node:tls::TlsOptions", copyable],
+    ["node:tls::TLSSocket", implicitlyCopyable],
+    ["node:tls::Server", implicitlyCopyable],
+    ["node:util::TextDecoder", copyable],
+    ["node:url::Url", copyable],
+    ["node:url::UrlWithStringQuery", copyable],
+    ["node:worker_threads::Worker", implicitlyCopyable],
+    ["node:worker_threads::WorkerOptions", copyable],
+    ["node:worker_threads::MessagePort", implicitlyCopyable],
+    ["node:worker_threads::MessageChannel", implicitlyCopyable],
+    ["node:zlib::ZlibOptions", implicitlyCopyable],
+    ["node:zlib::Zlib", implicitlyCopyable],
+  ]);
+  assert.equal(definition.types.length, expected.size);
+  assert.deepEqual(
+    definition.types.map(({ exportId }) => exportId).sort(),
+    [...expected.keys()].sort(),
+  );
+  for (const row of definition.types) {
+    assert.deepEqual(
+      row.conformances?.map(({ lifecycleRole }) => lifecycleRole),
+      expected.get(row.exportId),
+      row.exportId,
+    );
+    assert.equal(row.conformances?.every(({ trait, lifecycleRole }) =>
+      trait.kind === "target-named" && trait.lifecycleRequirement === lifecycleRole), true);
+  }
+});
+
+test("Node parity rows expose exact closed contracts and omit unsupported open resources", () => {
   const capability = createMojoNodejsCapability();
   const [contribution] = capability.createTargetContributions({});
   const { definition } = contribution;
   const modules = new Map(definition.modules.map((module) => [module.moduleSpecifier, module]));
   const operations = new Set(definition.operations.map((operation) => operation.exportId));
 
-  assert.equal(modules.has("node:stream"), false);
-  assert.equal(modules.has("node:events"), false);
+  for (const moduleSpecifier of [
+    "node:dns",
+    "node:dns/promises",
+    "node:events",
+    "node:https",
+    "node:net",
+    "node:readline",
+    "node:stream",
+    "node:tls",
+    "node:worker_threads",
+    "node:zlib",
+  ]) assert.equal(modules.has(moduleSpecifier), true, moduleSpecifier);
   assert.equal(modules.get("node:fs").exports.some((entry) => entry.name === "watch"), false);
   assert.equal(modules.get("node:fs/promises").exports.some((entry) => entry.name === "readFile"), true);
   assert.equal(modules.get("node:process").exports.some((entry) => entry.name === "stdin"), false);
@@ -148,4 +233,73 @@ test("Node parity rows expose exact closed contracts and omit unsupported open s
 
   assert.equal(operations.has("node:util::inspect"), false);
   assert.equal(operations.has("node:util::format"), false);
+});
+
+test("new Node families retain exact declarations and target operations", () => {
+  const capability = createMojoNodejsCapability();
+  const [{ definition }] = capability.createTargetContributions({});
+  const modules = new Map(definition.modules.map((module) => [module.moduleSpecifier, module]));
+  const operations = definition.operations;
+
+  const expectedExports = new Map([
+    ["node:dns", ["LookupAddress", "lookup", "resolve4", "resolve6", "reverse"]],
+    ["node:dns/promises", ["lookup", "resolve4", "resolve6", "reverse"]],
+    ["node:events", ["EventEmitter", "listenerCount"]],
+    ["node:https", ["ServerOptions", "Server", "ClientRequest", "createServer", "request", "get"]],
+    ["node:net", ["Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6"]],
+    ["node:readline", ["ReadLineOptions", "Interface", "createInterface"]],
+    ["node:stream", ["Readable", "Writable"]],
+    ["node:tls", ["ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer"]],
+    ["node:worker_threads", [
+      "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
+      "receiveMessageOnPort", "getEnvironmentData", "setEnvironmentData",
+      "markAsUntransferable", "isMarkedAsUntransferable", "isMainThread",
+      "threadId", "workerData", "parentPort",
+    ]],
+    ["node:zlib", [
+      "ZlibOptions", "Zlib", "gzipSync", "gunzipSync", "deflateSync",
+      "inflateSync", "deflateRawSync", "inflateRawSync", "unzipSync",
+      "brotliCompressSync", "brotliDecompressSync", "gzip", "gunzip",
+      "deflate", "inflate", "deflateRaw", "inflateRaw", "unzip",
+      "brotliCompress", "brotliDecompress", "createGzip", "createGunzip",
+      "createDeflate", "createInflate", "createDeflateRaw", "createInflateRaw",
+    ]],
+  ]);
+  for (const [moduleSpecifier, exports] of expectedExports) {
+    assert.deepEqual(
+      modules.get(moduleSpecifier)?.exports.map((entry) => entry.name),
+      exports,
+      moduleSpecifier,
+    );
+  }
+
+  for (const [exportId, targetKind] of [
+    ["node:dns::lookup", "function-call"],
+    ["node:events::EventEmitter", "function-call"],
+    ["node:https::createServer", "function-call"],
+    ["node:net::createConnection", "function-call"],
+    ["node:readline::createInterface", "function-call"],
+    ["node:stream::Readable", "instance-call"],
+    ["node:tls::connect", "function-call"],
+    ["node:worker_threads::MessageChannel", "function-call"],
+    ["node:zlib::gzipSync", "function-call"],
+  ]) {
+    assert.equal(
+      operations.find((operation) => operation.exportId === exportId)?.target.kind,
+      targetKind,
+      exportId,
+    );
+  }
+  const workerConstructors = operations.filter((operation) =>
+    operation.exportId === "node:worker_threads::Worker" &&
+    operation.memberId === "node:worker_threads::Worker.constructor");
+  assert.equal(workerConstructors.length, 2);
+  assert.deepEqual(
+    workerConstructors.map((operation) => operation.target.kind),
+    ["unsupported", "unsupported"],
+  );
+  assert.deepEqual(
+    [...new Set(workerConstructors.map((operation) => operation.target.code))],
+    ["MOJO_NODE_WORKER_SOURCE_MODULE_CONSTRUCTION_UNAVAILABLE"],
+  );
 });

@@ -11,6 +11,7 @@ import {
   instanceCall,
   methodMember,
   nativeString,
+  nodeProviderType,
   providerRef,
   stringType,
 } from "../model.js";
@@ -60,11 +61,9 @@ export function cryptoModule(): MojoProviderModuleDefinition {
 }
 
 export function cryptoTypes(): readonly MojoProviderTypeDefinition[] {
-  return Object.freeze([Object.freeze({
-    exportId: hashId,
-    sourceGenericParameters: Object.freeze([]),
-    targetType: hashCarrier,
-  })]);
+  return Object.freeze([
+    nodeProviderType(hashId, hashCarrier, "implicitly-copyable"),
+  ]);
 }
 
 export function cryptoOperations(): readonly MojoProviderOperationDefinition[] {

@@ -9,7 +9,9 @@ from .assertions import (
 )
 from .child_process import SpawnSyncResult, spawn_sync
 from .crypto import Hash, create_hash
+from .dns import LookupAddress, lookup, resolve4, resolve6, reverse
 from .event_loop import run_event_loop
+from .events import EventEmitter, event_emitter_new, listener_count
 from .filesystem import (
     Dirent,
     MkdirOptions,
@@ -50,6 +52,23 @@ from .filesystem_promises import (
     write_text_file as write_text_file_async,
 )
 from .http import IncomingMessage, Server, ServerResponse, create_server
+from .https import (
+    ClientRequest as HttpsClientRequest,
+    Server as HttpsServer,
+    create_server as create_https_server,
+    get as https_get,
+    request as https_request,
+)
+from .net import (
+    Server as NetServer,
+    Socket,
+    create_connection,
+    create_connection_host,
+    create_server as create_net_server,
+    is_ip,
+    is_ipv4,
+    is_ipv6,
+)
 from .os_info import (
     arch,
     end_of_line,
@@ -73,6 +92,7 @@ from .path import (
     resolve,
     separator,
 )
+from .stream import Readable, Writable, stderr, stdin, stdout
 from .process import (
     arguments,
     change_directory,
@@ -82,12 +102,22 @@ from .process import (
     set_environment,
     unset_environment,
 )
+from .readline import Interface, ReadLineOptions, create_interface
 from .timers import (
     Timeout,
     clear_interval,
     clear_timeout,
     set_interval,
     set_timeout,
+)
+from .tls import (
+    ConnectionOptions,
+    Server as TlsServer,
+    TLSSocket,
+    TlsOptions,
+    connect as tls_connect,
+    connect_callback as tls_connect_callback,
+    create_server as create_tls_server,
 )
 from .util import (
     TextDecoder,
@@ -98,3 +128,71 @@ from .util import (
     to_usv_string,
 )
 from .url import LegacyUrl, parse_legacy
+from .zlib import (
+    Zlib,
+    ZlibOptions,
+    brotli_compress_callback,
+    brotli_compress_callback_options,
+    brotli_compress_sync,
+    brotli_compress_sync_options,
+    brotli_decompress_callback,
+    brotli_decompress_callback_options,
+    brotli_decompress_sync,
+    brotli_decompress_sync_options,
+    create_deflate,
+    create_deflate_options,
+    create_deflate_raw,
+    create_deflate_raw_options,
+    create_gunzip,
+    create_gunzip_options,
+    create_gzip,
+    create_gzip_options,
+    create_inflate,
+    create_inflate_options,
+    create_inflate_raw,
+    create_inflate_raw_options,
+    deflate_callback,
+    deflate_callback_options,
+    deflate_raw_callback,
+    deflate_raw_callback_options,
+    deflate_raw_sync,
+    deflate_raw_sync_options,
+    deflate_sync,
+    deflate_sync_options,
+    gunzip_callback,
+    gunzip_callback_options,
+    gunzip_sync,
+    gunzip_sync_options,
+    gzip_callback,
+    gzip_callback_options,
+    gzip_sync,
+    gzip_sync_options,
+    inflate_callback,
+    inflate_callback_options,
+    inflate_raw_callback,
+    inflate_raw_callback_options,
+    inflate_raw_sync,
+    inflate_raw_sync_options,
+    inflate_sync,
+    inflate_sync_options,
+    unzip_callback,
+    unzip_callback_options,
+    unzip_sync,
+    unzip_sync_options,
+)
+from .worker_threads import (
+    MessageChannel,
+    MessagePort,
+    Worker,
+    WorkerOptions,
+    get_environment_data,
+    is_main_thread,
+    is_marked_as_untransferable,
+    mark_as_untransferable,
+    message_channel_new,
+    parent_port,
+    receive_message_on_port,
+    set_environment_data,
+    thread_id,
+    worker_data,
+)

@@ -6,6 +6,11 @@ from tsonic_runtime import GlobalCell, RaisingCallable
 
 from ..buffer import Buffer
 from .messages import IncomingMessage, ServerResponse
+from .parsing import (
+    find_header_end,
+    parse_request_bytes,
+    request_content_length,
+)
 
 
 comptime RequestArguments = Tuple[IncomingMessage, ServerResponse]
@@ -113,12 +118,10 @@ def poll_servers() raises -> Bool:
 
 
 def _accept_request(server: Server) raises:
-    var peer_address = Array[UInt8, 128](fill=0)
-    var peer_address_length = UInt32(128)
     var descriptor = external_call["accept", c_int](
         server._state[].descriptor,
-        peer_address.unsafe_ptr(),
-        Pointer(to=peer_address_length),
+        OptionalPointer[NoneType, MutUntrackedOrigin](),
+        OptionalPointer[NoneType, MutUntrackedOrigin](),
     )
     if descriptor < 0:
         return
@@ -143,42 +146,14 @@ def _read_request(descriptor: Int32) raises -> IncomingMessage:
     var header_end = -1
     while header_end < 0:
         _read_chunk(descriptor, bytes)
-        header_end = _find_header_end(bytes)
+        header_end = find_header_end(bytes)
         if len(bytes) > 64 * 1024:
             raise Error("HTTP request headers exceed the finite runtime limit")
-    var head_bytes = List[Byte](capacity=header_end)
-    for index in range(header_end):
-        head_bytes.append(bytes[index])
-    var head = String(from_utf8=head_bytes)
-    var lines = head.split("\r\n")
-    if len(lines) == 0:
-        raise Error("HTTP request has no request line")
-    var request_parts = String(lines[0]).split(" ")
-    if len(request_parts) != 3:
-        raise Error("HTTP request line is invalid")
-    var content_length = 0
-    for index in range(1, len(lines)):
-        var line = String(lines[index])
-        var separator = line.find(":")
-        if not separator:
-            raise Error("HTTP request header is invalid")
-        var name = String(line[byte = : separator.value()]).lower()
-        var value = String(line[byte = separator.value() + 1 :]).strip()
-        if name == "content-length":
-            content_length = Int(value)
-            if content_length < 0 or content_length > 64 * 1024 * 1024:
-                raise Error(
-                    "HTTP request body exceeds the finite runtime limit"
-                )
+    var content_length = request_content_length(bytes, header_end)
     var body_start = header_end + 4
     while len(bytes) - body_start < content_length:
         _read_chunk(descriptor, bytes)
-    var body = List[Byte](capacity=content_length)
-    for index in range(content_length):
-        body.append(bytes[body_start + index])
-    return IncomingMessage(
-        String(request_parts[0]), String(request_parts[1]), Buffer(body^)
-    )
+    return parse_request_bytes(bytes)
 
 
 def _read_chunk(descriptor: Int32, mut bytes: List[Byte]) raises:
@@ -190,20 +165,6 @@ def _read_chunk(descriptor: Int32, mut bytes: List[Byte]) raises:
         raise Error("HTTP request ended before it was complete")
     for index in range(count):
         bytes.append(buffer[index])
-
-
-def _find_header_end(bytes: List[Byte]) -> Int:
-    if len(bytes) < 4:
-        return -1
-    for index in range(len(bytes) - 3):
-        if (
-            bytes[index] == 13
-            and bytes[index + 1] == 10
-            and bytes[index + 2] == 13
-            and bytes[index + 3] == 10
-        ):
-            return index
-    return -1
 
 
 def _socket_readable(descriptor: Int32) raises -> Bool:
@@ -221,42 +182,24 @@ def _socket_readable(descriptor: Int32) raises -> Bool:
 def _listen_socket(port: Int32, host: String) raises -> Int32:
     if port < 0 or port > 65535:
         raise Error("HTTP server port must be between 0 and 65535")
-    var descriptor = external_call["socket", c_int](
-        c_int(2), c_int(1), c_int(0)
+    var host_buffer = String(host)
+    var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
+    var descriptor = external_call["tsonic_node_net_listen", c_int](
+        host_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        c_int(port),
+        Pointer(to=error),
     )
     if descriptor < 0:
-        raise Error("Unable to create HTTP server socket")
-    var address = Array[UInt8, 16](fill=0)
-    address[0] = 2
-    address[2] = UInt8(Int(port) >> 8)
-    address[3] = UInt8(Int(port) & 255)
-    _write_ipv4_address(address, host)
-    if (
-        external_call["bind", c_int](
-            descriptor, address.unsafe_ptr(), c_int(16)
-        )
-        != 0
-    ):
-        _ = close(descriptor)
-        raise Error("Unable to bind HTTP server socket")
-    if external_call["listen", c_int](descriptor, c_int(128)) != 0:
-        _ = close(descriptor)
-        raise Error("Unable to listen on HTTP server socket")
+        raise Error(_take_error(error, "Unable to listen for HTTP requests"))
     return descriptor
 
 
-def _write_ipv4_address(mut address: Array[UInt8, 16], host: String) raises:
-    if host == "0.0.0.0":
-        return
-    if host == "localhost" or host == "127.0.0.1":
-        address[4] = 127
-        address[7] = 1
-        return
-    var octets = host.split(".")
-    if len(octets) != 4:
-        raise Error("HTTP server host must be an IPv4 address or localhost")
-    for index in range(4):
-        var value = Int(String(octets[index]))
-        if value < 0 or value > 255:
-            raise Error("HTTP server host contains an invalid IPv4 octet")
-        address[4 + index] = UInt8(value)
+def _take_error(
+    pointer: OptionalPointer[UInt8, MutUntrackedOrigin],
+    fallback: String,
+) -> String:
+    if not pointer:
+        return fallback
+    var value = String(unsafe_from_utf8_ptr=pointer.value())
+    external_call["tsonic_node_free", NoneType](pointer.value())
+    return value^
