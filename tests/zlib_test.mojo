@@ -29,16 +29,20 @@ from tsonic_node.zlib import (
 @fieldwise_init
 struct CallbackEnvironment:
     var count: Location[Int]
+    var fail: Bool
 
     @staticmethod
     def invoke(
         context: ErasedCallableContext,
-        var arguments: Tuple[JsValue, Buffer],
+        var arguments: Tuple[JsValue, Optional[Buffer]],
     ) raises:
         var environment = context.unsafe_bitcast[CallbackEnvironment]()
-        assert_true(arguments[0].is_undefined())
-        assert_true(len(arguments[1]) != 0)
+        assert_true(arguments[0].is_null())
+        assert_true(arguments[1])
+        assert_true(len(arguments[1].value()) != 0)
         environment[].count.write(environment[].count.read() + 1)
+        if environment[].fail:
+            raise Error("callback failure")
 
     @staticmethod
     def destroy(context: ErasedCallableContext):
@@ -46,12 +50,12 @@ struct CallbackEnvironment:
 
 
 def callback(
-    count: Location[Int],
-) -> RaisingCallable[Tuple[JsValue, Buffer], NoneType]:
+    count: Location[Int], fail: Bool = False,
+) -> RaisingCallable[Tuple[JsValue, Optional[Buffer]], NoneType]:
     var environment = allocate_callable_environment(
-        CallbackEnvironment(count), CallbackEnvironment.destroy
+        CallbackEnvironment(count, fail), CallbackEnvironment.destroy
     )
-    return RaisingCallable[Tuple[JsValue, Buffer], NoneType](
+    return RaisingCallable[Tuple[JsValue, Optional[Buffer]], NoneType](
         environment, CallbackEnvironment.invoke
     )
 
@@ -92,4 +96,16 @@ def main() raises:
     gzip_callback(input, callback(count))
     assert_true(poll_zlib())
     assert_equal(count.read(), 1)
+    assert_false(poll_zlib())
+    gzip_callback(input, callback(count, True))
+    gzip_callback(input, callback(count))
+    var rejected = False
+    try:
+        _ = poll_zlib()
+    except:
+        rejected = True
+    assert_true(rejected)
+    assert_equal(count.read(), 2)
+    assert_true(poll_zlib())
+    assert_equal(count.read(), 3)
     assert_false(poll_zlib())

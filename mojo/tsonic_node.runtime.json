@@ -11,6 +11,8 @@
     "zlib": "==1.3.2"
   },
   "translationUnits": [
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/compression/constants.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/compression/codec.c" },
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/http_parser_bridge.c" },
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/socket_io_bridge.c" },
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/vendor/llhttp/src/llhttp.c" },
@@ -69,15 +71,26 @@
     {
       "language": "c",
       "standard": "c11",
-      "path": "tsonic_node.native/zlib_bridge.c"
-    },
-    {
-      "language": "c",
-      "standard": "c11",
       "path": "tsonic_node.native/tls_bridge.c"
     }
   ],
-  "includeDirectories": ["tsonic_node.native/vendor/ada", "tsonic_node.native/vendor/llhttp/include"],
+  "assets": [
+    "tsonic_node.native/fs_metadata.h",
+    "tsonic_node.native/compression/output.h",
+    "tsonic_node.native/vendor/ada/ada.h",
+    "tsonic_node.native/vendor/ada/ada_c.h",
+    "tsonic_node.native/vendor/ada/LICENSE-APACHE",
+    "tsonic_node.native/vendor/ada/LICENSE-MIT",
+    "tsonic_node.native/vendor/ada/UPSTREAM.md",
+    "tsonic_node.native/vendor/llhttp/include/llhttp.h",
+    "tsonic_node.native/vendor/llhttp/LICENSE-MIT",
+    "tsonic_node.native/vendor/llhttp/UPSTREAM.md"
+  ],
+  "includeDirectories": [],
+  "sourceIncludeDirectories": [
+    "tsonic_node.native/vendor/ada",
+    "tsonic_node.native/vendor/llhttp/include"
+  ],
   "staticLibraries": [],
   "dynamicLibraries": [
     "brotlicommon",
@@ -86,6 +99,7 @@
     "crypto",
     "curl",
     "ssl",
+    "stdc++",
     "uv",
     "z"
   ]

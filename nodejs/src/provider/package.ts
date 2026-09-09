@@ -60,7 +60,7 @@ import {
   workerThreadsOperations,
   workerThreadsTypes,
 } from "./modules/worker-threads.js";
-import { zlibModule, zlibOperations, zlibTypes } from "./modules/zlib.js";
+import { zlibModule, zlibOperations, zlibTypes } from "./modules/zlib/index.js";
 import { withNodeModuleObjects } from "./module-objects.js";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");

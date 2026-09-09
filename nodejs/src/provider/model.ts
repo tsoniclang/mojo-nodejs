@@ -214,7 +214,7 @@ export const dnsAddressArrayCallbackCarrier = callbackCarrier([
   jsValueCarrier,
   stringListCarrier,
 ]);
-export const zlibCallbackCarrier = callbackCarrier([jsValueCarrier, bufferCarrier]);
+export const zlibCallbackCarrier = callbackCarrier([jsValueCarrier, mojoOptionalTargetType(bufferCarrier)]);
 export const netConnectionCallbackCarrier = callbackCarrier([netSocketCarrier]);
 export const tlsSocketCallbackCarrier = callbackCarrier([tlsSocketCarrier]);
 export const readlineQuestionCallbackCarrier = callbackCarrier([nativeString]);
