@@ -492,6 +492,7 @@ export function variadicFunctionCall(
         convention: "imm",
         position: "positional-or-keyword",
         variadic: true,
+        restPacking: "list",
       })]),
     }),
     parameterTypes: Object.freeze([parameterType]),
