@@ -30,6 +30,8 @@ typedef struct {
     int referenced;
     uint64_t bytes_read;
     uint64_t bytes_written;
+    uint64_t wire_bytes_read;
+    uint64_t wire_bytes_written;
     char *authorization_error;
     char *servername;
     char *alpn;
@@ -37,6 +39,7 @@ typedef struct {
     int ready;
     int ending;
     int read_ended;
+    int transport_read_ended;
     int write_ended;
     int close_after_flush;
     int failed;
@@ -44,6 +47,8 @@ typedef struct {
     size_t output_length;
     size_t output_offset;
     size_t write_length;
+    size_t write_accepted;
+    int write_retry;
 } TsonicTlsSocket;
 
 char *tsonic_tls_copy_text(const char *value);
@@ -54,6 +59,7 @@ int tsonic_tls_apply_ca_text(SSL_CTX *context, const char *pem, char **error);
 int tsonic_tls_apply_certificate(SSL_CTX *context, const char *certificate_pem, const char *key_pem, char **error);
 TsonicTlsSocket *tsonic_tls_socket_from_ssl(SSL_CTX *context, SSL *ssl, TsonicNetEndpoint *endpoint, const char *servername, int context_owned);
 int tsonic_tls_complete_handshake(TsonicTlsSocket *socket, char **error);
-int tsonic_node_tls_attach_socket(SSL *ssl, int descriptor);
+int tsonic_tls_initialize_transport(SSL *ssl);
+int tsonic_tls_pump_transport(TsonicTlsSocket *socket, char **error);
 
 #endif

@@ -10,33 +10,45 @@ int tsonic_node_tls_progress(void *value, char **error) {
         return -1;
     }
     if (socket->descriptor < 0 && !socket->connecting) return 0;
-    if (!socket->ready) {
-        if (socket->connecting) {
-            int status = tsonic_node_net_endpoint_progress(socket->endpoint);
-            if (status == 0) return 0;
-            if (status < 0) {
-                tsonic_tls_set_error(error, uv_strerror(status));
-                goto failed;
-            }
-            socket->descriptor = tsonic_node_net_endpoint_descriptor(socket->endpoint);
-            if (tsonic_node_tls_attach_socket(socket->ssl, socket->descriptor) != 1) {
-                tsonic_tls_set_ssl_error(error, "Unable to attach TLS connection transport");
-                goto failed;
-            }
-            socket->connecting = 0;
+    if (socket->connecting) {
+        int status = tsonic_node_net_endpoint_progress(socket->endpoint);
+        if (status == 0) return 0;
+        if (status < 0) {
+            tsonic_tls_set_error(error, uv_strerror(status));
+            goto failed;
         }
+        socket->descriptor = tsonic_node_net_endpoint_descriptor(socket->endpoint);
+        if (tsonic_tls_initialize_transport(socket->ssl) != 1) {
+            tsonic_tls_set_ssl_error(error, "Unable to initialize TLS connection transport");
+            goto failed;
+        }
+        socket->connecting = 0;
+    }
+    if (!tsonic_tls_pump_transport(socket, error)) goto failed;
+    if (!socket->ready) {
         ERR_clear_error();
         int result = SSL_do_handshake(socket->ssl);
         if (result != 1) {
             int reason = SSL_get_error(socket->ssl, result);
-            if (reason == SSL_ERROR_WANT_READ || reason == SSL_ERROR_WANT_WRITE) return 0;
+            if (reason == SSL_ERROR_WANT_READ || reason == SSL_ERROR_WANT_WRITE) {
+                if (!tsonic_tls_pump_transport(socket, error)) goto failed;
+                return 0;
+            }
             tsonic_tls_set_ssl_error(error, "TLS handshake failed");
             goto failed;
         }
         if (!tsonic_tls_complete_handshake(socket, error)) goto failed;
+        if (!tsonic_tls_pump_transport(socket, error)) goto failed;
     }
     size_t progressed = 0u;
     while (socket->output_offset < socket->output_length && progressed < 65536u) {
+        if (BIO_ctrl_pending(SSL_get_wbio(socket->ssl)) != 0u) return 1;
+        if (socket->write_accepted != 0u) {
+            socket->output_offset += socket->write_accepted;
+            progressed += socket->write_accepted;
+            socket->write_accepted = 0u;
+            if (socket->output_offset == socket->output_length || progressed >= 65536u) break;
+        }
         if (socket->write_length == 0u) {
             size_t remaining = socket->output_length - socket->output_offset;
             socket->write_length = remaining > 16384u ? 16384u : remaining;
@@ -45,31 +57,41 @@ int tsonic_node_tls_progress(void *value, char **error) {
         int written = SSL_write(socket->ssl, socket->output + socket->output_offset, (int)socket->write_length);
         if (written <= 0) {
             int reason = SSL_get_error(socket->ssl, written);
-            if (reason == SSL_ERROR_WANT_READ || reason == SSL_ERROR_WANT_WRITE) return 1;
+            if (reason == SSL_ERROR_WANT_READ || reason == SSL_ERROR_WANT_WRITE) {
+                socket->write_retry = reason;
+                if (!tsonic_tls_pump_transport(socket, error)) goto failed;
+                return 1;
+            }
             tsonic_tls_set_ssl_error(error, "TLS write failed");
             goto failed;
         }
-        socket->output_offset += (size_t)written;
-        progressed += (size_t)written;
+        socket->write_accepted = (size_t)written;
         socket->write_length = 0u;
+        socket->write_retry = 0;
+        if (!tsonic_tls_pump_transport(socket, error)) goto failed;
     }
     if (socket->output_offset == socket->output_length) {
         free(socket->output);
         socket->output = NULL;
         socket->output_offset = socket->output_length = 0u;
-        if (socket->ending && !socket->write_ended) {
+        if (socket->ending && (SSL_get_shutdown(socket->ssl) & SSL_SENT_SHUTDOWN) == 0) {
             ERR_clear_error();
             int result = SSL_shutdown(socket->ssl);
             if (result < 0) {
                 int reason = SSL_get_error(socket->ssl, result);
-                if (reason == SSL_ERROR_WANT_READ || reason == SSL_ERROR_WANT_WRITE) return 1;
-                tsonic_tls_set_ssl_error(error, "TLS shutdown failed");
-                goto failed;
+                if (reason != SSL_ERROR_WANT_READ && reason != SSL_ERROR_WANT_WRITE) {
+                    tsonic_tls_set_ssl_error(error, "TLS shutdown failed");
+                    goto failed;
+                }
             }
-            socket->write_ended = 1;
-            if (result == 1) socket->read_ended = 1;
         }
     }
+    if (!tsonic_tls_pump_transport(socket, error)) goto failed;
+    int shutdown = SSL_get_shutdown(socket->ssl);
+    if ((shutdown & SSL_SENT_SHUTDOWN) != 0 && BIO_ctrl_pending(SSL_get_wbio(socket->ssl)) == 0u) {
+        socket->write_ended = 1;
+    }
+    if ((shutdown & SSL_RECEIVED_SHUTDOWN) != 0) socket->read_ended = 1;
     if (socket->write_ended && (socket->read_ended || socket->close_after_flush)) {
         tsonic_node_net_endpoint_close(socket->endpoint);
         socket->descriptor = -1;
@@ -96,7 +118,8 @@ int tsonic_node_tls_closed(void *value) {
 int tsonic_node_tls_pending(void *value) {
     TsonicTlsSocket *socket = value;
     return socket != NULL && !socket->failed && (socket->descriptor >= 0 || socket->connecting) &&
-        (!socket->ready || socket->output_length != 0u || (socket->ending && !socket->write_ended));
+        (!socket->ready || socket->output_length != 0u ||
+         BIO_ctrl_pending(SSL_get_wbio(socket->ssl)) != 0u || (socket->ending && !socket->write_ended));
 }
 
 int64_t tsonic_node_tls_write(
@@ -147,7 +170,7 @@ int64_t tsonic_node_tls_read(
     if (tsonic_node_tls_progress(socket, error) < 0) return -1;
     if (socket->connecting) return -2;
     if (socket->descriptor < 0 || socket->read_ended) return 0;
-    if (!socket->ready || socket->write_length != 0u) return -2;
+    if (!socket->ready || socket->write_retry == SSL_ERROR_WANT_WRITE) return -2;
     ERR_clear_error();
     int read = SSL_read(socket->ssl, bytes, (int)capacity);
     if (read > 0) {
@@ -192,7 +215,7 @@ int tsonic_node_tls_peek(void *value, char **error) {
     *error = NULL;
     if (tsonic_node_tls_progress(value, error) < 0) return -1;
     if (socket->read_ended || (socket->descriptor < 0 && !socket->connecting)) return 0;
-    if (!socket->ready || socket->write_length != 0u) return -2;
+    if (!socket->ready || socket->write_retry == SSL_ERROR_WANT_WRITE) return -2;
     unsigned char byte;
     ERR_clear_error();
     int result = SSL_peek(socket->ssl, &byte, 1);
@@ -219,5 +242,6 @@ void tsonic_node_tls_destroy(void *value) {
     socket->ending = 1;
     free(socket->output);
     socket->output = NULL;
-    socket->output_length = socket->output_offset = socket->write_length = 0u;
+    socket->output_length = socket->output_offset = socket->write_length = socket->write_accepted = 0u;
+    socket->write_retry = 0;
 }

@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "../../mojo/tsonic_node.native/tls/api.h"
 #include "../../mojo/tsonic_node.native/net/endpoint.h"
+#include "../../mojo/tsonic_node.native/tls/model.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,10 +173,74 @@ static void truncated_peer_is_not_authenticated_eof(const char *certificate, con
     free_pair(pair);
 }
 
+static size_t receive_payload(void *socket, const uint8_t *expected, size_t received, size_t total, int *ended) {
+    uint8_t bytes[32768];
+    char *error = NULL;
+    int64_t count = tsonic_node_tls_read(socket, bytes, sizeof(bytes), &error);
+    assert(count >= 0 || count == -2);
+    assert(error == NULL);
+    if (count > 0) {
+        assert(received + (size_t)count <= total);
+        assert(memcmp(bytes, expected + received, (size_t)count) == 0);
+        received += (size_t)count;
+    }
+    if (count == 0) *ended = 1;
+    return received;
+}
+
+static void simultaneous_backpressure(const char *certificate, const char *key) {
+    Pair pair = connect_pair(certificate, key);
+    int capacity = 4096;
+    assert(setsockopt(((TsonicTlsSocket *)pair.client)->descriptor, SOL_SOCKET, SO_SNDBUF, &capacity, sizeof(capacity)) == 0);
+    assert(setsockopt(((TsonicTlsSocket *)pair.peer)->descriptor, SOL_SOCKET, SO_SNDBUF, &capacity, sizeof(capacity)) == 0);
+    const size_t prefix = 3u * 1024u * 1024u;
+    const size_t total = prefix + 19u;
+    uint8_t *left = malloc(total);
+    uint8_t *right = malloc(total);
+    assert(left != NULL && right != NULL);
+    for (size_t index = 0; index < total; index++) {
+        left[index] = (uint8_t)(index % 251u);
+        right[index] = (uint8_t)(255u - index % 247u);
+    }
+    char *error = NULL;
+    assert(tsonic_node_tls_write(pair.client, left, prefix, &error) == (int64_t)prefix && error == NULL);
+    assert(tsonic_node_tls_write(pair.peer, right, prefix, &error) == (int64_t)prefix && error == NULL);
+    for (int turn = 0; turn < 32; turn++) progress(pair);
+    assert(tsonic_node_tls_queued_bytes(pair.client) > 0u);
+    assert(tsonic_node_tls_queued_bytes(pair.peer) > 0u);
+    assert(tsonic_node_tls_write(pair.client, left + prefix, total - prefix, &error) == (int64_t)(total - prefix) && error == NULL);
+    assert(tsonic_node_tls_write(pair.peer, right + prefix, total - prefix, &error) == (int64_t)(total - prefix) && error == NULL);
+    assert(tsonic_node_tls_end(pair.client, &error) == 1 && error == NULL);
+    assert(tsonic_node_tls_end(pair.peer, &error) == 1 && error == NULL);
+    size_t left_received = 0u;
+    size_t right_received = 0u;
+    int left_ended = 0;
+    int right_ended = 0;
+    uint64_t deadline = uv_hrtime() + 20000000000u;
+    while ((!left_ended || !right_ended) && uv_hrtime() < deadline) {
+        progress(pair);
+        if (!left_ended) left_received = receive_payload(pair.client, right, left_received, total, &left_ended);
+        if (!right_ended) right_received = receive_payload(pair.peer, left, right_received, total, &right_ended);
+        assert(BIO_ctrl_pending(SSL_get_rbio(((TsonicTlsSocket *)pair.client)->ssl)) <= 65536u);
+        assert(BIO_ctrl_pending(SSL_get_rbio(((TsonicTlsSocket *)pair.peer)->ssl)) <= 65536u);
+        if (!left_ended || !right_ended) pause_turn();
+    }
+    assert(left_ended && right_ended && left_received == total && right_received == total);
+    assert(tsonic_node_tls_queued_bytes(pair.client) == 0u);
+    assert(tsonic_node_tls_queued_bytes(pair.peer) == 0u);
+    assert(tsonic_node_tls_bytes_written(pair.client) == total);
+    assert(tsonic_node_tls_bytes_written(pair.peer) == total);
+    assert(tsonic_node_tls_closed(pair.client) && tsonic_node_tls_closed(pair.peer));
+    free(left);
+    free(right);
+    free_pair(pair);
+}
+
 int main(void) {
     char *certificate = fixture("tests/fixtures/localhost-cert.pem");
     char *key = fixture("tests/fixtures/localhost-key.pem");
     duplex_after_end(certificate, key);
+    simultaneous_backpressure(certificate, key);
     truncated_peer_is_not_authenticated_eof(certificate, key);
     free(certificate);
     free(key);

@@ -84,7 +84,7 @@ void *tsonic_node_tls_server_accept(void *server_value, int32_t descriptor, char
         return NULL;
     }
     SSL *ssl = SSL_new(server->context);
-    if (ssl == NULL || tsonic_node_tls_attach_socket(ssl, descriptor) != 1) {
+    if (ssl == NULL || tsonic_tls_initialize_transport(ssl) != 1) {
         tsonic_tls_set_ssl_error(error, "TLS server handshake failed");
         SSL_free(ssl);
         tsonic_node_net_endpoint_free(endpoint);

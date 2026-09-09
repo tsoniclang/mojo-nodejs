@@ -61,11 +61,7 @@ uint64_t tsonic_node_tls_queued_bytes(void *value) {
 
 uint64_t tsonic_node_tls_activity_bytes(void *value) {
     TsonicTlsSocket *socket = value;
-    if (socket == NULL || socket->ssl == NULL) return 0u;
-    BIO *reader = SSL_get_rbio(socket->ssl);
-    BIO *writer = SSL_get_wbio(socket->ssl);
-    return (reader == NULL ? 0u : BIO_number_read(reader)) +
-        (writer == NULL ? 0u : BIO_number_written(writer));
+    return socket == NULL ? 0u : socket->wire_bytes_read + socket->wire_bytes_written;
 }
 
 int tsonic_node_tls_set_no_delay(void *value, int enabled) {
