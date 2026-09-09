@@ -57,8 +57,8 @@ struct Server(ImplicitlyCopyable):
         _ = self._server.listen(port, host, callback)
         return self
 
-    def close(self):
-        self._server.close()
+    def close(self) raises:
+        _ = self._server.close()
 
     def ref(self) -> Self:
         _ = self._server.ref()

@@ -3,7 +3,6 @@ import type {
   MojoProviderOperationDefinition,
   MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
-import { mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
   booleanType,
   boolCarrier,
@@ -17,17 +16,15 @@ import {
   nodeProviderType,
   propertyMember,
   propertyRead,
-  propertyWrite,
   providerCallbackType,
   providerRef,
-  stringArrayType,
-  stringListCarrier,
   stringType,
   tlsServerOptionsCarrier,
   unitCarrier,
   voidType,
 } from "../model.js";
 import { httpClientExports, httpClientOperations, httpClientTypes } from "./http/client.js";
+import { tlsServerFields, tlsOptionMembers, tlsOptionOperations } from "./tls/options.js";
 
 const moduleSpecifier = "node:https";
 const optionsId = `${moduleSpecifier}::ServerOptions`;
@@ -58,14 +55,7 @@ export function httpsModule(): MojoProviderModuleDefinition {
         id: optionsId,
         name: "ServerOptions",
         kind: "interface",
-        members: Object.freeze([
-          propertyMember(optionsId, "key", stringType, { readonly: false, optional: true }),
-          propertyMember(optionsId, "cert", stringType, { readonly: false, optional: true }),
-          propertyMember(optionsId, "ca", stringArrayType, { readonly: false, optional: true }),
-          propertyMember(optionsId, "ALPNProtocols", stringArrayType, { readonly: false, optional: true }),
-          propertyMember(optionsId, "requestCert", booleanType, { readonly: false, optional: true }),
-          propertyMember(optionsId, "rejectUnauthorized", booleanType, { readonly: false, optional: true }),
-        ]),
+        members: tlsOptionMembers(optionsId, tlsServerFields),
       }),
       Object.freeze({
         id: serverId,
@@ -139,28 +129,14 @@ export function httpsTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function httpsOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
-    ...optionRows(),
+    ...tlsOptionOperations(optionsId, tlsServerOptionsCarrier, tlsServerFields),
     ...httpClientOperations("node:https"),
     functionCall(`${moduleSpecifier}::createServer`, `${moduleSpecifier}::createServer(options,handler)`, "https", "create_server", [tlsServerOptionsCarrier, httpRequestCallbackCarrier], httpsServerCarrier, true),
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", httpsServerCarrier, [float64Carrier, emptyCallbackCarrier], httpsServerCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host,callback)`, "listen", httpsServerCarrier, [float64Carrier, nativeString, emptyCallbackCarrier], httpsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpsServerCarrier, [], unitCarrier, false, "mut"),
+    instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpsServerCarrier, [], unitCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", httpsServerCarrier, [], httpsServerCarrier, false, "mut"),
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", httpsServerCarrier, [], httpsServerCarrier, false, "mut"),
     propertyRead(serverId, `${serverId}.listening`, "listening", httpsServerCarrier, boolCarrier, "method"),
   ]);
-}
-
-function optionRows(): readonly MojoProviderOperationDefinition[] {
-  return Object.freeze(([
-    ["key", "key", mojoOptionalTargetType(nativeString)],
-    ["cert", "cert", mojoOptionalTargetType(nativeString)],
-    ["ca", "ca", mojoOptionalTargetType(stringListCarrier)],
-    ["ALPNProtocols", "alpn_protocols", mojoOptionalTargetType(stringListCarrier)],
-    ["requestCert", "request_cert", mojoOptionalTargetType(boolCarrier)],
-    ["rejectUnauthorized", "reject_unauthorized", mojoOptionalTargetType(boolCarrier)],
-  ] as const).flatMap(([sourceName, targetName, type]) => [
-    propertyRead(optionsId, `${optionsId}.${sourceName}`, targetName, tlsServerOptionsCarrier, type),
-    propertyWrite(optionsId, `${optionsId}.${sourceName}`, targetName, tlsServerOptionsCarrier, type),
-  ]));
 }

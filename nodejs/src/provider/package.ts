@@ -51,7 +51,7 @@ import {
   streamOperations,
   streamTypes,
 } from "./modules/stream.js";
-import { tlsModule, tlsOperations, tlsTypes } from "./modules/tls.js";
+import { tlsModule, tlsOperations, tlsTypes } from "./modules/tls/index.js";
 import { utilModule, utilOperations, utilTypes } from "./modules/util.js";
 import { urlModule, urlOperations, urlTypes } from "./modules/url/index.js";
 import { timersModule, timersOperations, timersTypes } from "./modules/timers.js";

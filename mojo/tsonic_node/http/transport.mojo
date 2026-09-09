@@ -61,7 +61,7 @@ struct HttpTransport(ImplicitlyCopyable):
 
     def end(self) raises:
         if self._state[].tls:
-            self._state[].tls.value().end()
+            self._state[].tls.value().finish_response()
         elif self._state[].descriptor >= 0:
             _ = close(self._state[].descriptor)
             self._state[].descriptor = -1
