@@ -11,7 +11,7 @@ mkdir -p "${NATIVE_BUILD}"
 native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
 js_native_output="$("${PIXI_BIN}" run bash ../mojo-js/scripts/build-native.sh)"
 mapfile -t js_native_arguments <<<"${js_native_output}"
-for source in crypto_bridge crypto_catalog node_bridge worker/channel worker/spawn net/endpoint compression/codec compression/constants tls/context tls/handshake tls/connection tls/server tls/io tls/lifecycle tls_bio fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
+for source in crypto_bridge crypto_catalog node_bridge dns/request dns/lookup dns/resolver dns/records worker/channel worker/spawn net/endpoint compression/codec compression/constants tls/context tls/handshake tls/connection tls/server tls/io tls/lifecycle tls_bio fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
   object="${source//\//_}"
   "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- -O3 -fPIC -std=c11 \
     -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
@@ -32,6 +32,10 @@ link_arguments=(
   -Xlinker "${NATIVE_BUILD}/crypto_bridge.o"
   -Xlinker "${NATIVE_BUILD}/crypto_catalog.o"
   -Xlinker "${NATIVE_BUILD}/node_bridge.o"
+  -Xlinker "${NATIVE_BUILD}/dns_request.o"
+  -Xlinker "${NATIVE_BUILD}/dns_lookup.o"
+  -Xlinker "${NATIVE_BUILD}/dns_resolver.o"
+  -Xlinker "${NATIVE_BUILD}/dns_records.o"
   -Xlinker "${NATIVE_BUILD}/worker_channel.o"
   -Xlinker "${NATIVE_BUILD}/worker_spawn.o"
   -Xlinker "${NATIVE_BUILD}/net_endpoint.o"
@@ -65,6 +69,7 @@ link_arguments=(
   -Xlinker -lz
   -Xlinker -luv
   -Xlinker -lcurl
+  -Xlinker -lcares
   "${js_native_arguments[@]}"
 )
 
@@ -77,7 +82,8 @@ for test_file in tests/native/*.c; do
     "${NATIVE_BUILD}/tls_context.o" "${NATIVE_BUILD}/tls_handshake.o" "${NATIVE_BUILD}/tls_connection.o" \
     "${NATIVE_BUILD}/tls_server.o" "${NATIVE_BUILD}/tls_io.o" "${NATIVE_BUILD}/tls_lifecycle.o" \
     "${NATIVE_BUILD}/worker_channel.o" "${NATIVE_BUILD}/worker_spawn.o" \
-    -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv \
+    "${NATIVE_BUILD}/dns_request.o" "${NATIVE_BUILD}/dns_lookup.o" "${NATIVE_BUILD}/dns_resolver.o" "${NATIVE_BUILD}/dns_records.o" \
+    -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv -lcares \
     -o "${NATIVE_BUILD}/${test_name}" && "${NATIVE_BUILD}/${test_name}"; then
     printf 'PASS %s\n' "$test_file"
   else

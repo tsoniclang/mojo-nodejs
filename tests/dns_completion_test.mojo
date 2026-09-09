@@ -1,8 +1,9 @@
 from std.collections import List
+from std.time import sleep
 from std.testing import assert_equal, assert_true, assert_false
 from tsonic_js import JsValue
 from tsonic_runtime import Location, ErasedCallableContext, RaisingCallable, allocate_callable_environment, destroy_callable_environment
-from tsonic_node.dns import LookupCallback, AddressListCallback, lookup, lookup_callback, reverse_callback, poll_dns, has_pending_dns
+from tsonic_node.dns import LookupCallback, AddressListCallback, lookup_callback, reverse_callback, poll_dns, has_pending_dns
 
 
 @fieldwise_init
@@ -51,24 +52,27 @@ def main() raises:
     lookup_callback("127.0.0.1", completed(count, True))
     lookup_callback("127.0.0.1", completed(count))
     assert_equal(count.read(), 0)
-    var rejected = False
-    try:
-        _ = poll_dns()
-    except:
-        rejected = True
-    assert_true(rejected)
-    assert_equal(count.read(), 1)
-    assert_true(has_pending_dns())
-    assert_true(poll_dns())
+    var failures = 0
+    for turn in range(10000):
+        try:
+            _ = poll_dns()
+        except error:
+            assert_equal(String(error), "deliberate DNS callback failure")
+            failures += 1
+        if not has_pending_dns():
+            break
+        sleep(0.001)
+    assert_equal(failures, 1)
     assert_equal(count.read(), 2)
     assert_false(has_pending_dns())
     var environment = allocate_callable_environment(FailureCompletion(count), FailureCompletion.destroy)
     reverse_callback("not-an-IP-address", AddressListCallback(environment, FailureCompletion.invoke))
     assert_true(poll_dns())
     assert_equal(count.read(), 3)
-    rejected = False
+    var rejected = False
     try:
-        _ = lookup("127.0.0.1\0.invalid")
+        lookup_callback("127.0.0.1\0.invalid", completed(count))
     except:
         rejected = True
     assert_true(rejected)
+    assert_false(has_pending_dns())

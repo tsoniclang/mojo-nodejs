@@ -36,6 +36,9 @@ struct CallbackQueue(ImplicitlyCopyable):
     def has_pending(self) -> Bool:
         return len(self._pending[]) != 0
 
+    def pending_count(self) -> Int:
+        return len(self._pending[])
+
     def push(self, notification: Notification) raises:
         self.require_capacity()
         self._pending[].append(notification)
