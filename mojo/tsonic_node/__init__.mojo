@@ -8,7 +8,14 @@ from .assertions import (
     strict_equal_with_message,
 )
 from .child_process import SpawnSyncResult, spawn_sync
-from .crypto import Hash, create_hash
+from .crypto import (
+    Hash,
+    Hmac,
+    create_hash,
+    create_hmac,
+    random_bytes,
+    random_uuid,
+)
 from .dns import LookupAddress, lookup, resolve4, resolve6, reverse
 from .event_loop import run_event_loop
 from .events import EventEmitter, event_emitter_new, listener_count

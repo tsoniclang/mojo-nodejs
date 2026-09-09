@@ -136,6 +136,10 @@ def arch() -> String:
     return os_arch()
 
 
+def version() -> String:
+    return "tsonic-mojo"
+
+
 def current_directory() raises -> String:
     return String(cwd())
 

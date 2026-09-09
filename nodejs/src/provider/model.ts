@@ -147,6 +147,12 @@ export const hashCarrier = mojoNamedTargetType(
   "Hash",
 );
 
+export const hmacCarrier = mojoNamedTargetType(
+  "tsonic.mojo.node.Hmac",
+  ["tsonic_node", "crypto"],
+  "Hmac",
+);
+
 export const timeoutCarrier = mojoNamedTargetType(
   "tsonic.mojo.node.Timeout",
   ["tsonic_node", "timers"],
