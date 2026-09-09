@@ -5,6 +5,7 @@ import type {
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 import { mojoNamedTargetType, mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
+import type { ProviderTypeExpression } from "../model/types.js";
 import {
   boolCarrier,
   booleanType,
@@ -158,11 +159,11 @@ export function workerThreadsModule(): MojoProviderModuleDefinition {
       functionExport("receiveMessageOnPort", [
         { name: "port", type: providerRef(moduleSpecifier, "MessagePort") },
       ], Object.freeze({ kind: "union", types: Object.freeze([providerRef(moduleSpecifier, "MessagePortMessage"), undefinedType]) })),
-      functionExport("getEnvironmentData", [{ name: "key", type: stringType }], optionalUnknownType),
+      functionExport("getEnvironmentData", [{ name: "key", type: anyType }], optionalUnknownType),
       functionExport("setEnvironmentData", [
-        { name: "key", type: stringType },
+        { name: "key", type: anyType },
         { name: "value", type: anyType },
-      ], voidType),
+      ], voidType, [[{ name: "key", type: anyType }]]),
       functionExport("markAsUntransferable", [{ name: "value", type: anyType }], voidType),
       functionExport("isMarkedAsUntransferable", [{ name: "value", type: anyType }], booleanType),
       valueExport(moduleSpecifier, "isMainThread", booleanType),
@@ -215,8 +216,9 @@ export function workerThreadsOperations(): readonly MojoProviderOperationDefinit
     propertyRead(messageChannelId, `${messageChannelId}.port2`, "port2", messageChannelCarrier, messagePortCarrier),
     functionCall(`${moduleSpecifier}::receiveMessageOnPort`, `${moduleSpecifier}::receiveMessageOnPort(port)`, "worker_threads", "receive_message_on_port", [messagePortCarrier], mojoOptionalTargetType(messageResultCarrier)),
     propertyRead(messageResultId, `${messageResultId}.message`, "message", messageResultCarrier, jsValueCarrier),
-    functionCall(`${moduleSpecifier}::getEnvironmentData`, `${moduleSpecifier}::getEnvironmentData(key)`, "worker_threads", "get_environment_data", [nativeString], jsValueCarrier, true),
-    functionCall(`${moduleSpecifier}::setEnvironmentData`, `${moduleSpecifier}::setEnvironmentData(key,value)`, "worker_threads", "set_environment_data", [nativeString, jsValueCarrier], unitCarrier, true),
+    functionCall(`${moduleSpecifier}::getEnvironmentData`, `${moduleSpecifier}::getEnvironmentData(key)`, "worker_threads", "get_environment_data", [jsValueCarrier], jsValueCarrier),
+    functionCall(`${moduleSpecifier}::setEnvironmentData`, `${moduleSpecifier}::setEnvironmentData(key,value)`, "worker_threads", "set_environment_data", [jsValueCarrier, jsValueCarrier], unitCarrier, true),
+    functionCall(`${moduleSpecifier}::setEnvironmentData`, `${moduleSpecifier}::setEnvironmentData(key)`, "worker_threads", "set_environment_data", [jsValueCarrier], unitCarrier, true),
     functionCall(`${moduleSpecifier}::markAsUntransferable`, `${moduleSpecifier}::markAsUntransferable(value)`, "worker_threads", "mark_as_untransferable", [jsValueCarrier], unitCarrier, true),
     functionCall(`${moduleSpecifier}::isMarkedAsUntransferable`, `${moduleSpecifier}::isMarkedAsUntransferable(value)`, "worker_threads", "is_marked_as_untransferable", [jsValueCarrier], boolCarrier),
     functionValue(`${moduleSpecifier}::isMainThread`, "worker_threads", "is_main_thread", boolCarrier),
@@ -334,18 +336,19 @@ function optionProperty(
 
 function functionExport(
   name: string,
-  parameters: readonly { readonly name: string; readonly type: typeof anyType | ReturnType<typeof providerRef> | typeof stringType }[],
-  returnType: typeof anyType | typeof optionalUnknownType | typeof booleanType | typeof voidType,
+  parameters: readonly { readonly name: string; readonly type: ProviderTypeExpression }[],
+  returnType: ProviderTypeExpression,
+  overloads: readonly (readonly { readonly name: string; readonly type: ProviderTypeExpression }[])[] = [],
 ) {
   return Object.freeze({
     id: `${moduleSpecifier}::${name}`,
     name,
     kind: "function" as const,
-    signatures: Object.freeze([Object.freeze({
-      id: `${moduleSpecifier}::${name}(${parameters.map((parameter) => parameter.name).join(",")})`,
+    signatures: Object.freeze([parameters, ...overloads].map((signatureParameters) => Object.freeze({
+      id: `${moduleSpecifier}::${name}(${signatureParameters.map((parameter) => parameter.name).join(",")})`,
       name,
-      parameters: Object.freeze(parameters.map((parameter) => Object.freeze({ ...parameter }))),
+      parameters: Object.freeze(signatureParameters.map((parameter) => Object.freeze({ ...parameter }))),
       returnType,
-    })]),
+    }))),
   });
 }

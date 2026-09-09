@@ -3,7 +3,7 @@ from std.memory import ArcPointer
 from tsonic_js import JsString, JsValue, js_value_structured_clone
 from tsonic_runtime import GlobalCell, RaisingCallable
 
-from .events import EventEmitter
+from ..events import EventEmitter
 
 
 comptime Listener0 = RaisingCallable[Tuple[], NoneType]
@@ -12,32 +12,6 @@ comptime Listener1 = RaisingCallable[Tuple[JsValue], NoneType]
 comptime _MAX_CHANNELS = 1 << 20
 comptime _MAX_PENDING_MESSAGES = 1 << 20
 comptime _MESSAGE_EVENT = "message"
-
-
-struct WorkerOptions(Copyable):
-    var name: Optional[String]
-    var argv: Optional[List[String]]
-    var env: JsValue
-    var worker_data: JsValue
-
-    def __init__(
-        out self,
-        name: Optional[String] = None,
-        argv: Optional[List[String]] = None,
-        env: JsValue = JsValue.undefined(),
-        worker_data: JsValue = JsValue.undefined(),
-    ):
-        self.name = name
-        self.argv = argv
-        self.env = env
-        self.worker_data = worker_data
-
-
-struct Worker(ImplicitlyCopyable):
-    var _thread_id: Int32
-
-    def __init__(out self, thread_id: Int32):
-        self._thread_id = thread_id
 
 
 @fieldwise_init
@@ -141,35 +115,13 @@ struct MessagePortMessage(ImplicitlyCopyable):
     var message: JsValue
 
 
-@fieldwise_init
-struct _EnvironmentEntry(Copyable):
-    var key: String
-    var value: JsValue
-
-
 def _initial_ports() -> List[ArcPointer[_PortInbox]]:
     return List[ArcPointer[_PortInbox]]()
-
-
-def _initial_environment() -> List[_EnvironmentEntry]:
-    return List[_EnvironmentEntry]()
-
-
-def _initial_untransferable() -> List[JsValue]:
-    return List[JsValue]()
 
 
 comptime _ports = GlobalCell[
     "tsonic.node.worker-threads.ports",
     _initial_ports,
-]()
-comptime _environment = GlobalCell[
-    "tsonic.node.worker-threads.environment",
-    _initial_environment,
-]()
-comptime _untransferable = GlobalCell[
-    "tsonic.node.worker-threads.untransferable",
-    _initial_untransferable,
 ]()
 
 
@@ -194,60 +146,6 @@ def receive_message_on_port(port: MessagePort) -> Optional[MessagePortMessage]:
     if len(port._inbox[].messages) == 0:
         return None
     return MessagePortMessage(_shift_message(port._inbox[].messages))
-
-
-def get_environment_data(key: String) raises -> JsValue:
-    for entry in _environment.get()[]:
-        if entry.key == key:
-            return js_value_structured_clone(entry.value)
-    return JsValue.undefined()
-
-
-def set_environment_data(key: String, value: JsValue) raises:
-    var replacement = js_value_structured_clone(value)
-    for index in range(len(_environment.get()[])):
-        if _environment.get()[][index].key == key:
-            _environment.get()[][index].value = replacement
-            return
-    if len(_environment.get()[]) >= _MAX_CHANNELS:
-        raise Error("Worker environment data exceeds the finite runtime limit")
-    _environment.get()[].append(_EnvironmentEntry(key, replacement))
-
-
-def mark_as_untransferable(value: JsValue) raises:
-    if not value.is_array() and not value.is_object() and not value.is_json_projection():
-        return
-    for existing in _untransferable.get()[]:
-        if existing.same_identity(value):
-            return
-    if len(_untransferable.get()[]) >= _MAX_CHANNELS:
-        raise Error(
-            "Untransferable identity set exceeds the finite runtime limit"
-        )
-    _untransferable.get()[].append(value)
-
-
-def is_marked_as_untransferable(value: JsValue) -> Bool:
-    for existing in _untransferable.get()[]:
-        if existing.same_identity(value):
-            return True
-    return False
-
-
-def is_main_thread() -> Bool:
-    return True
-
-
-def thread_id() -> Float64:
-    return 0
-
-
-def worker_data() -> JsValue:
-    return JsValue.undefined()
-
-
-def parent_port() -> Optional[MessagePort]:
-    return None
 
 
 def poll_worker_threads() raises -> Bool:
@@ -290,4 +188,3 @@ def _shift_message(mut values: List[JsValue]) -> JsValue:
         retained.append(values[index])
     values = retained^
     return result
-

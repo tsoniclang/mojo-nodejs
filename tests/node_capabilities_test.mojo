@@ -130,8 +130,8 @@ def main() raises:
     assert_true(poll_worker_threads())
     assert_equal(message_count.read(), 1)
 
-    set_environment_data("mode", JsValue(JsString("test")))
-    assert_equal(get_environment_data("mode").string_value(), JsString("test"))
+    set_environment_data(JsValue(JsString("mode")), JsValue(JsString("test")))
+    assert_equal(get_environment_data(JsValue(JsString("mode"))).string_value(), JsString("test"))
     assert_true(is_main_thread())
 
     var identity = js_value_error("identity")
