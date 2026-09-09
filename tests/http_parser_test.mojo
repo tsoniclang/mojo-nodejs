@@ -40,6 +40,7 @@ def main() raises:
     assert_equal(len(message.read_all_buffer()), 0)
     rejects("POST / HTTP/1.1\r\nContent-Length: 2\r\nContent-Length: 3\r\n\r\nabc")
     rejects("POST / HTTP/1.1\r\nContent-Length: 2\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n")
+    rejects("POST / HTTP/1.1\r\nTransfer-Encoding: \r\n\r\n")
     rejects("GET / HTTP/1.1\r\nBad Header: value\r\n\r\n")
     rejects("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\nZ\r\nx\r\n0\r\n\r\n")
     var oversized = String("GET /")

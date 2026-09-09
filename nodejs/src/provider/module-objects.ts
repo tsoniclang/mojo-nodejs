@@ -29,8 +29,9 @@ export function withNodeModuleObjects(definition: PackageDefinition): PackageDef
     for (const declaration of module.exports) {
       if (declaration.kind !== "function" && declaration.kind !== "value") continue;
       const memberId = `${exportId}#${declaration.id}`;
+      const signatureIds = new Map((declaration.signatures ?? []).map((signature) => [signature.id, `${memberId}#${signature.id}`]));
       const member = declaration.kind === "function"
-        ? Object.freeze({ id: memberId, name: declaration.exportName ?? declaration.name, kind: "method" as const, static: true as const, signatures: declaration.signatures })
+        ? Object.freeze({ id: memberId, name: declaration.exportName ?? declaration.name, kind: "method" as const, static: true as const, signatures: Object.freeze((declaration.signatures ?? []).map((signature) => Object.freeze({ ...signature, id: signatureIds.get(signature.id)! }))) })
         : Object.freeze({ id: memberId, name: declaration.exportName ?? declaration.name, kind: "property" as const, static: true as const, readonly: true as const, type: declaration.type });
       members.push(member);
       for (const operation of definition.operations) {
@@ -39,6 +40,7 @@ export function withNodeModuleObjects(definition: PackageDefinition): PackageDef
           ...operation,
           exportId,
           memberId,
+          ...(operation.signatureId === undefined ? {} : { signatureId: signatureIds.get(operation.signatureId)! }),
           operationKind: declaration.kind === "value" ? "property" : operation.operationKind,
         }));
       }

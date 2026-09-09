@@ -14,7 +14,6 @@ import {
   functionCall,
   instanceCall,
   methodMember,
-  nativeIntCarrier,
   nativeString,
   nodeProviderType,
   numberArrayType,
@@ -26,7 +25,8 @@ import {
   providerRef,
   staticCall,
   stringType,
-} from "../model.js";
+} from "../../model.js";
+import { extraBufferMembers, extraBufferOperations } from "./members.js";
 
 const moduleSpecifier = "node:buffer";
 const bufferId = `${moduleSpecifier}::Buffer`;
@@ -104,16 +104,23 @@ export function bufferModule(): MojoProviderModuleDefinition {
               signatureSuffix: "string,encoding",
             },
             { parameters: [{ name: "value", type: numberArrayType }], returnType: bufferType, signatureSuffix: "numberArray" },
+            { parameters: [{ name: "value", type: bufferType }], returnType: bufferType, signatureSuffix: "buffer" },
           ], { static: true }),
-          methodMember(bufferId, "alloc", [{ name: "size", type: numberType }], bufferType, { static: true }),
+          ...extraBufferMembers(),
           overloadedMethodMember(bufferId, "byteLength", [
-            { parameters: [{ name: "value", type: stringType }], returnType: numberType },
+            { parameters: [{ name: "value", type: stringType }], returnType: numberType, signatureSuffix: "string" },
             { parameters: [{ name: "value", type: stringType }, { name: "encoding", type: stringType }], returnType: numberType },
+            { parameters: [{ name: "value", type: bufferType }], returnType: numberType, signatureSuffix: "buffer" },
           ], { static: true }),
-          methodMember(bufferId, "concat", [{ name: "list", type: { kind: "array", elementType: bufferType } }], bufferType, { static: true }),
+          overloadedMethodMember(bufferId, "concat", [
+            { parameters: [{ name: "list", type: { kind: "array", elementType: bufferType } }], returnType: bufferType },
+            { parameters: [{ name: "list", type: { kind: "array", elementType: bufferType } }, { name: "totalLength", type: numberType }], returnType: bufferType },
+          ], { static: true }),
           overloadedMethodMember(bufferId, "toString", [
             { parameters: [], returnType: stringType },
             { parameters: [{ name: "encoding", type: stringType }], returnType: stringType },
+            { parameters: [{ name: "encoding", type: stringType }, { name: "start", type: numberType }], returnType: stringType },
+            { parameters: [{ name: "encoding", type: stringType }, { name: "start", type: numberType }, { name: "end", type: numberType }], returnType: stringType },
           ]),
           overloadedMethodMember(bufferId, "copy", [
             { parameters: [{ name: "target", type: bufferType }], returnType: numberType },
@@ -135,6 +142,9 @@ export function bufferModule(): MojoProviderModuleDefinition {
       }),
       fnExport(moduleSpecifier, "isBuffer", [{ name: "value", type: bufferType }], booleanType),
       fnExport(moduleSpecifier, "isEncoding", [{ name: "encoding", type: stringType }], booleanType),
+      fnExport(moduleSpecifier, "isAscii", [{ name: "value", type: bufferType }], booleanType),
+      fnExport(moduleSpecifier, "isUtf8", [{ name: "value", type: bufferType }], booleanType),
+      fnExport(moduleSpecifier, "transcode", [{ name: "value", type: bufferType }, { name: "fromEncoding", type: stringType }, { name: "toEncoding", type: stringType }], bufferType),
       fnExport(moduleSpecifier, "btoa", [{ name: "value", type: stringType }], stringType),
       fnExport(moduleSpecifier, "atob", [{ name: "value", type: stringType }], stringType),
     ]),
@@ -174,30 +184,35 @@ function numericOperations(member: NumericMember): readonly MojoProviderOperatio
   const valueTypes = member.write ? [float64Carrier] : [];
   return Object.freeze([
     instanceOperation(member.sourceName, member.write ? "value" : "", member.targetName, valueTypes, float64Carrier, true, member.write ? "mut" : "imm"),
-    instanceOperation(member.sourceName, member.write ? "value,offset" : "offset", member.targetName, [...valueTypes, nativeIntCarrier], float64Carrier, true, member.write ? "mut" : "imm"),
+    instanceOperation(member.sourceName, member.write ? "value,offset" : "offset", member.targetName, [...valueTypes, float64Carrier], float64Carrier, true, member.write ? "mut" : "imm"),
   ]);
 }
 
 export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
   const sliceOperations = ["slice", "subarray"].flatMap((member) => [
     instanceOperation(member, "", member, [], bufferCarrier),
-    instanceOperation(member, "start", member, [nativeIntCarrier], bufferCarrier),
-    instanceOperation(member, "start,end", member, [nativeIntCarrier, nativeIntCarrier], bufferCarrier),
+    instanceOperation(member, "start", member, [float64Carrier], bufferCarrier),
+    instanceOperation(member, "start,end", member, [float64Carrier, float64Carrier], bufferCarrier),
   ]);
   return Object.freeze([
     staticOperation("from", "string", "buffer_from_string", [nativeString], bufferCarrier),
     staticOperation("from", "string,encoding", "buffer_from_string_encoded", [nativeString, nativeString], bufferCarrier, true),
     staticOperation("from", "numberArray", "buffer_from_numbers", [numberListCarrier], bufferCarrier),
-    staticOperation("alloc", "size", "buffer_alloc", [nativeIntCarrier], bufferCarrier, true),
-    staticOperation("byteLength", "value", "buffer_byte_length", [nativeString], float64Carrier, true),
+    staticOperation("from", "buffer", "buffer_from_buffer", [bufferCarrier], bufferCarrier),
+    ...extraBufferOperations(),
+    staticOperation("byteLength", "string", "buffer_byte_length", [nativeString], float64Carrier, true),
     staticOperation("byteLength", "value,encoding", "buffer_byte_length", [nativeString, nativeString], float64Carrier, true),
-    staticOperation("concat", "list", "buffer_concat", [bufferListCarrier], bufferCarrier),
+    staticOperation("byteLength", "buffer", "buffer_byte_length_buffer", [bufferCarrier], float64Carrier),
+    staticOperation("concat", "list", "buffer_concat", [bufferListCarrier], bufferCarrier, true),
+    staticOperation("concat", "list,totalLength", "buffer_concat", [bufferListCarrier, float64Carrier], bufferCarrier, true),
     instanceOperation("toString", "", "to_string", [], nativeString, true),
     instanceOperation("toString", "encoding", "to_string", [nativeString], nativeString, true),
+    instanceOperation("toString", "encoding,start", "to_string", [nativeString, float64Carrier], nativeString, true),
+    instanceOperation("toString", "encoding,start,end", "to_string", [nativeString, float64Carrier, float64Carrier], nativeString, true),
     instanceOperation("copy", "target", "copy", [bufferCarrier], float64Carrier, true),
-    instanceOperation("copy", "target,targetStart", "copy", [bufferCarrier, nativeIntCarrier], float64Carrier, true),
-    instanceOperation("copy", "target,targetStart,sourceStart", "copy", [bufferCarrier, nativeIntCarrier, nativeIntCarrier], float64Carrier, true),
-    instanceOperation("copy", "target,targetStart,sourceStart,sourceEnd", "copy", [bufferCarrier, nativeIntCarrier, nativeIntCarrier, nativeIntCarrier], float64Carrier, true),
+    instanceOperation("copy", "target,targetStart", "copy", [bufferCarrier, float64Carrier], float64Carrier, true),
+    instanceOperation("copy", "target,targetStart,sourceStart", "copy", [bufferCarrier, float64Carrier, float64Carrier], float64Carrier, true),
+    instanceOperation("copy", "target,targetStart,sourceStart,sourceEnd", "copy", [bufferCarrier, float64Carrier, float64Carrier, float64Carrier], float64Carrier, true),
     ...sliceOperations,
     ...["swap16", "swap32", "swap64"].map((member) => instanceOperation(member, "", member, [], bufferCarrier, true, "mut")),
     ...numericMembers.flatMap(numericOperations),
@@ -206,6 +221,9 @@ export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
     propertyRead(bufferId, `${bufferId}.length`, "js_length", bufferCarrier, float64Carrier, "method"),
     functionCall(`${moduleSpecifier}::isBuffer`, `${moduleSpecifier}::isBuffer(value)`, "buffer", "buffer_is_buffer", [bufferCarrier], boolCarrier),
     functionCall(`${moduleSpecifier}::isEncoding`, `${moduleSpecifier}::isEncoding(encoding)`, "buffer", "buffer_is_encoding", [nativeString], boolCarrier),
+    functionCall(`${moduleSpecifier}::isAscii`, `${moduleSpecifier}::isAscii(value)`, "buffer", "buffer_is_ascii", [bufferCarrier], boolCarrier),
+    functionCall(`${moduleSpecifier}::isUtf8`, `${moduleSpecifier}::isUtf8(value)`, "buffer", "buffer_is_utf8", [bufferCarrier], boolCarrier),
+    functionCall(`${moduleSpecifier}::transcode`, `${moduleSpecifier}::transcode(value,fromEncoding,toEncoding)`, "buffer", "buffer_transcode", [bufferCarrier, nativeString, nativeString], bufferCarrier, true),
     functionCall(`${moduleSpecifier}::btoa`, `${moduleSpecifier}::btoa(value)`, "buffer", "buffer_btoa", [nativeString], nativeString, true),
     functionCall(`${moduleSpecifier}::atob`, `${moduleSpecifier}::atob(value)`, "buffer", "buffer_atob", [nativeString], nativeString, true),
   ]);

@@ -164,3 +164,47 @@ def decode_binary_string(value: String) raises -> String:
         if _base64_digit(byte) < 0 or byte == 45 or byte == 95:
             raise Error("atob input contains an invalid base64 character")
     return decode_bytes(encode_bytes(String(compact[byte=:end]), "base64"), "latin1")
+
+
+def writable_byte_count(bytes: List[Byte], maximum: Int, encoding: String) -> Int:
+    var count = min(maximum, len(bytes))
+    if encoding == "utf16le":
+        return count - count % 2
+    if encoding == "utf8" and count < len(bytes):
+        while count > 0 and UInt8(bytes[count]) & 0xC0 == 0x80:
+            count -= 1
+    return count
+
+
+def transcode_bytes(
+    bytes: List[Byte], source_encoding: String, target_encoding: String
+) raises -> List[Byte]:
+    var source = encoding_name(source_encoding)
+    var target = encoding_name(target_encoding)
+    for name in (source, target):
+        if name != "utf8" and name != "utf16le" and name != "latin1" and name != "ascii":
+            raise Error("Buffer.transcode requires a text encoding")
+    var units = List[UInt16]()
+    if source == "utf16le":
+        var index = 0
+        while index + 1 < len(bytes):
+            units.append(UInt16(bytes[index]) | (UInt16(bytes[index + 1]) << 8))
+            index += 2
+        if index < len(bytes):
+            units.append(0xFFFD)
+    elif source == "ascii":
+        for byte in bytes:
+            units.append(UInt16(byte) if byte < 128 else 0xFFFD)
+    else:
+        var text = JsString(decode_bytes(bytes, source))
+        for index in range(len(text)):
+            units.append(text.code_unit_at(index).value())
+    var text = JsString(code_units=units^).to_native_lossy()
+    if target == "utf8" or target == "utf16le":
+        return encode_bytes(text, target)
+    var result = List[Byte]()
+    var maximum = UInt32(127) if target == "ascii" else UInt32(255)
+    for point in text.codepoints():
+        var scalar = point.to_u32()
+        result.append(Byte(scalar if scalar <= maximum else 63))
+    return result^

@@ -2,6 +2,7 @@ import type {
   MojoProviderModuleDefinition,
   MojoProviderOperationDefinition,
   MojoProviderTypeDefinition,
+  MojoProviderSurfaceMembers,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
@@ -68,7 +69,6 @@ export function filesystemModule(): MojoProviderModuleDefinition {
         propertyMember(statsId, "size", numberType),
         propertyMember(statsId, "mtimeMs", numberType),
         ...["atimeMs", "ctimeMs", "birthtimeMs"].map((name) => propertyMember(statsId, name, numberType)),
-        ...["atime", "mtime", "ctime", "birthtime"].map((name) => propertyMember(statsId, name, Object.freeze({ kind: "source-global", name: "Date" }))),
       ]),
       classExport(direntId, "Dirent", [
         propertyMember(direntId, "name", stringType),
@@ -280,7 +280,6 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
     propertyRead(statsId, `${statsId}.size`, "size", statsCarrier, nativeIntCarrier),
     propertyRead(statsId, `${statsId}.mtimeMs`, "mtime_ms", statsCarrier, float64Carrier),
     ...([["atimeMs", "atime_ms"], ["ctimeMs", "ctime_ms"], ["birthtimeMs", "birthtime_ms"]] as const).map(([source, target]) => propertyRead(statsId, `${statsId}.${source}`, target, statsCarrier, float64Carrier)),
-    ...["atime", "mtime", "ctime", "birthtime"].map((name) => propertyRead(statsId, `${statsId}.${name}`, name, statsCarrier, mojoNamedTargetType("tsonic.mojo.js.JsDate", ["tsonic_js"], "JsDate"), "method")),
     propertyRead(direntId, `${direntId}.name`, "name", direntCarrier, nativeString),
     ...optionFieldOperations(mkdirOptionsId, mkdirOptionsCarrier, [
       ["recursive", "recursive", optionalBoolCarrier],
@@ -351,4 +350,17 @@ function optionFieldOperations(
     propertyRead(exportId, `${exportId}.${sourceName}`, targetName, receiverType, storageType),
     propertyWrite(exportId, `${exportId}.${sourceName}`, targetName, receiverType, storageType),
   ]));
+}
+
+export function filesystemSurfaceMembers(): MojoProviderSurfaceMembers {
+  const names = ["atime", "mtime", "ctime", "birthtime"];
+  return Object.freeze({
+    id: "filesystem-js-date-members",
+    requiredSurfaces: Object.freeze(["js"]),
+    declarations: Object.freeze([Object.freeze({
+      exportId: statsId,
+      members: Object.freeze(names.map((name) => propertyMember(statsId, name, Object.freeze({ kind: "source-global", name: "Date" })))),
+    })]),
+    operations: Object.freeze(names.map((name) => propertyRead(statsId, `${statsId}.${name}`, name, statsCarrier, mojoNamedTargetType("tsonic.mojo.js.JsDate", ["tsonic_js"], "JsDate"), "method"))),
+  });
 }

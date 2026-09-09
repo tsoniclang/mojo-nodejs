@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { createMojoProviderPackage } from "@tsonic/target-mojo/provider";
 import type { MojoProviderPackageImplementation } from "@tsonic/target-mojo/provider";
 import { assertModule, assertOperations } from "./modules/assert.js";
-import { bufferModule, bufferOperations, bufferTypes } from "./modules/buffer.js";
+import { bufferModule, bufferOperations, bufferTypes } from "./modules/buffer/index.js";
 import {
   childProcessModule,
   childProcessOperations,
@@ -24,6 +24,7 @@ import {
 import {
   filesystemModule,
   filesystemOperations,
+  filesystemSurfaceMembers,
   filesystemTypes,
 } from "./modules/filesystem/index.js";
 import {
@@ -142,6 +143,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       ...workerThreadsTypes(),
       ...zlibTypes(),
     ]),
+    surfaceMembers: Object.freeze([filesystemSurfaceMembers()]),
     operations: Object.freeze([
       ...assertOperations(),
       ...bufferOperations(),
