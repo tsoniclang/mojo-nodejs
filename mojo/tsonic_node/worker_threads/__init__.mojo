@@ -12,11 +12,13 @@ from .transfer_metadata import (
     is_marked_as_untransferable,
     mark_as_untransferable,
 )
-from .worker import (
-    Worker,
-    WorkerOptions,
+from .worker import Worker, worker_new
+from .options import WorkerOptions
+from .context import (
     is_main_thread,
     parent_port,
+    source_module_entry,
+    source_module_complete,
     thread_id,
     worker_data,
 )

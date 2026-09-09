@@ -1,5 +1,5 @@
 from std.collections import List
-from tsonic_js import JsValue, object_is
+from tsonic_js import JsValue, object_is, js_value_from_array_values
 from tsonic_runtime import GlobalCell
 
 
@@ -42,3 +42,29 @@ def set_environment_data(key: JsValue, value: JsValue = JsValue.undefined()) rai
     if len(_environment.get()[]) >= 1048576:
         raise Error("Worker environment data exceeds the finite runtime limit")
     _environment.get()[].append(EnvironmentEntry(key, value))
+
+
+def environment_snapshot() raises -> JsValue:
+    var entries = List[JsValue]()
+    for entry in _environment.get()[]:
+        entries.append(js_value_from_array_values(List[JsValue](entry.key, entry.value)))
+    return js_value_from_array_values(entries^)
+
+
+def restore_environment(snapshot: JsValue) raises:
+    if not snapshot.is_array():
+        raise Error("Worker environment snapshot is not an entry array")
+    var entries = List[EnvironmentEntry]()
+    for index in range(snapshot.array_length()):
+        var pair = snapshot.array_at(index)
+        if not pair.is_array() or pair.array_length() != 2:
+            raise Error("Worker environment snapshot contains an invalid entry")
+        var key = pair.array_at(0)
+        var value = pair.array_at(1)
+        if value.is_undefined():
+            raise Error("Worker environment snapshot contains a deleted entry")
+        for existing in entries:
+            if _key_equal(existing.key, key):
+                raise Error("Worker environment snapshot contains a duplicate key")
+        entries.append(EnvironmentEntry(key, value))
+    _environment.get()[] = entries^

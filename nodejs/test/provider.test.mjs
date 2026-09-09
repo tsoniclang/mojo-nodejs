@@ -311,10 +311,10 @@ test("new Node families retain exact declarations and target operations", () => 
   assert.equal(workerConstructors.length, 2);
   assert.deepEqual(
     workerConstructors.map((operation) => operation.target.kind),
-    ["unsupported", "unsupported"],
+    ["function-call", "function-call"],
   );
   assert.deepEqual(
-    [...new Set(workerConstructors.map((operation) => operation.target.code))],
-    ["MOJO_NODE_WORKER_SOURCE_MODULE_CONSTRUCTION_UNAVAILABLE"],
+    [...new Set(workerConstructors.map((operation) => operation.target.sourceModule.bootstrap.id))],
+    ["tsonic.mojo.node.worker-threads"],
   );
 });

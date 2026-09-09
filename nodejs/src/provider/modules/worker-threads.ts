@@ -188,8 +188,14 @@ export function workerThreadsTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function workerThreadsOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
-    unsupportedWorkerConstructor(`${workerId}.constructor(modulePath)`, [nativeString]),
-    unsupportedWorkerConstructor(`${workerId}.constructor(modulePath,options)`, [nativeString, workerOptionsCarrier]),
+    workerConstructor(`${workerId}.constructor(modulePath)`, [nativeString]),
+    workerConstructor(`${workerId}.constructor(modulePath,options)`, [nativeString, workerOptionsCarrier]),
+    instanceCall(workerId, `${workerId}.postMessage`, `${workerId}.postMessage(value)`, "post_message", workerCarrier, [jsValueCarrier], unitCarrier, true),
+    instanceCall(workerId, `${workerId}.terminate`, `${workerId}.terminate()`, "terminate", workerCarrier, [], Object.freeze({ kind: "future", domain: "native", output: float64Carrier, raises: true }), true),
+    instanceCall(workerId, `${workerId}.ref`, `${workerId}.ref()`, "ref_chain", workerCarrier, [], workerCarrier, false, "mut"),
+    instanceCall(workerId, `${workerId}.unref`, `${workerId}.unref()`, "unref_chain", workerCarrier, [], workerCarrier, false, "mut"),
+    propertyRead(workerId, `${workerId}.threadId`, "thread_id", workerCarrier, float64Carrier, "method"),
+    ...eventOperations(workerId, workerCarrier),
     Object.freeze({
       exportId: messageChannelId,
       memberId: `${messageChannelId}.constructor`,
@@ -207,14 +213,14 @@ export function workerThreadsOperations(): readonly MojoProviderOperationDefinit
     }),
     instanceCall(messagePortId, `${messagePortId}.postMessage`, `${messagePortId}.postMessage(value)`, "post_message", messagePortCarrier, [jsValueCarrier], unitCarrier, true, "mut"),
     instanceCall(messagePortId, `${messagePortId}.start`, `${messagePortId}.start()`, "start", messagePortCarrier, [], unitCarrier, false, "mut"),
-    instanceCall(messagePortId, `${messagePortId}.close`, `${messagePortId}.close()`, "close", messagePortCarrier, [], unitCarrier, false, "mut"),
+    instanceCall(messagePortId, `${messagePortId}.close`, `${messagePortId}.close()`, "close", messagePortCarrier, [], unitCarrier, true, "mut"),
     instanceCall(messagePortId, `${messagePortId}.ref`, `${messagePortId}.ref()`, "ref_chain", messagePortCarrier, [], messagePortCarrier, false, "mut"),
     instanceCall(messagePortId, `${messagePortId}.unref`, `${messagePortId}.unref()`, "unref_chain", messagePortCarrier, [], messagePortCarrier, false, "mut"),
     instanceCall(messagePortId, `${messagePortId}.hasRef`, `${messagePortId}.hasRef()`, "has_ref", messagePortCarrier, [], boolCarrier),
     ...eventOperations(messagePortId, messagePortCarrier),
     propertyRead(messageChannelId, `${messageChannelId}.port1`, "port1", messageChannelCarrier, messagePortCarrier),
     propertyRead(messageChannelId, `${messageChannelId}.port2`, "port2", messageChannelCarrier, messagePortCarrier),
-    functionCall(`${moduleSpecifier}::receiveMessageOnPort`, `${moduleSpecifier}::receiveMessageOnPort(port)`, "worker_threads", "receive_message_on_port", [messagePortCarrier], mojoOptionalTargetType(messageResultCarrier)),
+    functionCall(`${moduleSpecifier}::receiveMessageOnPort`, `${moduleSpecifier}::receiveMessageOnPort(port)`, "worker_threads", "receive_message_on_port", [messagePortCarrier], mojoOptionalTargetType(messageResultCarrier), true),
     propertyRead(messageResultId, `${messageResultId}.message`, "message", messageResultCarrier, jsValueCarrier),
     functionCall(`${moduleSpecifier}::getEnvironmentData`, `${moduleSpecifier}::getEnvironmentData(key)`, "worker_threads", "get_environment_data", [jsValueCarrier], jsValueCarrier),
     functionCall(`${moduleSpecifier}::setEnvironmentData`, `${moduleSpecifier}::setEnvironmentData(key,value)`, "worker_threads", "set_environment_data", [jsValueCarrier, jsValueCarrier], unitCarrier, true),
@@ -229,7 +235,7 @@ export function workerThreadsOperations(): readonly MojoProviderOperationDefinit
   ]);
 }
 
-function unsupportedWorkerConstructor(
+function workerConstructor(
   signatureId: string,
   parameterTypes: readonly MojoTargetTypeRef[],
 ): MojoProviderOperationDefinition {
@@ -239,12 +245,23 @@ function unsupportedWorkerConstructor(
     signatureId,
     operationKind: "constructor",
     target: Object.freeze({
-      kind: "unsupported",
-      code: "MOJO_NODE_WORKER_SOURCE_MODULE_CONSTRUCTION_UNAVAILABLE",
-      reason: "Worker construction requires an exact generated source-module entry and closed executable dispatch, which the current Mojo target does not provide.",
+      kind: "function-call",
+      modulePath: Object.freeze(["tsonic_node", "worker_threads"]),
+      name: "worker_new",
+      arguments: Object.freeze(parameterTypes.map(() => Object.freeze({ convention: "imm", position: "positional-or-keyword" }))),
+      sourceModule: Object.freeze({
+        parameterIndex: 0,
+        bootstrap: Object.freeze({
+          id: "tsonic.mojo.node.worker-threads",
+          modulePath: Object.freeze(["tsonic_node", "worker_threads"]),
+          entryName: "source_module_entry",
+          completeName: "source_module_complete",
+        }),
+      }),
     }),
     parameterTypes: Object.freeze([...parameterTypes]),
     resultType: workerCarrier,
+    raises: true,
   });
 }
 

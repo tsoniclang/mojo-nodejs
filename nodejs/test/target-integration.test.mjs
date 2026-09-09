@@ -303,7 +303,7 @@ export function main(): void { new Worker("./worker.js"); }
 `);
   assert.deepEqual(result.artifacts, []);
   assert.deepEqual(result.diagnostics.map(({ code }) => code), [
-    "MOJO_NODE_WORKER_SOURCE_MODULE_CONSTRUCTION_UNAVAILABLE",
+    "MOJO_SOURCE_MODULE_ARGUMENT_NOT_PROJECT_SOURCE",
   ]);
 });
 

@@ -11,6 +11,8 @@
     "zlib": "==1.3.2"
   },
   "translationUnits": [
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/worker/channel.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/worker/spawn.c" },
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/net/endpoint.c" },
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls_bio.c" },
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/compression/constants.c" },
@@ -82,6 +84,8 @@
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/lifecycle.c" }
   ],
   "assets": [
+    "tsonic_node.native/worker/api.h",
+    "tsonic_node.native/worker/model.h",
     "tsonic_node.native/tls/model.h",
     "tsonic_node.native/tls/api.h",
     "tsonic_node.native/net/endpoint.h",
