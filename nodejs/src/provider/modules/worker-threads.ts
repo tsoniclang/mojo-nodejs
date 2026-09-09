@@ -4,7 +4,7 @@ import type {
   MojoProviderTypeDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
-import { mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
+import { mojoNamedTargetType, mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
   boolCarrier,
   booleanType,
@@ -44,6 +44,8 @@ const workerId = `${moduleSpecifier}::Worker`;
 const workerOptionsId = `${moduleSpecifier}::WorkerOptions`;
 const messagePortId = `${moduleSpecifier}::MessagePort`;
 const messageChannelId = `${moduleSpecifier}::MessageChannel`;
+const messageResultId = `${moduleSpecifier}::MessagePortMessage`;
+const messageResultCarrier = mojoNamedTargetType("tsonic.mojo.node.MessagePortMessage", ["tsonic_node", "worker_threads"], "MessagePortMessage");
 const anyType = Object.freeze({ kind: "any" as const });
 const eventNameType = Object.freeze({
   kind: "union" as const,
@@ -73,6 +75,12 @@ export function workerThreadsModule(): MojoProviderModuleDefinition {
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.worker-threads",
     exports: Object.freeze([
+      Object.freeze({
+        id: messageResultId,
+        name: "MessagePortMessage",
+        kind: "interface",
+        members: Object.freeze([propertyMember(messageResultId, "message", anyType)]),
+      }),
       Object.freeze({
         id: workerId,
         name: "Worker",
@@ -149,7 +157,7 @@ export function workerThreadsModule(): MojoProviderModuleDefinition {
       }),
       functionExport("receiveMessageOnPort", [
         { name: "port", type: providerRef(moduleSpecifier, "MessagePort") },
-      ], optionalUnknownType),
+      ], Object.freeze({ kind: "union", types: Object.freeze([providerRef(moduleSpecifier, "MessagePortMessage"), undefinedType]) })),
       functionExport("getEnvironmentData", [{ name: "key", type: stringType }], optionalUnknownType),
       functionExport("setEnvironmentData", [
         { name: "key", type: stringType },
@@ -167,6 +175,7 @@ export function workerThreadsModule(): MojoProviderModuleDefinition {
 
 export function workerThreadsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
+    nodeProviderType(messageResultId, messageResultCarrier, "implicitly-copyable"),
     nodeProviderType(workerId, workerCarrier, "implicitly-copyable"),
     nodeProviderType(workerOptionsId, workerOptionsCarrier, "copyable", {
       objectLiteralConstruction: true,
@@ -193,6 +202,7 @@ export function workerThreadsOperations(): readonly MojoProviderOperationDefinit
       }),
       parameterTypes: Object.freeze([]),
       resultType: messageChannelCarrier,
+      raises: true,
     }),
     instanceCall(messagePortId, `${messagePortId}.postMessage`, `${messagePortId}.postMessage(value)`, "post_message", messagePortCarrier, [jsValueCarrier], unitCarrier, true, "mut"),
     instanceCall(messagePortId, `${messagePortId}.start`, `${messagePortId}.start()`, "start", messagePortCarrier, [], unitCarrier, false, "mut"),
@@ -203,11 +213,12 @@ export function workerThreadsOperations(): readonly MojoProviderOperationDefinit
     ...eventOperations(messagePortId, messagePortCarrier),
     propertyRead(messageChannelId, `${messageChannelId}.port1`, "port1", messageChannelCarrier, messagePortCarrier),
     propertyRead(messageChannelId, `${messageChannelId}.port2`, "port2", messageChannelCarrier, messagePortCarrier),
-    functionCall(`${moduleSpecifier}::receiveMessageOnPort`, `${moduleSpecifier}::receiveMessageOnPort(port)`, "worker_threads", "receive_message_on_port", [messagePortCarrier], jsValueCarrier, true),
+    functionCall(`${moduleSpecifier}::receiveMessageOnPort`, `${moduleSpecifier}::receiveMessageOnPort(port)`, "worker_threads", "receive_message_on_port", [messagePortCarrier], mojoOptionalTargetType(messageResultCarrier)),
+    propertyRead(messageResultId, `${messageResultId}.message`, "message", messageResultCarrier, jsValueCarrier),
     functionCall(`${moduleSpecifier}::getEnvironmentData`, `${moduleSpecifier}::getEnvironmentData(key)`, "worker_threads", "get_environment_data", [nativeString], jsValueCarrier, true),
     functionCall(`${moduleSpecifier}::setEnvironmentData`, `${moduleSpecifier}::setEnvironmentData(key,value)`, "worker_threads", "set_environment_data", [nativeString, jsValueCarrier], unitCarrier, true),
     functionCall(`${moduleSpecifier}::markAsUntransferable`, `${moduleSpecifier}::markAsUntransferable(value)`, "worker_threads", "mark_as_untransferable", [jsValueCarrier], unitCarrier, true),
-    functionCall(`${moduleSpecifier}::isMarkedAsUntransferable`, `${moduleSpecifier}::isMarkedAsUntransferable(value)`, "worker_threads", "is_marked_as_untransferable", [jsValueCarrier], boolCarrier, true),
+    functionCall(`${moduleSpecifier}::isMarkedAsUntransferable`, `${moduleSpecifier}::isMarkedAsUntransferable(value)`, "worker_threads", "is_marked_as_untransferable", [jsValueCarrier], boolCarrier),
     functionValue(`${moduleSpecifier}::isMainThread`, "worker_threads", "is_main_thread", boolCarrier),
     functionValue(`${moduleSpecifier}::threadId`, "worker_threads", "thread_id", float64Carrier),
     functionValue(`${moduleSpecifier}::workerData`, "worker_threads", "worker_data", jsValueCarrier),

@@ -137,6 +137,11 @@ struct MessageChannel(ImplicitlyCopyable):
 
 
 @fieldwise_init
+struct MessagePortMessage(ImplicitlyCopyable):
+    var message: JsValue
+
+
+@fieldwise_init
 struct _EnvironmentEntry(Copyable):
     var key: String
     var value: JsValue
@@ -185,10 +190,10 @@ def message_channel_new() raises -> MessageChannel:
     )
 
 
-def receive_message_on_port(port: MessagePort) raises -> JsValue:
+def receive_message_on_port(port: MessagePort) -> Optional[MessagePortMessage]:
     if len(port._inbox[].messages) == 0:
-        return JsValue.undefined()
-    return _shift_message(port._inbox[].messages)
+        return None
+    return MessagePortMessage(_shift_message(port._inbox[].messages))
 
 
 def get_environment_data(key: String) raises -> JsValue:
@@ -210,7 +215,8 @@ def set_environment_data(key: String, value: JsValue) raises:
 
 
 def mark_as_untransferable(value: JsValue) raises:
-    _require_reference_value(value)
+    if not value.is_array() and not value.is_object() and not value.is_json_projection():
+        return
     for existing in _untransferable.get()[]:
         if existing.same_identity(value):
             return
@@ -221,8 +227,7 @@ def mark_as_untransferable(value: JsValue) raises:
     _untransferable.get()[].append(value)
 
 
-def is_marked_as_untransferable(value: JsValue) raises -> Bool:
-    _require_reference_value(value)
+def is_marked_as_untransferable(value: JsValue) -> Bool:
     for existing in _untransferable.get()[]:
         if existing.same_identity(value):
             return True
@@ -247,11 +252,10 @@ def parent_port() -> Optional[MessagePort]:
 
 def poll_worker_threads() raises -> Bool:
     var did_work = False
-    var retained = List[ArcPointer[_PortInbox]]()
-    for inbox in _ports.get()[]:
+    var snapshot = _ports.get()[].copy()
+    for inbox in snapshot:
         if inbox[].closed:
             continue
-        retained.append(inbox)
         if not inbox[].started or len(inbox[].messages) == 0:
             continue
         var value = _shift_message(inbox[].messages)
@@ -259,6 +263,10 @@ def poll_worker_threads() raises -> Bool:
             JsValue(JsString(_MESSAGE_EVENT)), value
         )
         did_work = True
+    var retained = List[ArcPointer[_PortInbox]]()
+    for inbox in _ports.get()[]:
+        if not inbox[].closed:
+            retained.append(inbox)
     _ports.get()[] = retained^
     return did_work
 
@@ -283,9 +291,3 @@ def _shift_message(mut values: List[JsValue]) -> JsValue:
     values = retained^
     return result
 
-
-def _require_reference_value(value: JsValue) raises:
-    if not value.is_array() and not value.is_object():
-        raise Error(
-            "Only JavaScript object identities can be marked untransferable"
-        )

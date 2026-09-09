@@ -266,7 +266,7 @@ test("new Node families retain exact declarations and target operations", () => 
     ["node:stream", ["Readable", "Writable"]],
     ["node:tls", ["ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer"]],
     ["node:worker_threads", [
-      "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
+      "MessagePortMessage", "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
       "receiveMessageOnPort", "getEnvironmentData", "setEnvironmentData",
       "markAsUntransferable", "isMarkedAsUntransferable", "isMainThread",
       "threadId", "workerData", "parentPort",
