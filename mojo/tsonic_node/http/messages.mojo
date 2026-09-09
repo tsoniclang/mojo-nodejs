@@ -6,26 +6,40 @@ from ..tls import TLSSocket
 from .transport import close_socket, send_buffer, send_string
 
 
+@fieldwise_init
+struct _IncomingState:
+    var body: Optional[Buffer]
+
+
 struct IncomingMessage(ImplicitlyCopyable):
     var method: String
     var url: String
-    var _body: Buffer
+    var status_code: Optional[Int32]
+    var _state: ArcPointer[_IncomingState]
 
     def __init__(
         out self,
         var method: String,
         var url: String,
         body: Buffer,
+        status_code: Optional[Int32] = None,
     ):
         self.method = method^
         self.url = url^
-        self._body = body
+        self.status_code = status_code
+        self._state = ArcPointer(_IncomingState(Optional(body)))
+
+    def read(self) -> Optional[Buffer]:
+        var body = self._state[].body
+        self._state[].body = None
+        return body
 
     def read_all(self) raises -> String:
-        return self._body.to_string()
+        return self.read_all_buffer().to_string()
 
     def read_all_buffer(self) -> Buffer:
-        return self._body
+        var body = self.read()
+        return body.value() if body else Buffer()
 
 
 @fieldwise_init

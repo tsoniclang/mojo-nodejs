@@ -2,17 +2,17 @@ import std.os.path
 from std.collections import List
 from std.ffi import c_int, external_call, get_errno
 from std.os import (
-    lstat as native_lstat,
     makedirs,
     mkdir,
     remove,
     rmdir,
-    stat as native_stat,
     symlink,
 )
 from std.pathlib import Path
 
-from .buffer import Buffer
+from ..buffer import Buffer
+from .metadata import Stats, stat, lstat
+from .validation import checked_integer, checked_path, check_status
 
 
 struct MkdirOptions(Copyable):
@@ -31,14 +31,20 @@ struct MkdirOptions(Copyable):
 struct RmOptions(Copyable):
     var recursive: Optional[Bool]
     var force: Optional[Bool]
+    var max_retries: Optional[Float64]
+    var retry_delay: Optional[Float64]
 
     def __init__(
         out self,
         recursive: Optional[Bool] = None,
         force: Optional[Bool] = None,
+        max_retries: Optional[Float64] = None,
+        retry_delay: Optional[Float64] = None,
     ):
         self.recursive = recursive
         self.force = force
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
 
 
 struct ReaddirOptions(Copyable):
@@ -46,30 +52,6 @@ struct ReaddirOptions(Copyable):
 
     def __init__(out self, with_file_types: Bool = True):
         self.with_file_types = with_file_types
-
-
-@fieldwise_init
-struct Stats(Copyable):
-    var size: Int
-    var mtime_ms: Float64
-    var mode: Int
-    var device: Int
-    var inode: Int
-    var links: Int
-    var user: Int
-    var group: Int
-    var _file: Bool
-    var _directory: Bool
-    var _symbolic_link: Bool
-
-    def is_file(self) -> Bool:
-        return self._file
-
-    def is_directory(self) -> Bool:
-        return self._directory
-
-    def is_symbolic_link(self) -> Bool:
-        return self._symbolic_link
 
 
 @fieldwise_init
@@ -89,40 +71,8 @@ struct Dirent(Copyable):
         return self._symbolic_link
 
 
-def _stats(path: String, follow_links: Bool) raises -> Stats:
-    var native = native_stat(Path(path)) if follow_links else native_lstat(
-        Path(path)
-    )
-    return Stats(
-        native.st_size,
-        Float64(native.st_mtimespec.as_nanoseconds()) / 1_000_000.0,
-        native.st_mode,
-        native.st_dev,
-        native.st_ino,
-        native.st_nlink,
-        native.st_uid,
-        native.st_gid,
-        std.os.path.isfile(Path(path)) if follow_links else (
-            std.os.path.isfile(Path(path))
-            and not std.os.path.islink(Path(path))
-        ),
-        std.os.path.isdir(Path(path)) if follow_links else (
-            std.os.path.isdir(Path(path)) and not std.os.path.islink(Path(path))
-        ),
-        std.os.path.islink(Path(path)),
-    )
-
-
 def exists(path: String) -> Bool:
     return std.os.path.exists(Path(path))
-
-
-def stat(path: String) raises -> Stats:
-    return _stats(path, True)
-
-
-def lstat(path: String) raises -> Stats:
-    return _stats(path, False)
 
 
 def read_file(path: String) raises -> Buffer:
@@ -149,11 +99,12 @@ def write_text_file(path: String, value: String) raises:
 
 
 def append_file(path: String, buffer: Buffer) raises:
-    var previous = read_file(path) if exists(path) else Buffer()
-    var bytes = previous.copy_bytes()
-    for byte in buffer.copy_bytes():
-        bytes.append(byte)
-    Path(path).write_bytes(Span(bytes))
+    from .streams import _open
+    var descriptor = _open(path, "a", None)
+    try:
+        _ = descriptor.write(buffer, None)
+    finally:
+        descriptor.close()
 
 
 def append_text_file(path: String, value: String) raises:
@@ -166,7 +117,8 @@ def make_directory_default(path: String) raises:
 
 def make_directory(path: String, options: MkdirOptions = MkdirOptions()) raises:
     var recursive = options.recursive.value() if options.recursive else False
-    var mode = Int(options.mode.value()) if options.mode else 0o777
+    checked_path(path)
+    var mode = Int(checked_integer(options.mode.value(), 4294967295, "mode")) if options.mode else 0o777
     if recursive:
         makedirs(Path(path), mode=mode, exist_ok=True)
     else:
@@ -208,32 +160,14 @@ def remove_path_default(path: String) raises:
 
 
 def remove_path(path: String, options: RmOptions) raises:
-    var path_value = Path(path)
-    if not std.os.path.lexists(path_value):
-        if options.force and options.force.value():
-            return
-        raise Error("Path does not exist: ", path)
-
-    if std.os.path.islink(path_value) or path_value.is_file():
-        remove(path_value)
-        return
-
-    if path_value.is_dir():
-        if not options.recursive or not options.recursive.value():
-            rmdir(path_value)
-            return
-        for child in path_value.listdir():
-            remove_path(
-                String(path_value / child),
-                RmOptions(
-                    recursive=Optional[Bool](True),
-                    force=options.force,
-                ),
-            )
-        rmdir(path_value)
-        return
-
-    remove(path_value)
+    checked_path(path)
+    var retries = UInt32(checked_integer(options.max_retries.value(), 4294967295, "maxRetries")) if options.max_retries else UInt32(0)
+    var delay = UInt32(checked_integer(options.retry_delay.value(), 4294967295, "retryDelay")) if options.retry_delay else UInt32(100)
+    var status = external_call["tsonic_node_fs_remove", Int32](
+        path.as_c_string_slice(), c_int(options.recursive.value() if options.recursive else False),
+        c_int(options.force.value() if options.force else False), retries, delay,
+    )
+    check_status(status, "rm")
 
 
 def make_temp_directory(prefix: String) raises -> String:
@@ -254,9 +188,13 @@ def unlink(path: String) raises:
     remove(Path(path))
 
 
-def copy_file(source: String, destination: String) raises:
-    var bytes = Path(source).read_bytes()
-    Path(destination).write_bytes(Span(bytes))
+def copy_file(source: String, destination: String, mode: Float64 = 0) raises:
+    checked_path(source)
+    checked_path(destination)
+    var flags = c_int(checked_integer(mode, 7, "copy mode"))
+    check_status(external_call["tsonic_node_fs_copy", Int32](
+        source.as_c_string_slice(), destination.as_c_string_slice(), flags,
+    ), "copyFile")
 
 
 def rename_path(source: String, destination: String) raises:

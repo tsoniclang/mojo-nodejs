@@ -25,12 +25,12 @@ import {
   filesystemModule,
   filesystemOperations,
   filesystemTypes,
-} from "./modules/filesystem.js";
+} from "./modules/filesystem/index.js";
 import {
   filesystemPromisesModule,
   filesystemPromisesOperations,
-} from "./modules/filesystem-promises.js";
-import { httpModule, httpOperations, httpTypes } from "./modules/http.js";
+} from "./modules/filesystem/promises.js";
+import { httpModule, httpOperations, httpTypes } from "./modules/http/index.js";
 import { httpsModule, httpsOperations, httpsTypes } from "./modules/https.js";
 import { netModule, netOperations, netTypes } from "./modules/net.js";
 import { osModule, osOperations } from "./modules/os.js";
@@ -52,7 +52,7 @@ import {
 } from "./modules/stream.js";
 import { tlsModule, tlsOperations, tlsTypes } from "./modules/tls.js";
 import { utilModule, utilOperations, utilTypes } from "./modules/util.js";
-import { urlModule, urlOperations, urlTypes } from "./modules/url.js";
+import { urlModule, urlOperations, urlTypes } from "./modules/url/index.js";
 import { timersModule, timersOperations, timersTypes } from "./modules/timers.js";
 import {
   workerThreadsModule,
@@ -60,11 +60,12 @@ import {
   workerThreadsTypes,
 } from "./modules/worker-threads.js";
 import { zlibModule, zlibOperations, zlibTypes } from "./modules/zlib.js";
+import { withNodeModuleObjects } from "./module-objects.js";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementation {
-  return createMojoProviderPackage({
+  return createMojoProviderPackage(withNodeModuleObjects({
     id: "@tsonic/mojo-nodejs",
     displayName: "Node.js for Mojo",
     version: "0.0.1",
@@ -184,5 +185,5 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       packageName: "tsonic_js",
       packagePath: resolve(packageRoot, "node_modules/@tsonic/mojo-js/mojo"),
     })]),
-  });
+  }));
 }

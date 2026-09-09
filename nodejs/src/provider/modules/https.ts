@@ -11,8 +11,6 @@ import {
   float64Carrier,
   functionCall,
   httpRequestCallbackCarrier,
-  httpResponseCallbackCarrier,
-  httpsClientRequestCarrier,
   httpsServerCarrier,
   instanceCall,
   nativeString,
@@ -29,11 +27,11 @@ import {
   unitCarrier,
   voidType,
 } from "../model.js";
+import { httpClientExports, httpClientOperations, httpClientTypes } from "./http/client.js";
 
 const moduleSpecifier = "node:https";
 const optionsId = `${moduleSpecifier}::ServerOptions`;
 const serverId = `${moduleSpecifier}::Server`;
-const clientRequestId = `${moduleSpecifier}::ClientRequest`;
 
 export function httpsModule(): MojoProviderModuleDefinition {
   const requestHandler = providerCallbackType(
@@ -44,15 +42,10 @@ export function httpsModule(): MojoProviderModuleDefinition {
       { name: "response", type: providerRef("node:http", "ServerResponse") },
     ],
   );
-  const responseCallback = (signatureId: string) => providerCallbackType(
-    signatureId,
-    "callback",
-    [{ name: "response", type: providerRef("node:http", "IncomingMessage") }],
-  );
   return Object.freeze({
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.https",
-    imports: Object.freeze([Object.freeze({
+    imports: Object.freeze([Object.freeze({ moduleSpecifier: "node:buffer", namedImports: Object.freeze([{ exportedName: "Buffer" }]) }), Object.freeze({
       moduleSpecifier: "node:http",
       namedImports: Object.freeze([
         { exportedName: "IncomingMessage" },
@@ -60,6 +53,7 @@ export function httpsModule(): MojoProviderModuleDefinition {
       ]),
     })]),
     exports: Object.freeze([
+      ...httpClientExports("node:https"),
       Object.freeze({
         id: optionsId,
         name: "ServerOptions",
@@ -119,28 +113,6 @@ export function httpsModule(): MojoProviderModuleDefinition {
         ]),
       }),
       Object.freeze({
-        id: clientRequestId,
-        name: "ClientRequest",
-        kind: "class",
-        members: Object.freeze([
-          Object.freeze({
-            id: `${clientRequestId}.write`, name: "write", kind: "method",
-            signatures: Object.freeze([Object.freeze({
-              id: `${clientRequestId}.write(chunk)`, name: "write",
-              parameters: Object.freeze([{ name: "chunk", type: stringType }]),
-              returnType: booleanType,
-            })]),
-          }),
-          Object.freeze({
-            id: `${clientRequestId}.end`, name: "end", kind: "method",
-            signatures: Object.freeze([Object.freeze({
-              id: `${clientRequestId}.end()`, name: "end",
-              parameters: Object.freeze([]), returnType: voidType,
-            })]),
-          }),
-        ]),
-      }),
-      Object.freeze({
         id: `${moduleSpecifier}::createServer`, name: "createServer", kind: "function",
         signatures: Object.freeze([Object.freeze({
           id: `${moduleSpecifier}::createServer(options,handler)`, name: "createServer",
@@ -150,20 +122,6 @@ export function httpsModule(): MojoProviderModuleDefinition {
           ]),
           returnType: providerRef(moduleSpecifier, "Server"),
         })]),
-      }),
-      ...(["request", "get"] as const).map((name) => {
-        const signatureId = `${moduleSpecifier}::${name}(url,callback)`;
-        return Object.freeze({
-          id: `${moduleSpecifier}::${name}`, name, kind: "function" as const,
-          signatures: Object.freeze([Object.freeze({
-            id: signatureId, name,
-            parameters: Object.freeze([
-              { name: "url", type: stringType },
-              { name: "callback", type: responseCallback(signatureId) },
-            ]),
-            returnType: providerRef(moduleSpecifier, "ClientRequest"),
-          })]),
-        });
       }),
     ]),
   });
@@ -175,18 +133,15 @@ export function httpsTypes(): readonly MojoProviderTypeDefinition[] {
       objectLiteralConstruction: true,
     }),
     nodeProviderType(serverId, httpsServerCarrier, "implicitly-copyable"),
-    nodeProviderType(clientRequestId, httpsClientRequestCarrier, "implicitly-copyable"),
+    ...httpClientTypes("node:https"),
   ]);
 }
 
 export function httpsOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
     ...optionRows(),
+    ...httpClientOperations("node:https"),
     functionCall(`${moduleSpecifier}::createServer`, `${moduleSpecifier}::createServer(options,handler)`, "https", "create_server", [tlsServerOptionsCarrier, httpRequestCallbackCarrier], httpsServerCarrier, true),
-    functionCall(`${moduleSpecifier}::request`, `${moduleSpecifier}::request(url,callback)`, "https", "request", [nativeString, httpResponseCallbackCarrier], httpsClientRequestCarrier, true),
-    functionCall(`${moduleSpecifier}::get`, `${moduleSpecifier}::get(url,callback)`, "https", "get", [nativeString, httpResponseCallbackCarrier], httpsClientRequestCarrier, true),
-    instanceCall(clientRequestId, `${clientRequestId}.write`, `${clientRequestId}.write(chunk)`, "write_string", httpsClientRequestCarrier, [nativeString], boolCarrier, true, "mut"),
-    instanceCall(clientRequestId, `${clientRequestId}.end`, `${clientRequestId}.end()`, "end", httpsClientRequestCarrier, [], unitCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", httpsServerCarrier, [float64Carrier, emptyCallbackCarrier], httpsServerCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host,callback)`, "listen", httpsServerCarrier, [float64Carrier, nativeString, emptyCallbackCarrier], httpsServerCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpsServerCarrier, [], unitCarrier, false, "mut"),

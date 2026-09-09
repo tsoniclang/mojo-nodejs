@@ -3,6 +3,7 @@ import type {
   MojoProviderOperationDefinition,
   MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
+import { mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
   booleanType,
   boolCarrier,
@@ -27,7 +28,8 @@ import {
   nodeProviderType,
   unitCarrier,
   voidType,
-} from "../model.js";
+} from "../../model.js";
+import { httpClientExports, httpClientOperations, httpClientTypes } from "./client.js";
 
 const moduleSpecifier = "node:http";
 const incomingId = `${moduleSpecifier}::IncomingMessage`;
@@ -52,6 +54,7 @@ export function httpModule(): MojoProviderModuleDefinition {
       namedImports: Object.freeze([{ exportedName: "Buffer" }]),
     })]),
     exports: Object.freeze([
+      ...httpClientExports("node:http"),
       Object.freeze({
         id: incomingId,
         name: "IncomingMessage",
@@ -59,6 +62,8 @@ export function httpModule(): MojoProviderModuleDefinition {
         members: Object.freeze([
           propertyMember(incomingId, "method", stringType),
           propertyMember(incomingId, "url", stringType),
+          propertyMember(incomingId, "statusCode", Object.freeze({ kind: "union", types: Object.freeze([int32Type, Object.freeze({ kind: "undefined" })]) })),
+          methodMember(incomingId, "read", [], Object.freeze({ kind: "union", types: Object.freeze([providerRef("node:buffer", "Buffer"), Object.freeze({ kind: "undefined" })]) })),
           methodMember(incomingId, "readAll", [], stringType),
           methodMember(incomingId, "readAllBuffer", [], providerRef("node:buffer", "Buffer")),
         ]),
@@ -122,6 +127,8 @@ export function httpModule(): MojoProviderModuleDefinition {
             },
           ]),
           methodMember(serverId, "close", [], voidType),
+          methodMember(serverId, "ref", [], providerRef(moduleSpecifier, "Server")),
+          methodMember(serverId, "unref", [], providerRef(moduleSpecifier, "Server")),
         ]),
       }),
       Object.freeze({
@@ -141,6 +148,7 @@ export function httpModule(): MojoProviderModuleDefinition {
 
 export function httpTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
+    ...httpClientTypes("node:http"),
     nodeProviderType(incomingId, httpIncomingMessageCarrier, "implicitly-copyable"),
     nodeProviderType(responseId, httpServerResponseCarrier, "implicitly-copyable"),
     nodeProviderType(serverId, httpServerCarrier, "implicitly-copyable"),
@@ -149,6 +157,7 @@ export function httpTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function httpOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
+    ...httpClientOperations("node:http"),
     Object.freeze({
       exportId: `${moduleSpecifier}::createServer`,
       signatureId: `${moduleSpecifier}::createServer(handler)`,
@@ -166,6 +175,8 @@ export function httpOperations(): readonly MojoProviderOperationDefinition[] {
     }),
     propertyRead(incomingId, `${incomingId}.method`, "method", httpIncomingMessageCarrier, nativeString),
     propertyRead(incomingId, `${incomingId}.url`, "url", httpIncomingMessageCarrier, nativeString),
+    propertyRead(incomingId, `${incomingId}.statusCode`, "status_code", httpIncomingMessageCarrier, mojoOptionalTargetType(int32Carrier)),
+    instanceCall(incomingId, `${incomingId}.read`, `${incomingId}.read()`, "read", httpIncomingMessageCarrier, [], mojoOptionalTargetType(bufferCarrier)),
     instanceCall(incomingId, `${incomingId}.readAll`, `${incomingId}.readAll()`, "read_all", httpIncomingMessageCarrier, [], nativeString, true),
     instanceCall(incomingId, `${incomingId}.readAllBuffer`, `${incomingId}.readAllBuffer()`, "read_all_buffer", httpIncomingMessageCarrier, [], bufferCarrier),
     propertyRead(responseId, `${responseId}.statusCode`, "status_code", httpServerResponseCarrier, int32Carrier, "method"),
@@ -179,5 +190,7 @@ export function httpOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", httpServerCarrier, [int32Carrier, emptyCallbackCarrier], httpServerCarrier, true),
     instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,hostname,callback)`, "listen", httpServerCarrier, [int32Carrier, nativeString, emptyCallbackCarrier], httpServerCarrier, true),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpServerCarrier, [], unitCarrier),
+    instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", httpServerCarrier, [], httpServerCarrier),
+    instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", httpServerCarrier, [], httpServerCarrier),
   ]);
 }

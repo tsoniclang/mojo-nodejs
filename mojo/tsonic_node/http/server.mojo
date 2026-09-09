@@ -25,13 +25,14 @@ struct ServerState:
     var listening_callback: Optional[ListenCallback]
     var listening_callback_pending: Bool
     var active: Bool
+    var referenced: Bool
 
 
 struct Server(ImplicitlyCopyable):
     var _state: ArcPointer[ServerState]
 
     def __init__(out self, handler: RequestHandler):
-        self._state = ArcPointer(ServerState(-1, handler, None, False, False))
+        self._state = ArcPointer(ServerState(-1, handler, None, False, False, True))
 
     def listen_default_host(
         self,
@@ -66,6 +67,14 @@ struct Server(ImplicitlyCopyable):
         self._state[].descriptor = -1
         self._state[].active = False
 
+    def ref(self) -> Self:
+        self._state[].referenced = True
+        return self
+
+    def unref(self) -> Self:
+        self._state[].referenced = False
+        return self
+
 
 def create_server(handler: RequestHandler) -> Server:
     return Server(handler)
@@ -89,7 +98,7 @@ comptime _max_pending_responses = 1 << 20
 
 def has_active_servers() -> Bool:
     for index in range(len(_servers.get()[])):
-        if _servers.get()[][index]._state[].active:
+        if _servers.get()[][index]._state[].active and _servers.get()[][index]._state[].referenced:
             return True
     return len(_responses.get()[]) > 0
 

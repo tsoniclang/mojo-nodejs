@@ -1,7 +1,7 @@
 from std.collections import List
 
-from .buffer import Buffer
-from .filesystem import (
+from ..buffer import Buffer
+from .core import (
     MkdirOptions,
     RmOptions,
     Stats,
@@ -19,6 +19,8 @@ from .filesystem import (
     write_file as write_file_sync,
     write_text_file as write_text_file_sync,
 )
+from .descriptors import access as access_sync, chmod as chmod_sync, truncate_file as truncate_file_sync
+from .links import read_link as read_link_sync
 
 
 async def read_file(path: String) raises -> Buffer:
@@ -71,3 +73,19 @@ async def copy_file(source: String, destination: String) raises:
 
 async def rename_path(source: String, destination: String) raises:
     rename_path_sync(source, destination)
+
+
+async def access(path: String, mode: Float64 = 0) raises:
+    access_sync(path, mode)
+
+
+async def chmod(path: String, mode: Float64) raises:
+    chmod_sync(path, mode)
+
+
+async def read_link(path: String) raises -> String:
+    return read_link_sync(path)
+
+
+async def truncate_file(path: String, length: Float64 = 0) raises:
+    truncate_file_sync(path, length)

@@ -4,6 +4,7 @@ import type {
   MojoProviderTypeDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
+import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
 import {
   booleanType,
   boolCarrier,
@@ -34,7 +35,11 @@ import {
   stringType,
   unitCarrier,
   voidType,
-} from "../model.js";
+} from "../../model.js";
+
+import { filesystemWatchExports, filesystemWatchOperations, filesystemWatchTypes } from "./watch.js";
+import { filesystemStreamExports, filesystemStreamOperations, filesystemStreamTypes } from "./streams.js";
+import { filesystemCallExports, filesystemCallOperations } from "./call-records.js";
 
 const moduleSpecifier = "node:fs";
 const statsId = `${moduleSpecifier}::Stats`;
@@ -50,14 +55,20 @@ export function filesystemModule(): MojoProviderModuleDefinition {
     imports: Object.freeze([Object.freeze({
       moduleSpecifier: "node:buffer",
       namedImports: Object.freeze([{ exportedName: "Buffer" }]),
-    })]),
+    }), Object.freeze({ moduleSpecifier: "node:stream", namedImports: Object.freeze([{ exportedName: "Readable" }, { exportedName: "Writable" }]) }),
+    Object.freeze({ moduleSpecifier: "node:http", namedImports: Object.freeze([{ exportedName: "ServerResponse" }]) })]),
     exports: Object.freeze([
+      ...filesystemCallExports(),
+      ...filesystemWatchExports(),
+      ...filesystemStreamExports(),
       classExport(statsId, "Stats", [
         method(statsId, "isFile"),
         method(statsId, "isDirectory"),
         method(statsId, "isSymbolicLink"),
         propertyMember(statsId, "size", numberType),
         propertyMember(statsId, "mtimeMs", numberType),
+        ...["atimeMs", "ctimeMs", "birthtimeMs"].map((name) => propertyMember(statsId, name, numberType)),
+        ...["atime", "mtime", "ctime", "birthtime"].map((name) => propertyMember(statsId, name, Object.freeze({ kind: "source-global", name: "Date" }))),
       ]),
       classExport(direntId, "Dirent", [
         propertyMember(direntId, "name", stringType),
@@ -72,6 +83,8 @@ export function filesystemModule(): MojoProviderModuleDefinition {
       interfaceExport(rmOptionsId, "RmOptions", [
         propertyMember(rmOptionsId, "recursive", booleanType, { readonly: false, optional: true }),
         propertyMember(rmOptionsId, "force", booleanType, { readonly: false, optional: true }),
+        propertyMember(rmOptionsId, "maxRetries", numberType, { readonly: false, optional: true }),
+        propertyMember(rmOptionsId, "retryDelay", numberType, { readonly: false, optional: true }),
       ]),
       interfaceExport(readdirOptionsId, "ReaddirOptions", [
         propertyMember(
@@ -204,6 +217,8 @@ export function filesystemModule(): MojoProviderModuleDefinition {
 
 export function filesystemTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
+    ...filesystemWatchTypes(),
+    ...filesystemStreamTypes(),
     nodeProviderType(statsId, statsCarrier, "copyable"),
     nodeProviderType(direntId, direntCarrier, "copyable"),
     nodeProviderType(mkdirOptionsId, mkdirOptionsCarrier, "copyable", {
@@ -236,6 +251,9 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
     raises,
   );
   return Object.freeze([
+    ...filesystemCallOperations(),
+    ...filesystemWatchOperations(),
+    ...filesystemStreamOperations(),
     operation("existsSync", "path", "exists", [nativeString], boolCarrier, false),
     operation("statSync", "path", "stat", [nativeString], statsCarrier),
     operation("lstatSync", "path", "lstat", [nativeString], statsCarrier),
@@ -261,6 +279,8 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
     ...methodOperations(direntId, direntCarrier),
     propertyRead(statsId, `${statsId}.size`, "size", statsCarrier, nativeIntCarrier),
     propertyRead(statsId, `${statsId}.mtimeMs`, "mtime_ms", statsCarrier, float64Carrier),
+    ...([["atimeMs", "atime_ms"], ["ctimeMs", "ctime_ms"], ["birthtimeMs", "birthtime_ms"]] as const).map(([source, target]) => propertyRead(statsId, `${statsId}.${source}`, target, statsCarrier, float64Carrier)),
+    ...["atime", "mtime", "ctime", "birthtime"].map((name) => propertyRead(statsId, `${statsId}.${name}`, name, statsCarrier, mojoNamedTargetType("tsonic.mojo.js.JsDate", ["tsonic_js"], "JsDate"), "method")),
     propertyRead(direntId, `${direntId}.name`, "name", direntCarrier, nativeString),
     ...optionFieldOperations(mkdirOptionsId, mkdirOptionsCarrier, [
       ["recursive", "recursive", optionalBoolCarrier],
@@ -269,6 +289,8 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
     ...optionFieldOperations(rmOptionsId, rmOptionsCarrier, [
       ["recursive", "recursive", optionalBoolCarrier],
       ["force", "force", optionalBoolCarrier],
+      ["maxRetries", "max_retries", optionalFloat64Carrier],
+      ["retryDelay", "retry_delay", optionalFloat64Carrier],
     ]),
     ...optionFieldOperations(readdirOptionsId, readdirOptionsCarrier, [
       ["withFileTypes", "with_file_types", boolCarrier],

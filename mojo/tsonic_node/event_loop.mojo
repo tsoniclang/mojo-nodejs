@@ -1,6 +1,7 @@
 from std.time import sleep
 
 from .http import has_active_servers, poll_servers
+from .http.client import has_pending_requests, poll_requests
 from .https import has_active_https, poll_https
 from .dns import has_pending_dns, poll_dns
 from .net import has_active_net, poll_net
@@ -8,36 +9,43 @@ from .timers import has_refed_timers, next_timer_delay_ns, poll_timers
 from .tls import has_active_tls, poll_tls
 from .zlib import has_pending_zlib, poll_zlib
 from .worker_threads import has_active_worker_threads, poll_worker_threads
+from .filesystem.watch import has_active_watchers, poll_watchers
 
 
 def run_event_loop() raises:
     while (
         has_refed_timers()
         or has_active_servers()
+        or has_pending_requests()
         or has_pending_dns()
         or has_active_net()
         or has_active_tls()
         or has_pending_zlib()
         or has_active_https()
         or has_active_worker_threads()
+        or has_active_watchers()
     ):
         var timer_work = poll_timers()
         var server_work = poll_servers()
+        var request_work = poll_requests()
         var dns_work = poll_dns()
         var net_work = poll_net()
         var tls_work = poll_tls()
         var zlib_work = poll_zlib()
         var https_work = poll_https()
         var worker_work = poll_worker_threads()
+        var watcher_work = poll_watchers()
         if (
             timer_work
             or server_work
+            or request_work
             or dns_work
             or net_work
             or tls_work
             or zlib_work
             or https_work
             or worker_work
+            or watcher_work
         ):
             continue
         var delay = next_timer_delay_ns()

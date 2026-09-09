@@ -68,6 +68,8 @@ export function processModule(): MojoProviderModuleDefinition {
     })]),
     exports: Object.freeze([
       fnExport(moduleSpecifier, "cwd", [], stringType),
+      fnExport(moduleSpecifier, "availableMemory", [], numberType),
+      fnExport(moduleSpecifier, "constrainedMemory", [], numberType),
       fnExport(moduleSpecifier, "chdir", [{ name: "directory", type: stringType }], voidType),
       overloadedFunctionExport(moduleSpecifier, "exit", [
         { parameters: [], returnType: voidType, signatureSuffix: "" },
@@ -160,6 +162,8 @@ export function processOperations(): readonly MojoProviderOperationDefinition[] 
     functionCall(`${moduleSpecifier}::hrtime`, `${moduleSpecifier}::hrtime(previous)`, "process", "hrtime_since", [numberListCarrier], numberListCarrier, true),
     functionCall(`${moduleSpecifier}::memoryUsage`, `${moduleSpecifier}::memoryUsage()`, "process", "memory_usage", [], processMemoryUsageCarrier),
     functionCall(`${moduleSpecifier}::uptime`, `${moduleSpecifier}::uptime()`, "process", "uptime", [], float64Carrier),
+    functionCall(`${moduleSpecifier}::availableMemory`, `${moduleSpecifier}::availableMemory()`, "process", "available_memory", [], float64Carrier),
+    functionCall(`${moduleSpecifier}::constrainedMemory`, `${moduleSpecifier}::constrainedMemory()`, "process", "constrained_memory", [], float64Carrier),
     functionValue(`${moduleSpecifier}::env`, "process", "environment_object", processEnvCarrier),
     functionValue(`${moduleSpecifier}::stdin`, "stream", "stdin", readableCarrier),
     functionValue(`${moduleSpecifier}::version`, "process", "version", nativeString),
@@ -211,6 +215,8 @@ function defaultProcessExport(): MojoProviderModuleDefinition["exports"][number]
       ], { static: true }),
       providerMethodMember(defaultId, "memoryUsage", [], providerRef(moduleSpecifier, "MemoryUsage"), { static: true }),
       providerMethodMember(defaultId, "uptime", [], numberType, { static: true }),
+      providerMethodMember(defaultId, "availableMemory", [], numberType, { static: true }),
+      providerMethodMember(defaultId, "constrainedMemory", [], numberType, { static: true }),
       overloadedMethodMember(defaultId, "exit", [
         { parameters: [], returnType: voidType, signatureSuffix: "" },
         {
@@ -241,6 +247,8 @@ function defaultProcessExport(): MojoProviderModuleDefinition["exports"][number]
 
 function defaultProcessOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
+    staticCall(defaultId, `${defaultId}.availableMemory`, `${defaultId}.availableMemory()`, "process", "available_memory", [], float64Carrier),
+    staticCall(defaultId, `${defaultId}.constrainedMemory`, `${defaultId}.constrainedMemory()`, "process", "constrained_memory", [], float64Carrier),
     staticCall(defaultId, `${defaultId}.cwd`, `${defaultId}.cwd()`, "process", "current_directory", [], nativeString, true),
     staticCall(defaultId, `${defaultId}.chdir`, `${defaultId}.chdir(directory)`, "process", "change_directory", [nativeString], unitCarrier, true),
     staticCall(defaultId, `${defaultId}.hrtime`, `${defaultId}.hrtime()`, "process", "hrtime", [], numberListCarrier),

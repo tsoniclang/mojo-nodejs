@@ -190,7 +190,6 @@ export const tlsServerOptionsCarrier = namedCarrier("TlsOptions", "tls");
 export const tlsSocketCarrier = namedCarrier("TLSSocket", "tls");
 export const tlsServerCarrier = namedCarrier("Server", "tls");
 export const httpsServerCarrier = namedCarrier("Server", "https");
-export const httpsClientRequestCarrier = namedCarrier("ClientRequest", "https");
 export const readlineOptionsCarrier = namedCarrier("ReadLineOptions", "readline");
 export const readlineInterfaceCarrier = namedCarrier("Interface", "readline");
 export const workerCarrier = namedCarrier("Worker", "worker_threads");
@@ -436,7 +435,7 @@ export function constructorMember(
 export function functionCall(
   exportId: string,
   signatureId: string,
-  moduleName: string,
+  moduleName: string | readonly string[],
   targetName: string,
   parameterTypes: readonly MojoTargetTypeRef[],
   resultType: MojoTargetTypeRef,
@@ -448,7 +447,7 @@ export function functionCall(
     operationKind: "call",
     target: Object.freeze({
       kind: "function-call",
-      modulePath: Object.freeze(["tsonic_node", moduleName]),
+      modulePath: Object.freeze(["tsonic_node", ...(typeof moduleName === "string" ? [moduleName] : moduleName)]),
       name: targetName,
       arguments: Object.freeze(parameterTypes.map(() => Object.freeze({
         convention: "imm" as const,

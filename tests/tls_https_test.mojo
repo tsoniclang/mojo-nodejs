@@ -12,6 +12,7 @@ from tsonic_runtime import (
 )
 from tsonic_node.filesystem import read_text_file
 from tsonic_node.http import IncomingMessage, ServerResponse
+from tsonic_node.http.client import has_pending_requests, poll_requests
 from tsonic_node.https import (
     create_server as create_https_server,
     get as https_get,
@@ -230,7 +231,12 @@ def _run_https_client(port: Int) raises:
         "https://localhost:" + String(port) + "/",
         response_callback(body),
     )
-    assert_true(poll_https())
+    for _ in range(500):
+        _ = poll_requests()
+        if not has_pending_requests():
+            break
+        sleep(0.002)
+    assert_true(not has_pending_requests())
     assert_equal(body.read(), "secure")
 
 

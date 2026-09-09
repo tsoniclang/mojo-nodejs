@@ -1,0 +1,134 @@
+import type {
+  MojoProviderModuleDefinition, MojoProviderOperationDefinition, MojoProviderTypeDefinition,
+} from "@tsonic/target-mojo/provider";
+import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
+import {
+  booleanType, boolCarrier, bufferCarrier, float64Carrier, functionCall,
+  httpServerResponseCarrier, instanceCall, methodMember, nativeString,
+  nodeProviderType, numberType, optionalBoolCarrier, optionalFloat64Carrier,
+  optionalStringCarrier, overloadedFunctionExport, overloadedMethodMember,
+  propertyMember, propertyRead, propertyWrite, providerRef, readableCarrier,
+  stringType, undefinedType, unitCarrier, voidType, writableCarrier,
+} from "../../model.js";
+
+const moduleSpecifier = "node:fs";
+const readId = `${moduleSpecifier}::ReadStream`;
+const writeId = `${moduleSpecifier}::WriteStream`;
+const readOptionsId = `${moduleSpecifier}::ReadStreamOptions`;
+const writeOptionsId = `${moduleSpecifier}::WriteStreamOptions`;
+const readType = providerRef(moduleSpecifier, "ReadStream");
+const writeType = providerRef(moduleSpecifier, "WriteStream");
+const bufferType = providerRef("node:buffer", "Buffer");
+const responseType = providerRef("node:http", "ServerResponse");
+const readOptions = mojoNamedTargetType("tsonic.mojo.node.ReadStreamOptions", ["tsonic_node", "filesystem"], "ReadStreamOptions");
+const writeOptions = mojoNamedTargetType("tsonic.mojo.node.WriteStreamOptions", ["tsonic_node", "filesystem"], "WriteStreamOptions");
+const optionFields = Object.freeze([
+  ["flags", "flags", stringType, optionalStringCarrier],
+  ["mode", "mode", numberType, optionalFloat64Carrier],
+  ["start", "start", numberType, optionalFloat64Carrier],
+  ["highWaterMark", "high_water_mark", numberType, optionalFloat64Carrier],
+] as const);
+
+export function filesystemStreamExports(): MojoProviderModuleDefinition["exports"] {
+  return Object.freeze([
+    ...([[readOptionsId, "ReadStreamOptions"], [writeOptionsId, "WriteStreamOptions"]] as const).map(([id, name]) => Object.freeze({
+      id, name, kind: "interface" as const,
+      members: Object.freeze([
+        ...optionFields.map(([field, , type]) => propertyMember(id, field, type, { readonly: false, optional: true })),
+        propertyMember(id, id === readOptionsId ? "end" : "flush", id === readOptionsId ? numberType : booleanType, { readonly: false, optional: true }),
+      ]),
+    })),
+    Object.freeze({ id: readId, name: "ReadStream", kind: "class" as const,
+      heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Readable") }]), members: Object.freeze([
+      methodMember(readId, "read", [], Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, undefinedType]) })),
+      overloadedMethodMember(readId, "pipe", [
+        { signatureSuffix: "writeStream", parameters: [{ name: "destination", type: writeType }], returnType: writeType },
+        { signatureSuffix: "writable", parameters: [{ name: "destination", type: providerRef("node:stream", "Writable") }], returnType: providerRef("node:stream", "Writable") },
+        { signatureSuffix: "serverResponse", parameters: [{ name: "destination", type: responseType }], returnType: responseType },
+      ]),
+      methodMember(readId, "close", [], voidType),
+      methodMember(readId, "pause", [], readType),
+      methodMember(readId, "resume", [], readType),
+      methodMember(readId, "isPaused", [], booleanType),
+      propertyMember(readId, "path", stringType),
+      propertyMember(readId, "bytesRead", numberType),
+    ]) }),
+    Object.freeze({ id: writeId, name: "WriteStream", kind: "class" as const,
+      heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Writable") }]), members: Object.freeze([
+      overloadedMethodMember(writeId, "write", [
+        { signatureSuffix: "buffer", parameters: [{ name: "chunk", type: bufferType }], returnType: booleanType },
+        { signatureSuffix: "string", parameters: [{ name: "chunk", type: stringType }], returnType: booleanType },
+      ]),
+      overloadedMethodMember(writeId, "end", [
+        { parameters: [], returnType: writeType },
+        { signatureSuffix: "buffer", parameters: [{ name: "chunk", type: bufferType }], returnType: writeType },
+        { signatureSuffix: "string", parameters: [{ name: "chunk", type: stringType }], returnType: writeType },
+      ]),
+      methodMember(writeId, "close", [], voidType),
+      methodMember(writeId, "cork", [], voidType),
+      methodMember(writeId, "uncork", [], voidType),
+      propertyMember(writeId, "path", stringType),
+      propertyMember(writeId, "bytesWritten", numberType),
+    ]) }),
+    ...([
+      ["createReadStream", "ReadStreamOptions", readType],
+      ["createWriteStream", "WriteStreamOptions", writeType],
+    ] as const).map(([name, options, result]) => overloadedFunctionExport(moduleSpecifier, name, [
+      { parameters: [{ name: "path", type: stringType }], returnType: result },
+      { parameters: [{ name: "path", type: stringType }, { name: "options", type: providerRef(moduleSpecifier, options) }], returnType: result },
+    ])),
+  ]);
+}
+
+export function filesystemStreamTypes(): readonly MojoProviderTypeDefinition[] {
+  return Object.freeze([
+    nodeProviderType(readId, readableCarrier, "implicitly-copyable"),
+    nodeProviderType(writeId, writableCarrier, "implicitly-copyable"),
+    nodeProviderType(readOptionsId, readOptions, "copyable", { objectLiteralConstruction: true }),
+    nodeProviderType(writeOptionsId, writeOptions, "copyable", { objectLiteralConstruction: true }),
+  ]);
+}
+
+export function filesystemStreamOperations(): readonly MojoProviderOperationDefinition[] {
+  const operations: MojoProviderOperationDefinition[] = [];
+  for (const [name, target, result, options] of [
+    ["createReadStream", "create_read_stream", readableCarrier, readOptions],
+    ["createWriteStream", "create_write_stream", writableCarrier, writeOptions],
+  ] as const) {
+    operations.push(
+      functionCall(`${moduleSpecifier}::${name}`, `${moduleSpecifier}::${name}(path)`, "filesystem", target, [nativeString], result, true),
+      functionCall(`${moduleSpecifier}::${name}`, `${moduleSpecifier}::${name}(path,options)`, "filesystem", target, [nativeString, options], result, true),
+    );
+  }
+  for (const [id, carrier] of [[readOptionsId, readOptions], [writeOptionsId, writeOptions]] as const) {
+    const fields = [...optionFields, id === readOptionsId
+      ? ["end", "end", numberType, optionalFloat64Carrier] as const
+      : ["flush", "flush", booleanType, optionalBoolCarrier] as const];
+    for (const [name, target, , fieldType] of fields) {
+      operations.push(propertyRead(id, `${id}.${name}`, target, carrier, fieldType),
+        propertyWrite(id, `${id}.${name}`, target, carrier, fieldType));
+    }
+  }
+  for (const [id, carrier, counter, targetCounter] of [
+    [readId, readableCarrier, "bytesRead", "bytes_read"],
+    [writeId, writableCarrier, "bytesWritten", "bytes_written"],
+  ] as const) {
+    operations.push(instanceCall(id, `${id}.close`, `${id}.close()`, "close", carrier, [], unitCarrier, true),
+      propertyRead(id, `${id}.path`, "path", carrier, nativeString, "method"),
+      propertyRead(id, `${id}.${counter}`, targetCounter, carrier, float64Carrier, "method"));
+  }
+  operations.push(instanceCall(readId, `${readId}.read`, `${readId}.read()`, "read", readableCarrier, [], Object.freeze({ kind: "optional", value: bufferCarrier }), true, "mut"));
+  for (const [suffix, destination, target] of [
+    ["writeStream", writableCarrier, "pipe_to"], ["writable", writableCarrier, "pipe_to"],
+    ["serverResponse", httpServerResponseCarrier, "pipe_to_response"],
+  ] as const) operations.push(instanceCall(readId, `${readId}.pipe`, `${readId}.pipe(${suffix})`, target, readableCarrier, [destination], destination, true, "mut"));
+  for (const name of ["pause", "resume"] as const) operations.push(instanceCall(readId, `${readId}.${name}`, `${readId}.${name}()`, name, readableCarrier, [], readableCarrier, false, "mut"));
+  operations.push(instanceCall(readId, `${readId}.isPaused`, `${readId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier));
+  for (const [suffix, carrier, target] of [["buffer", bufferCarrier, "buffer"], ["string", nativeString, "string"]] as const) {
+    operations.push(instanceCall(writeId, `${writeId}.write`, `${writeId}.write(${suffix})`, `write_${target}`, writableCarrier, [carrier], boolCarrier, true, "mut"),
+      instanceCall(writeId, `${writeId}.end`, `${writeId}.end(${suffix})`, `end_${target}`, writableCarrier, [carrier], writableCarrier, true, "mut"));
+  }
+  operations.push(instanceCall(writeId, `${writeId}.end`, `${writeId}.end()`, "end", writableCarrier, [], writableCarrier, true, "mut"));
+  for (const name of ["cork", "uncork"] as const) operations.push(instanceCall(writeId, `${writeId}.${name}`, `${writeId}.${name}()`, name, writableCarrier, [], unitCarrier, name === "uncork", "mut"));
+  return Object.freeze(operations);
+}

@@ -20,7 +20,8 @@ import {
   stringType,
   unitFutureCarrier,
   voidType,
-} from "../model.js";
+} from "../../model.js";
+import { filesystemCallExports, filesystemCallOperations } from "./call-records.js";
 
 const moduleSpecifier = "node:fs/promises";
 
@@ -43,6 +44,7 @@ export function filesystemPromisesModule(): MojoProviderModuleDefinition {
       }),
     ]),
     exports: Object.freeze([
+      ...filesystemCallExports(true),
       overloadedFunctionExport(moduleSpecifier, "readFile", [
         {
           parameters: [{ name: "path", type: stringType }],
@@ -131,13 +133,14 @@ export function filesystemPromisesOperations(): readonly MojoProviderOperationDe
   ): MojoProviderOperationDefinition => functionCall(
     `${moduleSpecifier}::${sourceName}`,
     `${moduleSpecifier}::${sourceName}(${signature})`,
-    "filesystem_promises",
+    ["filesystem", "promises"],
     targetName,
     parameters,
     result,
     true,
   );
   return Object.freeze([
+    ...filesystemCallOperations(true),
     operation("readFile", "path", "read_file", [nativeString], Object.freeze({
       kind: "future",
       domain: "native",

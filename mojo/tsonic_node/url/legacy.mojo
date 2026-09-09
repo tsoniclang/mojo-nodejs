@@ -13,6 +13,20 @@ struct LegacyUrl(Copyable):
     var pathname: Optional[String]
     var path: Optional[String]
 
+    def __init__(out self):
+        self.href = None
+        self.protocol = None
+        self.slashes = None
+        self.auth = None
+        self.host = None
+        self.port = None
+        self.hostname = None
+        self.hash = None
+        self.search = None
+        self.query = None
+        self.pathname = None
+        self.path = None
+
 
 def _slice(value: String, start: Int, end: Int) -> String:
     return String(value[byte=start:end])

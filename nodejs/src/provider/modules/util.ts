@@ -7,6 +7,7 @@ import {
   booleanType,
   boolCarrier,
   bufferCarrier,
+  float64Carrier,
   fnExport,
   functionCall,
   instanceCall,
@@ -106,6 +107,8 @@ export function utilOperations(): readonly MojoProviderOperationDefinition[] {
     functionCall(`${moduleSpecifier}::stripVTControlCharacters`, `${moduleSpecifier}::stripVTControlCharacters(value)`, "util", "strip_vt_control_characters", [nativeString], nativeString),
     functionCall(`${moduleSpecifier}::toUSVString`, `${moduleSpecifier}::toUSVString(value)`, "util", "to_usv_string", [nativeString], nativeString),
     functionCall(`${moduleSpecifier}::styleText`, `${moduleSpecifier}::styleText(style,text)`, "util", "style_text", [nativeString, nativeString], nativeString, true),
+    functionCall(`${moduleSpecifier}::getSystemErrorName`, `${moduleSpecifier}::getSystemErrorName(code)`, "system_errors", "get_system_error_name", [float64Carrier], nativeString, true),
+    functionCall(`${moduleSpecifier}::getSystemErrorMessage`, `${moduleSpecifier}::getSystemErrorMessage(code)`, "system_errors", "get_system_error_message", [float64Carrier], nativeString, true),
   ]);
 }
 
