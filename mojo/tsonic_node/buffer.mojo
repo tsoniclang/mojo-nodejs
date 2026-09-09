@@ -1,6 +1,7 @@
 from std.collections import List
-from std.base64 import b64decode, b64encode
 from std.memory import ArcPointer, bitcast
+from tsonic_runtime.numeric import source_number_to_uint32
+from .buffer_codec import decode_bytes, encode_bytes, encoded_byte_length, is_encoding, encode_binary_string, decode_binary_string
 
 
 struct Buffer(ImplicitlyCopyable, Sized):
@@ -260,17 +261,10 @@ struct Buffer(ImplicitlyCopyable, Sized):
         return result^
 
     def to_string(self) raises -> String:
-        return String(from_utf8=self.copy_bytes())
+        return decode_bytes(self.copy_bytes(), "utf8")
 
     def to_string(self, encoding: String) raises -> String:
-        if encoding == "utf8" or encoding == "utf-8":
-            return self.to_string()
-        if encoding == "base64":
-            var bytes = self.copy_bytes()
-            return b64encode(Span(bytes))
-        if encoding == "hex":
-            return self._hex_string()
-        raise Error("Unsupported Buffer encoding: ", encoding)
+        return decode_bytes(self.copy_bytes(), encoding)
 
     def same_storage(self, other: Self) -> Bool:
         return self._bytes is other._bytes
@@ -330,15 +324,6 @@ struct Buffer(ImplicitlyCopyable, Sized):
                 self._bytes[][right] = value
         return self
 
-    def _hex_string(self) -> String:
-        comptime digits = "0123456789abcdef"
-        var result = String(capacity_bytes=self._length * 2)
-        for byte in self.copy_bytes():
-            var value = UInt8(byte)
-            result += String(digits[byte=Int(value >> 4)])
-            result += String(digits[byte=Int(value & 0x0F)])
-        return result^
-
     @staticmethod
     def _bound_index(index: Int, length: Int) -> Int:
         if index < 0:
@@ -353,17 +338,13 @@ def buffer_from_string(value: String) -> Buffer:
 def buffer_from_string_encoded(
     value: String, encoding: String
 ) raises -> Buffer:
-    if encoding == "utf8" or encoding == "utf-8":
-        return Buffer.from_string(value)
-    if encoding == "base64":
-        return Buffer(b64decode(value))
-    raise Error("Unsupported Buffer encoding: ", encoding)
+    return Buffer(encode_bytes(value, encoding))
 
 
 def buffer_from_numbers(values: List[Float64]) -> Buffer:
     var bytes = List[Byte](capacity=len(values))
     for value in values:
-        bytes.append(Byte(UInt8(Int64(value) & 0xFF)))
+        bytes.append(Byte(source_number_to_uint32(value) & 255))
     return Buffer(bytes^)
 
 
@@ -382,11 +363,7 @@ def buffer_concat(values: List[Buffer]) -> Buffer:
 def buffer_byte_length(
     value: String, encoding: String = "utf8"
 ) raises -> Float64:
-    if encoding == "utf8" or encoding == "utf-8":
-        return Float64(value.byte_length())
-    if encoding == "base64":
-        return Float64(len(b64decode(value)))
-    raise Error("Unsupported Buffer encoding: ", encoding)
+    return encoded_byte_length(value, encoding)
 
 
 def buffer_is_buffer(value: Buffer) -> Bool:
@@ -394,17 +371,12 @@ def buffer_is_buffer(value: Buffer) -> Bool:
 
 
 def buffer_is_encoding(encoding: String) -> Bool:
-    return (
-        encoding == "utf8"
-        or encoding == "utf-8"
-        or encoding == "base64"
-        or encoding == "hex"
-    )
+    return is_encoding(encoding)
 
 
-def buffer_btoa(value: String) -> String:
-    return b64encode(value)
+def buffer_btoa(value: String) raises -> String:
+    return encode_binary_string(value)
 
 
 def buffer_atob(value: String) raises -> String:
-    return String(from_utf8=b64decode(value))
+    return decode_binary_string(value)

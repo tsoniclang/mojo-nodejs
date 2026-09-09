@@ -11,12 +11,13 @@ from tsonic_runtime import (
     destroy_callable_environment,
 )
 from tsonic_node.filesystem import read_text_file
+from tsonic_node.buffer import Buffer
 from tsonic_node.http import IncomingMessage, ServerResponse
+from tsonic_node.http.connections import has_pending_connections, poll_connections
 from tsonic_node.http.client import has_pending_requests, poll_requests
 from tsonic_node.https import (
     create_server as create_https_server,
     get as https_get,
-    poll_https,
 )
 from tsonic_node.tls import (
     ConnectionOptions,
@@ -44,20 +45,14 @@ struct EmptyEnvironment:
 
 @fieldwise_init
 struct SocketEnvironment:
-    var count: Location[Int]
+    var socket: Location[Optional[TLSSocket]]
 
     @staticmethod
     def invoke(
         context: ErasedCallableContext, var arguments: Tuple[TLSSocket]
     ) raises:
         var environment = context.unsafe_bitcast[SocketEnvironment]()
-        var socket = arguments[0]
-        var input = socket.read()
-        assert_true(input)
-        assert_equal(input.value().to_string(), "ping")
-        assert_true(socket.write_string("pong"))
-        socket.end()
-        environment[].count.write(environment[].count.read() + 1)
+        environment[].socket.write(Optional(arguments[0]))
 
     @staticmethod
     def destroy(context: ErasedCallableContext):
@@ -111,10 +106,10 @@ def empty_callback(count: Location[Int]) -> RaisingCallable[Tuple[], NoneType]:
 
 
 def socket_callback(
-    count: Location[Int],
+    socket: Location[Optional[TLSSocket]],
 ) -> RaisingCallable[Tuple[TLSSocket], NoneType]:
     var environment = allocate_callable_environment(
-        SocketEnvironment(count), SocketEnvironment.destroy
+        SocketEnvironment(socket), SocketEnvironment.destroy
     )
     return RaisingCallable[Tuple[TLSSocket], NoneType](
         environment, SocketEnvironment.invoke
@@ -155,26 +150,41 @@ def _prove_tls(certificate: String, private_key: String) raises:
     var options = TlsOptions()
     options.cert = Optional(certificate)
     options.key = Optional(private_key)
-    var accepted = Location(0)
+    var accepted = Location[Optional[TLSSocket]](None)
     var listening = Location(0)
     var server = create_tls_server(options, socket_callback(accepted))
     _ = server.listen(Float64(port), "127.0.0.1", empty_callback(listening))
 
     var child = external_call["fork", c_pid_t]()
     if child == 0:
+        server.close()
         try:
             _run_tls_client(port, certificate)
             external_call["_exit", NoneType](c_int(0))
         except:
             external_call["_exit", NoneType](c_int(20))
 
-    _poll_server(accepted)
+    var replied = False
+    for _ in range(1000):
+        _ = poll_tls()
+        if accepted.read() and not replied:
+            var socket = accepted.read().value()
+            var input = socket.read()
+            if input:
+                assert_equal(input.value().to_string(), "ping")
+                assert_true(socket.write_string("pong"))
+                socket.end()
+                replied = True
+        if replied and accepted.read().value().closed():
+            break
+        sleep(0.002)
+    assert_true(replied)
+    assert_true(accepted.read().value().closed())
     server.close()
     var status: c_int = 0
     assert_true(waitpid(child, Pointer(to=status), 0) >= 0)
     assert_equal(status, 0)
     assert_equal(listening.read(), 1)
-    assert_equal(accepted.read(), 1)
 
 
 def _run_tls_client(port: Int, certificate: String) raises:
@@ -189,12 +199,30 @@ def _run_tls_client(port: Int, certificate: String) raises:
         reject_unauthorized=Optional(True),
     )
     var socket = connect(options)
+    for _ in range(1000):
+        _ = poll_tls()
+        if socket.ready():
+            break
+        sleep(0.002)
+    assert_true(socket.ready())
     assert_true(socket.authorized())
     assert_true(socket.write_string("ping"))
-    var output = socket.read()
+    var output: Optional[Buffer] = None
+    for _ in range(1000):
+        _ = poll_tls()
+        output = socket.read()
+        if output:
+            break
+        sleep(0.002)
     assert_true(output)
     assert_equal(output.value().to_string(), "pong")
     socket.end()
+    for _ in range(1000):
+        _ = poll_tls()
+        if socket.closed():
+            break
+        sleep(0.002)
+    assert_true(socket.closed())
 
 
 def _prove_https(certificate: String, private_key: String) raises:
@@ -243,7 +271,8 @@ def _run_https_client(port: Int) raises:
 def _poll_server(count: Location[Int]) raises:
     for _ in range(500):
         _ = poll_tls()
-        if count.read() == 1:
+        _ = poll_connections()
+        if count.read() == 1 and not has_pending_connections():
             return
         sleep(0.002)
     raise Error("TLS server did not receive the expected connection")

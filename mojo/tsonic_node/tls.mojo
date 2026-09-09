@@ -1,10 +1,11 @@
 from std.collections import List
-from std.ffi import c_int, c_size_t, c_ssize_t, c_ulong, external_call
+from std.ffi import c_int, c_size_t, external_call
 from std.memory import ArcPointer
 from std.sys._libc import close
 from tsonic_runtime import GlobalCell, RaisingCallable
 
 from .buffer import Buffer
+from .validation import checked_integer
 
 
 comptime EmptyCallback = RaisingCallable[Tuple[], NoneType]
@@ -70,12 +71,20 @@ struct TlsOptions(Copyable):
 struct _TlsSocketState(Movable):
     var handle: OptionalPointer[NoneType, MutUntrackedOrigin]
     var referenced: Bool
+    var scheduled: Bool
+    var callback: Optional[EmptyCallback]
+    var accepted: Optional[SocketCallback]
+    var native_owner: Optional[ArcPointer[_TlsServerNativeState]]
 
     def __init__(
         out self, handle: OptionalPointer[NoneType, MutUntrackedOrigin]
     ):
         self.handle = handle
         self.referenced = True
+        self.scheduled = False
+        self.callback = None
+        self.accepted = None
+        self.native_owner = None
 
     def __deinit__(deinit self):
         if self.handle:
@@ -93,6 +102,7 @@ struct TLSSocket(ImplicitlyCopyable):
         if not handle:
             raise Error("TLS socket handle is absent")
         self._state = ArcPointer(_TlsSocketState(handle))
+        _schedule_socket(self)
 
     def write_buffer(self, value: Buffer) raises -> Bool:
         var bytes = value.copy_bytes()
@@ -107,6 +117,7 @@ struct TLSSocket(ImplicitlyCopyable):
         )
         if written < 0 or written != Int64(len(bytes)):
             raise Error(_take_error(error, "TLS write failed"))
+        _schedule_socket(self)
         return True
 
     def write_string(self, value: String) raises -> Bool:
@@ -123,6 +134,8 @@ struct TLSSocket(ImplicitlyCopyable):
             c_size_t(len(bytes)),
             Pointer(to=error),
         )
+        if count == -2:
+            return None
         if count < 0:
             raise Error(_take_error(error, "TLS read failed"))
         if count == 0:
@@ -141,6 +154,36 @@ struct TLSSocket(ImplicitlyCopyable):
             == 0
         ):
             raise Error(_take_error(error, "Unable to close TLS socket"))
+        _schedule_socket(self)
+
+    def destroy(self):
+        external_call["tsonic_node_tls_destroy", NoneType](self._handle())
+        self._state[].callback = None
+        self._state[].accepted = None
+        self._state[].native_owner = None
+
+    def ready(self) -> Bool:
+        return external_call["tsonic_node_tls_ready", c_int](self._handle()) != 0
+
+    def closed(self) -> Bool:
+        return external_call["tsonic_node_tls_closed", c_int](self._handle()) != 0
+
+    def read_into(self, mut bytes: List[Byte]) raises -> Int:
+        var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
+        var count = external_call["tsonic_node_tls_read", Int64](
+            self._handle(), bytes.unsafe_ptr(), c_size_t(len(bytes)), Pointer(to=error),
+        )
+        if count == -1:
+            raise Error(_take_error(error, "TLS read failed"))
+        return Int(count)
+
+    def progress(self) raises:
+        var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
+        if external_call["tsonic_node_tls_progress", c_int](self._handle(), Pointer(to=error)) < 0:
+            raise Error(_take_error(error, "TLS transport failed"))
+
+    def pending(self) -> Bool:
+        return external_call["tsonic_node_tls_pending", c_int](self._handle()) != 0
 
     def ref(self) -> Self:
         self._state[].referenced = True
@@ -257,6 +300,11 @@ struct Server(ImplicitlyCopyable):
     ) raises -> Self:
         if self._state[].active:
             raise Error("TLS server is already listening")
+        var retained = List[Server]()
+        for server in _servers.get()[]:
+            if server._state[].active:
+                retained.append(server)
+        _servers.get()[] = retained^
         var host_buffer = String(host)
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var descriptor = external_call["tsonic_node_net_listen", c_int](
@@ -268,6 +316,9 @@ struct Server(ImplicitlyCopyable):
             raise Error(
                 _take_error(error, "Unable to listen for TLS connections")
             )
+        if external_call["tsonic_node_socket_nonblocking", c_int](descriptor) != 0:
+            _ = close(descriptor)
+            raise Error("Unable to configure nonblocking TLS listener")
         if len(_servers.get()[]) >= _MAX_SERVERS:
             _ = close(descriptor)
             raise Error("TLS servers exceed the finite runtime limit")
@@ -297,28 +348,31 @@ struct Server(ImplicitlyCopyable):
         return self._state[].active
 
 
-@fieldwise_init
-struct _PendingConnect(ImplicitlyCopyable):
-    var callback: EmptyCallback
-
-
 def _initial_servers() -> List[Server]:
     return List[Server]()
 
 
-def _initial_connects() -> List[_PendingConnect]:
-    return List[_PendingConnect]()
+def _initial_activities() -> List[TLSSocket]:
+    return List[TLSSocket]()
 
 
 comptime _servers = GlobalCell["tsonic.node.tls.servers", _initial_servers]()
-comptime _pending_connects = GlobalCell[
-    "tsonic.node.tls.connects", _initial_connects
+comptime _activities = GlobalCell[
+    "tsonic.node.tls.activities", _initial_activities
 ]()
+
+
+def _schedule_socket(socket: TLSSocket):
+    if not socket._state[].scheduled:
+        socket._state[].scheduled = True
+        _activities.get()[].append(socket)
 
 
 def connect(options: ConnectionOptions) raises -> TLSSocket:
     var host = options.host.value() if options.host else "localhost"
     var servername = options.servername.value() if options.servername else host
+    if host.find("\0") >= 0 or servername.find("\0") >= 0:
+        raise Error("TLS host contains a null byte")
     var port = _port(options.port.value() if options.port else 443)
     var reject = (
         options.reject_unauthorized.value() if options.reject_unauthorized else True
@@ -351,10 +405,8 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
 def connect_callback(
     options: ConnectionOptions, callback: EmptyCallback
 ) raises -> TLSSocket:
-    if len(_pending_connects.get()[]) >= _MAX_PENDING:
-        raise Error("Pending TLS callbacks exceed the finite runtime limit")
     var socket = connect(options)
-    _pending_connects.get()[].append(_PendingConnect(callback))
+    socket._state[].callback = callback
     return socket^
 
 
@@ -389,8 +441,9 @@ def create_server(
 
 
 def has_active_tls() -> Bool:
-    if len(_pending_connects.get()[]) != 0:
-        return True
+    for socket in _activities.get()[]:
+        if socket._state[].referenced:
+            return True
     for server in _servers.get()[]:
         if server._state[].active and server._state[].referenced:
             return True
@@ -399,15 +452,8 @@ def has_active_tls() -> Bool:
 
 def poll_tls() raises -> Bool:
     var did_work = False
-    if len(_pending_connects.get()[]) != 0:
-        var pending = List[_PendingConnect]()
-        for connect in _pending_connects.get()[]:
-            pending.append(connect)
-        _pending_connects.get()[] = List[_PendingConnect]()
-        for connect in pending:
-            connect.callback.call(())
-        did_work = True
-    for server in _servers.get()[]:
+    var servers = _servers.get()[].copy()
+    for server in servers:
         if not server._state[].active:
             continue
         if server._state[].listen_callback_pending:
@@ -415,15 +461,17 @@ def poll_tls() raises -> Bool:
             if server._state[].listen_callback:
                 server._state[].listen_callback.value().call(())
             did_work = True
-        if not _socket_readable(server._state[].descriptor):
+        if not server._state[].active or not _socket_readable(server._state[].descriptor):
             continue
-        var descriptor = external_call["accept", c_int](
-            server._state[].descriptor,
-            OptionalPointer[NoneType, MutUntrackedOrigin](),
-            OptionalPointer[NoneType, MutUntrackedOrigin](),
-        )
+        var status = c_int(0)
+        var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].descriptor, Pointer(to=status))
+        if descriptor == -2:
+            continue
         if descriptor < 0:
-            continue
+            raise Error("Unable to accept TLS connection")
+        if len(_activities.get()[]) >= _MAX_PENDING:
+            _ = close(descriptor)
+            raise Error("Pending TLS connections exceed the finite runtime limit")
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var handle = external_call[
             "tsonic_node_tls_server_accept",
@@ -435,8 +483,39 @@ def poll_tls() raises -> Bool:
         )
         if not handle:
             raise Error(_take_error(error, "TLS server handshake failed"))
-        server._state[].callback.call((TLSSocket(handle),))
+        var socket = TLSSocket(handle)
+        socket._state[].accepted = server._state[].callback
+        socket._state[].native_owner = server._state[].native
         did_work = True
+    var pending = List[TLSSocket]()
+    swap(pending, _activities.get()[])
+    for index in range(len(pending)):
+        var socket = pending[index]
+        socket._state[].scheduled = False
+        try:
+            var was_ready = socket.ready()
+            var written = socket.bytes_written()
+            socket.progress()
+            did_work = did_work or socket.ready() != was_ready or socket.bytes_written() != written
+            if socket.ready() and not socket.closed():
+                if socket._state[].callback:
+                    var callback = socket._state[].callback.value()
+                    socket._state[].callback = None
+                    callback.call(())
+                    did_work = True
+                if socket._state[].accepted:
+                    var callback = socket._state[].accepted.value()
+                    socket._state[].accepted = None
+                    callback.call((socket,))
+                    did_work = True
+                socket._state[].native_owner = None
+            if socket.pending():
+                _schedule_socket(socket)
+        except error:
+            socket.destroy()
+            for remaining in range(index + 1, len(pending)):
+                _activities.get()[].append(pending[remaining])
+            raise error
     return did_work
 
 
@@ -470,33 +549,18 @@ def _join_certificates(certificates: Optional[List[String]]) -> String:
 
 
 def _port(value: Float64) raises -> Int32:
-    var port = Int(value)
-    if Float64(port) != value or port < 0 or port > 65535:
-        raise Error("TLS port must be an integer from 0 through 65535")
-    return Int32(port)
+    return Int32(checked_integer(value, 65535, "TLS port"))
 
 
 def _milliseconds(value: Float64) raises -> Int32:
-    var milliseconds = Int(value)
-    if (
-        Float64(milliseconds) != value
-        or milliseconds < 0
-        or milliseconds > 2147483647
-    ):
-        raise Error("TLS timeout must be a non-negative 32-bit integer")
-    return Int32(milliseconds)
+    return Int32(checked_integer(value, 2147483647, "TLS timeout"))
 
 
 def _socket_readable(descriptor: Int32) raises -> Bool:
-    var poll_data = Array[Int32, 2](fill=0)
-    poll_data[0] = descriptor
-    poll_data[1] = 1
-    var result = external_call["poll", c_int](
-        poll_data.unsafe_ptr(), c_ulong(1), c_int(0)
-    )
+    var result = external_call["tsonic_node_socket_readable", c_int](descriptor)
     if result < 0:
         raise Error("Unable to poll TLS server socket")
-    return result > 0 and ((poll_data[1] >> 16) & 1) == 1
+    return result > 0
 
 
 def _take_error(

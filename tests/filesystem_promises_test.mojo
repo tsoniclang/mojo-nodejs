@@ -15,6 +15,7 @@ from tsonic_node import (
     write_file_async,
 )
 from tsonic_runtime import create_raising_task
+from tsonic_node.filesystem.promises import append_text_file, real_path, symbolic_link, make_temp_directory
 
 
 async def nested_read(path: String) raises -> String:
@@ -50,6 +51,16 @@ def main() raises:
     rename_task^.wait()
     var file_task = create_raising_task(stat_async(destination))
     assert_true(file_task^.wait().is_file())
+    var append_task = create_raising_task(append_text_file(destination, "!"))
+    append_task^.wait()
+    var appended = create_raising_task(read_text_file_async(destination, "utf8"))
+    assert_equal(appended^.wait(), "value!")
+    var link_task = create_raising_task(symbolic_link(destination, root + "/alias"))
+    link_task^.wait()
+    var real_task = create_raising_task(real_path(root + "/alias"))
+    assert_equal(real_task^.wait(), destination)
+    var temp_task = create_raising_task(make_temp_directory(root + "/temp-"))
+    assert_true(exists(temp_task^.wait()))
     var remove_task = create_raising_task(
         remove_path_async(root, RmOptions(recursive=True))
     )

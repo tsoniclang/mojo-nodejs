@@ -111,6 +111,13 @@ export function filesystemPromisesModule(): MojoProviderModuleDefinition {
         },
       ]),
       fnExport(moduleSpecifier, "unlink", [{ name: "path", type: stringType }], sourcePromise(voidType)),
+      fnExport(moduleSpecifier, "realpath", [{ name: "path", type: stringType }], sourcePromise(stringType)),
+      fnExport(moduleSpecifier, "mkdtemp", [{ name: "prefix", type: stringType }], sourcePromise(stringType)),
+      fnExport(moduleSpecifier, "symlink", [{ name: "target", type: stringType }, { name: "path", type: stringType }], sourcePromise(voidType)),
+      overloadedFunctionExport(moduleSpecifier, "appendFile", [
+        { signatureSuffix: "path,buffer", parameters: [{ name: "path", type: stringType }, { name: "data", type: providerRef("node:buffer", "Buffer") }], returnType: sourcePromise(voidType) },
+        { signatureSuffix: "path,string", parameters: [{ name: "path", type: stringType }, { name: "data", type: stringType }], returnType: sourcePromise(voidType) },
+      ]),
       fnExport(moduleSpecifier, "copyFile", [
         { name: "source", type: stringType },
         { name: "destination", type: stringType },
@@ -162,6 +169,11 @@ export function filesystemPromisesOperations(): readonly MojoProviderOperationDe
     operation("rm", "path", "remove_path_default", [nativeString], unitFutureCarrier),
     operation("rm", "path,options", "remove_path", [nativeString, rmOptionsCarrier], unitFutureCarrier),
     operation("unlink", "path", "unlink", [nativeString], unitFutureCarrier),
+    operation("realpath", "path", "real_path", [nativeString], nativeStringFutureCarrier),
+    operation("mkdtemp", "prefix", "make_temp_directory", [nativeString], nativeStringFutureCarrier),
+    operation("symlink", "target,path", "symbolic_link", [nativeString, nativeString], unitFutureCarrier),
+    operation("appendFile", "path,buffer", "append_file", [nativeString, bufferCarrier], unitFutureCarrier),
+    operation("appendFile", "path,string", "append_text_file", [nativeString, nativeString], unitFutureCarrier),
     operation("copyFile", "source,destination", "copy_file", [nativeString, nativeString], unitFutureCarrier),
     operation("rename", "oldPath,newPath", "rename_path", [nativeString, nativeString], unitFutureCarrier),
   ]);

@@ -6,13 +6,34 @@ comptime separator = "/"
 comptime delimiter = ":"
 
 
-@fieldwise_init
 struct PathParts(Copyable):
     var root: String
     var directory: String
     var base: String
     var name: String
     var extension: String
+
+    def __init__(out self, var root: String = "", var directory: String = "", var base: String = "", var name: String = "", var extension: String = ""):
+        self.root = root^
+        self.directory = directory^
+        self.base = base^
+        self.name = name^
+        self.extension = extension^
+
+
+struct PathInput(Copyable):
+    var root: Optional[String]
+    var directory: Optional[String]
+    var base: Optional[String]
+    var name: Optional[String]
+    var extension: Optional[String]
+
+    def __init__(out self):
+        self.root = None
+        self.directory = None
+        self.base = None
+        self.name = None
+        self.extension = None
 
 
 def _append_component(mut output: String, component: String):
@@ -56,7 +77,7 @@ def normalize(path: String) -> String:
 
     if not result:
         result = separator if absolute else "."
-    elif trailing and result != separator:
+    if trailing and result != separator:
         result += separator
     return result^
 
@@ -86,6 +107,8 @@ def resolve(parts: List[String]) raises -> String:
                 break
         index -= 1
     var normalized = normalize(resolved^)
+    while normalized.byte_length() > 1 and normalized.endswith(separator):
+        normalized = String(normalized[byte=:normalized.byte_length() - 1])
     if not normalized.startswith(separator):
         normalized = separator + normalized
     return normalized^
@@ -98,34 +121,35 @@ def is_absolute(path: String) -> Bool:
 def dirname(path: String) -> String:
     if not path:
         return "."
-    var normalized = normalize(path)
-    while normalized.byte_length() > 1 and normalized.endswith(separator):
-        var trimmed = String(
-            normalized[byte = 0 : normalized.byte_length() - 1]
-        )
-        normalized = trimmed^
-    var index = normalized.rfind(separator)
+    var end = _base_end(path)
+    var index = String(path[byte=:end]).rfind(separator)
     if index < 0:
-        return "."
+        return separator if path.startswith(separator) else "."
     if index == 0:
         return separator
-    return String(normalized[byte=0:index])
+    if index == 1 and path.startswith("//"):
+        return "//"
+    return String(path[byte=:index])
+
+
+def _base_end(path: String) -> Int:
+    var end = path.byte_length()
+    var bytes = path.as_bytes()
+    while end > 0 and bytes[end - 1] == 47:
+        end -= 1
+    return end
 
 
 def basename(path: String, suffix: String = "") -> String:
     if not path:
         return ""
-    var normalized = normalize(path)
-    while normalized.byte_length() > 1 and normalized.endswith(separator):
-        var trimmed = String(
-            normalized[byte = 0 : normalized.byte_length() - 1]
-        )
-        normalized = trimmed^
-    var index = normalized.rfind(separator)
-    var result = (
-        String(normalized[byte = index + 1 : normalized.byte_length()]) if index
-        >= 0 else normalized.copy()
-    )
+    if suffix and suffix == path:
+        return ""
+    var end = _base_end(path)
+    var index = String(path[byte=:end]).rfind(separator)
+    var result = String(path[byte=index + 1:end])
+    if suffix and suffix.byte_length() <= path.byte_length() and suffix.endswith(result) and suffix != result:
+        return String(path[byte=index + 1:])
     if suffix and result.endswith(suffix) and result != suffix:
         return String(
             result[byte = 0 : result.byte_length() - suffix.byte_length()]
@@ -136,16 +160,16 @@ def basename(path: String, suffix: String = "") -> String:
 def extname(path: String) -> String:
     var base = basename(path)
     var index = base.rfind(".")
-    if index <= 0:
+    if index <= 0 or base == "..":
         return ""
     return String(base[byte = index : base.byte_length()])
 
 
 def parse(path: String) -> PathParts:
     var root = String(separator) if is_absolute(path) else String()
-    var directory = dirname(path)
-    if directory == "." and not root:
-        directory = ""
+    var end = _base_end(path)
+    var start = String(path[byte=:end]).rfind(separator) + 1
+    var directory = String(path[byte=:start - 1]) if start > 1 else root.copy()
     var base = basename(path)
     var extension = extname(base)
     var name = String(
@@ -155,12 +179,24 @@ def parse(path: String) -> PathParts:
 
 
 def format_path(parts: PathParts) -> String:
-    var base = parts.base if parts.base else parts.name + parts.extension
-    if not parts.directory:
-        return parts.root + base
-    if parts.directory == separator:
-        return separator + base
-    return parts.directory + separator + base
+    var extension = parts.extension
+    if extension and not extension.startswith("."):
+        extension = "." + extension
+    var base = parts.base if parts.base else parts.name + extension
+    var directory = parts.directory if parts.directory else parts.root
+    if not directory:
+        return base
+    return directory + base if directory == parts.root else directory + separator + base
+
+
+def format_path(parts: PathInput) -> String:
+    return format_path(PathParts(
+        parts.root.value() if parts.root else String(),
+        parts.directory.value() if parts.directory else String(),
+        parts.base.value() if parts.base else String(),
+        parts.name.value() if parts.name else String(),
+        parts.extension.value() if parts.extension else String(),
+    ))
 
 
 def relative(from_path: String, to_path: String) raises -> String:
@@ -168,8 +204,8 @@ def relative(from_path: String, to_path: String) raises -> String:
     source_paths.append(from_path.copy())
     var target_paths = List[String]()
     target_paths.append(to_path.copy())
-    var source = _components(resolve([from_path]))
-    var target = _components(resolve([to_path]))
+    var source = _components(resolve(source_paths))
+    var target = _components(resolve(target_paths))
     var shared = 0
     while (
         shared < len(source)

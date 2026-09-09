@@ -206,7 +206,7 @@ export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
     propertyRead(bufferId, `${bufferId}.length`, "js_length", bufferCarrier, float64Carrier, "method"),
     functionCall(`${moduleSpecifier}::isBuffer`, `${moduleSpecifier}::isBuffer(value)`, "buffer", "buffer_is_buffer", [bufferCarrier], boolCarrier),
     functionCall(`${moduleSpecifier}::isEncoding`, `${moduleSpecifier}::isEncoding(encoding)`, "buffer", "buffer_is_encoding", [nativeString], boolCarrier),
-    functionCall(`${moduleSpecifier}::btoa`, `${moduleSpecifier}::btoa(value)`, "buffer", "buffer_btoa", [nativeString], nativeString),
+    functionCall(`${moduleSpecifier}::btoa`, `${moduleSpecifier}::btoa(value)`, "buffer", "buffer_btoa", [nativeString], nativeString, true),
     functionCall(`${moduleSpecifier}::atob`, `${moduleSpecifier}::atob(value)`, "buffer", "buffer_atob", [nativeString], nativeString, true),
   ]);
 }

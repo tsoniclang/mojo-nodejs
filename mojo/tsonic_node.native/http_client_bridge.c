@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 typedef struct {
   CURL* easy;
@@ -137,6 +138,22 @@ int tsonic_node_http_start(void* value, const char* method, const void* body,
     size_t length, int body_present, long timeout) {
   HttpRequest* request = value;
   if (request->active || request->complete || request->result != CURLE_OK) return 0;
+  const char* implicit[] = { "Accept", "Expect", "Content-Type" };
+  for (size_t index = 0; index < sizeof(implicit) / sizeof(implicit[0]); index++) {
+    size_t name_length = strlen(implicit[index]);
+    int present = 0;
+    for (struct curl_slist* header = request->headers; header; header = header->next) {
+      if (strlen(header->data) > name_length && strncasecmp(header->data, implicit[index], name_length) == 0 &&
+          (header->data[name_length] == ':' || header->data[name_length] == ';')) present = 1;
+    }
+    if (!present) {
+      char suppressed[32];
+      memcpy(suppressed, implicit[index], name_length);
+      suppressed[name_length] = ':';
+      suppressed[name_length + 1] = '\0';
+      if (!tsonic_node_http_header(request, suppressed)) return 0;
+    }
+  }
   if (!selected(request, curl_easy_setopt(request->easy, CURLOPT_HTTPHEADER, request->headers))) return 0;
   if (body_present &&
       (!selected(request, curl_easy_setopt(request->easy, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)length)) ||

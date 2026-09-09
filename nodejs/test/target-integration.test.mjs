@@ -307,11 +307,10 @@ export function main(): void { new Worker("./worker.js"); }
   ]);
 });
 
-test("open resource and dynamic utility lanes fail at their exact boundaries", () => {
-  assert.throws(
-    () => compileNode(`import { watch } from "node:fs"; export function main(): void { watch("."); }`),
-    /TS2305/u,
-  );
+test("filesystem watchers cross the target boundary while unclosed dynamic utilities remain rejected", () => {
+  const watcher = compileNode(`import { watch } from "node:fs"; export function main(): void { const handle = watch("."); handle.close(); }`);
+  assert.deepEqual(watcher.diagnostics, []);
+  assert.ok(watcher.artifacts.some(({ path }) => path.endsWith(".mojo")));
   const input = compileNode(`import process from "node:process"; export function main(): void { process.stdin; }`);
   assert.deepEqual(input.diagnostics, []);
   assert.ok(input.artifacts.some(({ path }) => path.endsWith(".mojo")));

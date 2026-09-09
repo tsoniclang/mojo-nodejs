@@ -3,7 +3,7 @@ from std.tempfile import mkdtemp
 from tsonic_node.buffer import Buffer
 from tsonic_node.filesystem import (
     RmOptions, access, append_file, chmod, close_file, copy_file, fstat, lstat,
-    open_file, read_file, read_into, read_link, remove_path, stat, symbolic_link,
+    open_file, read_file, read_into, read_link, remove_path, stat, symbolic_link, make_temp_directory,
     truncate_file, write_from, write_string,
 )
 
@@ -12,6 +12,17 @@ def main() raises:
     var root = mkdtemp(prefix="mojo-fs-descriptors-")
     var path = root + "/data"
     try:
+        var first_temp = make_temp_directory(root + "/temp-")
+        var second_temp = make_temp_directory(root + "/temp-")
+        assert_true(first_temp != second_temp)
+        assert_equal(first_temp.byte_length(), (root + "/temp-XXXXXX").byte_length())
+        assert_true(stat(first_temp).is_directory())
+        var missing_parent = False
+        try:
+            _ = make_temp_directory(root + "/absent/temp-")
+        except:
+            missing_parent = True
+        assert_true(missing_parent)
         var descriptor = open_file(path, "wx+")
         try:
             assert_equal(write_string(descriptor, "abc😀"), 7)

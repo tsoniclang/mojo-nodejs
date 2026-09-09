@@ -34,7 +34,7 @@ import { httpModule, httpOperations, httpTypes } from "./modules/http/index.js";
 import { httpsModule, httpsOperations, httpsTypes } from "./modules/https.js";
 import { netModule, netOperations, netTypes } from "./modules/net.js";
 import { osModule, osOperations } from "./modules/os.js";
-import { pathModule, pathOperations } from "./modules/path.js";
+import { pathModule, pathOperations, pathTypes } from "./modules/path.js";
 import {
   processModule,
   processOperations,
@@ -128,6 +128,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       ...dnsTypes(),
       ...eventsTypes(),
       ...filesystemTypes(),
+      ...pathTypes(),
       ...httpTypes(),
       ...httpsTypes(),
       ...netTypes(),

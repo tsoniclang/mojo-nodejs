@@ -1,68 +1,52 @@
 from std.collections import List
-
+from std.ffi import c_int, c_size_t, external_call
+from std.memory import ArcPointer
 from ..buffer import Buffer
 from .messages import IncomingMessage
 
 
-def parse_request_bytes(bytes: List[Byte]) raises -> IncomingMessage:
-    var header_end = find_header_end(bytes)
-    if header_end < 0:
-        raise Error("HTTP request ended before its headers were complete")
-    if header_end > 64 * 1024:
-        raise Error("HTTP request headers exceed the finite runtime limit")
-    var head_bytes = List[Byte](capacity=header_end)
-    for index in range(header_end):
-        head_bytes.append(bytes[index])
-    var head = String(from_utf8=head_bytes)
-    var lines = head.split("\r\n")
-    if len(lines) == 0:
-        raise Error("HTTP request has no request line")
-    var request_parts = String(lines[0]).split(" ")
-    if len(request_parts) != 3:
-        raise Error("HTTP request line is invalid")
-    var content_length = request_content_length(bytes, header_end)
-    var body_start = header_end + 4
-    if len(bytes) - body_start < content_length:
-        raise Error("HTTP request ended before its body was complete")
-    var body = List[Byte](capacity=content_length)
-    for index in range(content_length):
-        body.append(bytes[body_start + index])
-    return IncomingMessage(
-        String(request_parts[0]), String(request_parts[1]), Buffer(body^)
-    )
+struct _ParserState(Movable):
+    var handle: OptionalPointer[NoneType, MutUntrackedOrigin]
+    var complete: Bool
+
+    def __init__(out self, handle: OptionalPointer[NoneType, MutUntrackedOrigin]):
+        self.handle = handle
+        self.complete = False
+
+    def __deinit__(deinit self):
+        if self.handle:
+            external_call["tsonic_node_http_parser_free", NoneType](self.handle.value())
 
 
-def request_content_length(bytes: List[Byte], header_end: Int) raises -> Int:
-    var head_bytes = List[Byte](capacity=header_end)
-    for index in range(header_end):
-        head_bytes.append(bytes[index])
-    var lines = String(from_utf8=head_bytes).split("\r\n")
-    var content_length = 0
-    for index in range(1, len(lines)):
-        var line = String(lines[index])
-        var separator = line.find(":")
-        if not separator:
-            raise Error("HTTP request header is invalid")
-        var name = String(line[byte = : separator.value()]).lower()
-        var value = String(line[byte = separator.value() + 1 :]).strip()
-        if name == "content-length":
-            content_length = Int(value)
-            if content_length < 0 or content_length > 64 * 1024 * 1024:
-                raise Error(
-                    "HTTP request body exceeds the finite runtime limit"
-                )
-    return content_length
+struct RequestParser(ImplicitlyCopyable):
+    var _state: ArcPointer[_ParserState]
 
+    def __init__(out self) raises:
+        var handle = external_call["tsonic_node_http_parser_new", OptionalPointer[NoneType, MutUntrackedOrigin]]()
+        if not handle:
+            raise Error("Unable to allocate HTTP request parser")
+        self._state = ArcPointer(_ParserState(handle))
 
-def find_header_end(bytes: List[Byte]) -> Int:
-    if len(bytes) < 4:
-        return -1
-    for index in range(len(bytes) - 3):
-        if (
-            bytes[index] == 13
-            and bytes[index + 1] == 10
-            and bytes[index + 2] == 13
-            and bytes[index + 3] == 10
-        ):
-            return index
-    return -1
+    def feed(self, bytes: List[Byte], count: Int) raises -> Bool:
+        if count < 0 or count > len(bytes):
+            raise Error("HTTP parser input length is outside its buffer")
+        var status = external_call["tsonic_node_http_parser_feed", c_int](
+            self._state[].handle.value(), bytes.unsafe_ptr(), c_size_t(count),
+        )
+        if status < 0:
+            var message = external_call["tsonic_node_http_parser_error", OptionalPointer[UInt8, ImmUntrackedOrigin]](self._state[].handle.value())
+            raise Error(String(unsafe_from_utf8_ptr=message.value()) if message else "Invalid HTTP request")
+        self._state[].complete = status == 1
+        return self._state[].complete
+
+    def message(self) raises -> IncomingMessage:
+        if not self._state[].complete:
+            raise Error("HTTP request is not complete")
+        var method = external_call["tsonic_node_http_parser_method", Pointer[UInt8, ImmUntrackedOrigin]](self._state[].handle.value())
+        var url = external_call["tsonic_node_http_parser_url", Pointer[UInt8, ImmUntrackedOrigin]](self._state[].handle.value())
+        var length = c_size_t(0)
+        var pointer = external_call["tsonic_node_http_parser_body", OptionalPointer[Byte, ImmUntrackedOrigin]](self._state[].handle.value(), Pointer(to=length))
+        var bytes = List[Byte](capacity=Int(length))
+        for index in range(Int(length)):
+            bytes.append(pointer.value()[index])
+        return IncomingMessage(String(unsafe_from_utf8_ptr=method), String(unsafe_from_utf8_ptr=url), Buffer(bytes^))

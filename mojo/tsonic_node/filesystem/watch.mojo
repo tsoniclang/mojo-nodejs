@@ -110,10 +110,10 @@ def watch_file(path: String, options: WatchOptions, listener: StatListener) rais
     return _watch(path, options, None, Optional(listener))
 
 
-def unwatch_file(path: String):
+def unwatch_file(path: String, listener: Optional[StatListener] = None):
     var snapshot = _watchers.get()[].copy()
     for watcher in snapshot:
-        if watcher._state[].stat and watcher._state[].path == path:
+        if watcher._state[].stat and watcher._state[].path == path and (not listener or watcher._state[].stat.value().same(listener.value())):
             watcher.close()
 
 

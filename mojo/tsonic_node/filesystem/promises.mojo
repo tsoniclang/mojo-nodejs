@@ -18,9 +18,34 @@ from .core import (
     unlink as unlink_sync,
     write_file as write_file_sync,
     write_text_file as write_text_file_sync,
+    append_file as append_file_sync,
+    append_text_file as append_text_file_sync,
+    real_path as real_path_sync,
+    symbolic_link as symbolic_link_sync,
+    make_temp_directory as make_temp_directory_sync,
 )
 from .descriptors import access as access_sync, chmod as chmod_sync, truncate_file as truncate_file_sync
 from .links import read_link as read_link_sync
+
+
+async def append_file(path: String, value: Buffer) raises:
+    append_file_sync(path, value)
+
+
+async def append_text_file(path: String, value: String) raises:
+    append_text_file_sync(path, value)
+
+
+async def real_path(path: String) raises -> String:
+    return real_path_sync(path)
+
+
+async def symbolic_link(target: String, path: String) raises:
+    symbolic_link_sync(target, path)
+
+
+async def make_temp_directory(prefix: String) raises -> String:
+    return make_temp_directory_sync(prefix)
 
 
 async def read_file(path: String) raises -> Buffer:

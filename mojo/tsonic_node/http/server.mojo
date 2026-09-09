@@ -1,16 +1,12 @@
 from std.collections import List
-from std.ffi import c_int, c_size_t, c_ssize_t, c_ulong, external_call
+from std.ffi import c_int, external_call
 from std.memory import ArcPointer
 from std.sys._libc import close
 from tsonic_runtime import GlobalCell, RaisingCallable
 
-from ..buffer import Buffer
 from .messages import IncomingMessage, ServerResponse
-from .parsing import (
-    find_header_end,
-    parse_request_bytes,
-    request_content_length,
-)
+from .connections import accept_connection, has_pending_connections, poll_connections
+from .transport import HttpTransport
 
 
 comptime RequestArguments = Tuple[IncomingMessage, ServerResponse]
@@ -49,6 +45,11 @@ struct Server(ImplicitlyCopyable):
     ) raises -> Self:
         if self._state[].active:
             raise Error("HTTP server is already listening")
+        var retained = List[Server]()
+        for server in _servers.get()[]:
+            if server._state[].active:
+                retained.append(server)
+        _servers.get()[] = retained^
         var descriptor = _listen_socket(port, host)
         self._state[].descriptor = descriptor
         self._state[].listening_callback = Optional(callback)
@@ -84,29 +85,21 @@ def _initial_servers() -> List[Server]:
     return List[Server]()
 
 
-def _initial_responses() -> List[ServerResponse]:
-    return List[ServerResponse]()
-
-
 comptime _servers = GlobalCell["tsonic.node.http.servers", _initial_servers]()
-comptime _responses = GlobalCell[
-    "tsonic.node.http.responses", _initial_responses
-]()
 comptime _max_servers = 1024
-comptime _max_pending_responses = 1 << 20
 
 
 def has_active_servers() -> Bool:
     for index in range(len(_servers.get()[])):
         if _servers.get()[][index]._state[].active and _servers.get()[][index]._state[].referenced:
             return True
-    return len(_responses.get()[]) > 0
+    return has_pending_connections()
 
 
 def poll_servers() raises -> Bool:
     var did_work = False
-    for index in range(len(_servers.get()[])):
-        var server = _servers.get()[][index]
+    var servers = _servers.get()[].copy()
+    for server in servers:
         if not server._state[].active:
             continue
         if server._state[].listening_callback_pending:
@@ -114,78 +107,28 @@ def poll_servers() raises -> Bool:
             if server._state[].listening_callback:
                 server._state[].listening_callback.value().call(())
             did_work = True
-        if _socket_readable(server._state[].descriptor):
+        if server._state[].active and _socket_readable(server._state[].descriptor):
             _accept_request(server)
             did_work = True
-    var retained = List[ServerResponse](capacity=len(_responses.get()[]))
-    for index in range(len(_responses.get()[])):
-        var response = _responses.get()[][index]
-        if not response.is_finished():
-            retained.append(response)
-    _responses.get()[] = retained^
-    return did_work
+    var connection_work = poll_connections()
+    return did_work or connection_work
 
 
 def _accept_request(server: Server) raises:
-    var descriptor = external_call["accept", c_int](
-        server._state[].descriptor,
-        OptionalPointer[NoneType, MutUntrackedOrigin](),
-        OptionalPointer[NoneType, MutUntrackedOrigin](),
-    )
-    if descriptor < 0:
+    var status = c_int(0)
+    var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].descriptor, Pointer(to=status))
+    if descriptor == -2:
         return
-    try:
-        var request = _read_request(descriptor)
-        var response = ServerResponse(descriptor)
-        server._state[].handler.call((request, response))
-        if not response.is_finished():
-            if len(_responses.get()[]) >= _max_pending_responses:
-                response.end_empty()
-                raise Error(
-                    "Pending HTTP responses exceed the finite runtime limit"
-                )
-            _responses.get()[].append(response)
-    except error:
-        _ = close(descriptor)
-        raise error
-
-
-def _read_request(descriptor: Int32) raises -> IncomingMessage:
-    var bytes = List[Byte]()
-    var header_end = -1
-    while header_end < 0:
-        _read_chunk(descriptor, bytes)
-        header_end = find_header_end(bytes)
-        if len(bytes) > 64 * 1024:
-            raise Error("HTTP request headers exceed the finite runtime limit")
-    var content_length = request_content_length(bytes, header_end)
-    var body_start = header_end + 4
-    while len(bytes) - body_start < content_length:
-        _read_chunk(descriptor, bytes)
-    return parse_request_bytes(bytes)
-
-
-def _read_chunk(descriptor: Int32, mut bytes: List[Byte]) raises:
-    var buffer = Array[Byte, 4096](fill=0)
-    var count = external_call["recv", c_ssize_t](
-        descriptor, buffer.unsafe_ptr(), c_size_t(4096), c_int(0)
-    )
-    if count <= 0:
-        raise Error("HTTP request ended before it was complete")
-    for index in range(count):
-        bytes.append(buffer[index])
+    if descriptor < 0:
+        raise Error("Unable to accept HTTP connection")
+    accept_connection(HttpTransport(descriptor), server._state[].handler)
 
 
 def _socket_readable(descriptor: Int32) raises -> Bool:
-    var poll_data = Array[Int32, 2](fill=0)
-    poll_data[0] = descriptor
-    poll_data[1] = 1
-    var result = external_call["poll", c_int](
-        poll_data.unsafe_ptr(), c_ulong(1), c_int(0)
-    )
+    var result = external_call["tsonic_node_socket_readable", c_int](descriptor)
     if result < 0:
         raise Error("Unable to poll HTTP server socket")
-    return result > 0 and ((poll_data[1] >> 16) & 1) == 1
+    return result > 0
 
 
 def _listen_socket(port: Int32, host: String) raises -> Int32:
@@ -200,6 +143,9 @@ def _listen_socket(port: Int32, host: String) raises -> Int32:
     )
     if descriptor < 0:
         raise Error(_take_error(error, "Unable to listen for HTTP requests"))
+    if external_call["tsonic_node_socket_nonblocking", c_int](descriptor) != 0:
+        _ = close(descriptor)
+        raise Error("Unable to configure nonblocking HTTP listener")
     return descriptor
 
 

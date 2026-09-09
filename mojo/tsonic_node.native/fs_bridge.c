@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "fs_metadata.h"
 #include <errno.h>
+#include <stdint.h>
 #include <string.h>
 
 void* tsonic_node_fs_stat(const char* path, int descriptor, int follow, int* status) {
@@ -112,4 +113,30 @@ int tsonic_node_fs_remove(const char* path, int recursive, int force,
       remaining -= interval;
     }
   }
+}
+char *tsonic_node_fs_mkdtemp(const char *prefix, int *status) {
+    size_t length = strlen(prefix);
+    if (length > SIZE_MAX - 7u) { *status = UV_ENAMETOOLONG; return NULL; }
+    char *pattern = malloc(length + 7u);
+    if (pattern == NULL) { *status = UV_ENOMEM; return NULL; }
+    memcpy(pattern, prefix, length);
+    memcpy(pattern + length, "XXXXXX", 7u);
+    uv_fs_t request;
+    *status = uv_fs_mkdtemp(NULL, &request, pattern, NULL);
+    free(pattern);
+    char *result = NULL;
+    if (*status == 0) {
+        size_t output_length = strlen(request.path);
+        result = malloc(output_length + 1u);
+        if (result == NULL) {
+            uv_fs_t removal;
+            uv_fs_rmdir(NULL, &removal, request.path, NULL);
+            uv_fs_req_cleanup(&removal);
+            *status = UV_ENOMEM;
+        } else {
+            memcpy(result, request.path, output_length + 1u);
+        }
+    }
+    uv_fs_req_cleanup(&request);
+    return result;
 }

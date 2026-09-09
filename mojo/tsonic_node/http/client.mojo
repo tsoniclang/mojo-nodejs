@@ -150,13 +150,20 @@ def poll_requests() raises -> Bool:
             completed.append(request)
         else:
             _requests.get()[].append(request)
-    for request in completed:
+    for index in range(len(completed)):
+        var request = completed[index]
+        if request._state[].destroyed:
+            continue
         var native = request._state[].native.value()
         try:
             native.check_error()
             var response = IncomingMessage("", request._state[].address.href(), native.body(), Optional(native.status()))
             if request._state[].callback:
                 request._state[].callback.value().call((response,))
+        except error:
+            for remaining in range(index + 1, len(completed)):
+                _requests.get()[].append(completed[remaining])
+            raise error
         finally:
             native.close()
             request._state[].native = None

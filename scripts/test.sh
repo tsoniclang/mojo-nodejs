@@ -9,11 +9,13 @@ git diff --exit-code -- mojo tests
 
 mkdir -p "${NATIVE_BUILD}"
 native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
-for source in crypto_bridge crypto_catalog node_bridge zlib_bridge tls_bridge fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge; do
+for source in crypto_bridge crypto_catalog node_bridge zlib_bridge tls_bridge fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
+  object="${source//\//_}"
   "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- -O3 -fPIC -std=c11 \
     -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
+    -Imojo/tsonic_node.native/vendor/llhttp/include \
     -c "mojo/tsonic_node.native/${source}.c" \
-    -o "${NATIVE_BUILD}/${source}.o"
+    -o "${NATIVE_BUILD}/${object}.o"
 done
 
 for source in url_bridge vendor/ada/ada; do
@@ -34,6 +36,11 @@ link_arguments=(
   -Xlinker "${NATIVE_BUILD}/fs_stream_bridge.o"
   -Xlinker "${NATIVE_BUILD}/fs_bridge.o"
   -Xlinker "${NATIVE_BUILD}/http_client_bridge.o"
+  -Xlinker "${NATIVE_BUILD}/http_parser_bridge.o"
+  -Xlinker "${NATIVE_BUILD}/socket_io_bridge.o"
+  -Xlinker "${NATIVE_BUILD}/vendor_llhttp_src_llhttp.o"
+  -Xlinker "${NATIVE_BUILD}/vendor_llhttp_src_api.o"
+  -Xlinker "${NATIVE_BUILD}/vendor_llhttp_src_http.o"
   -Xlinker "${NATIVE_BUILD}/os_bridge.o"
   -Xlinker "${NATIVE_BUILD}/url_bridge.o"
   -Xlinker "${NATIVE_BUILD}/vendor_ada_ada.o"

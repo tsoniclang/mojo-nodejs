@@ -1,7 +1,7 @@
 import type {
   MojoProviderModuleDefinition, MojoProviderOperationDefinition, MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
-import { mojoCallableTargetType, mojoNamedTargetType } from "@tsonic/target-mojo/provider";
+import { mojoCallableTargetType, mojoNamedTargetType, mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
   booleanType, boolCarrier, fnExport, functionCall, instanceCall, methodMember,
   nativeString, nodeProviderType, numberType, optionalBoolCarrier, optionalFloat64Carrier,
@@ -61,7 +61,10 @@ export function filesystemWatchExports(): MojoProviderModuleDefinition["exports"
       { parameters: [pathParameter, { name: "listener", type: statType }], returnType: statWatcherType },
       { parameters: [pathParameter, { name: "options", type: providerRef(moduleSpecifier, "WatchFileOptions") }, { name: "listener", type: statType }], returnType: statWatcherType },
     ]),
-    fnExport(moduleSpecifier, "unwatchFile", [pathParameter], voidType),
+    overloadedFunctionExport(moduleSpecifier, "unwatchFile", [
+      { parameters: [pathParameter], returnType: voidType },
+      { parameters: [pathParameter, { name: "listener", type: statType }], returnType: voidType },
+    ]),
   ]);
 }
 
@@ -81,6 +84,7 @@ export function filesystemWatchOperations(): readonly MojoProviderOperationDefin
     functionCall(`${moduleSpecifier}::watchFile`, `${moduleSpecifier}::watchFile(path,listener)`, "filesystem", "watch_file", [nativeString, statCarrier], watcherCarrier, true),
     functionCall(`${moduleSpecifier}::watchFile`, `${moduleSpecifier}::watchFile(path,options,listener)`, "filesystem", "watch_file", [nativeString, optionsCarrier, statCarrier], watcherCarrier, true),
     functionCall(`${moduleSpecifier}::unwatchFile`, `${moduleSpecifier}::unwatchFile(path)`, "filesystem", "unwatch_file", [nativeString], unitCarrier),
+    functionCall(`${moduleSpecifier}::unwatchFile`, `${moduleSpecifier}::unwatchFile(path,listener)`, "filesystem", "unwatch_file", [nativeString, mojoOptionalTargetType(statCarrier)], unitCarrier),
     instanceCall(watcherId, `${watcherId}.close`, `${watcherId}.close()`, "close", watcherCarrier, [], unitCarrier),
     instanceCall(watcherId, `${watcherId}.ref`, `${watcherId}.ref()`, "ref", watcherCarrier, [], watcherCarrier),
     instanceCall(watcherId, `${watcherId}.unref`, `${watcherId}.unref()`, "unref", watcherCarrier, [], watcherCarrier),

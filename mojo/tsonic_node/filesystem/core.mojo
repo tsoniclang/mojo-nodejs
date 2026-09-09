@@ -171,17 +171,14 @@ def remove_path(path: String, options: RmOptions) raises:
 
 
 def make_temp_directory(prefix: String) raises -> String:
-    var process = Int(external_call["getpid", c_int]())
-    for attempt in range(1024):
-        var candidate = prefix + String(process) + "-" + String(attempt)
-        if exists(candidate):
-            continue
-        try:
-            mkdir(Path(candidate), mode=0o700)
-            return candidate^
-        except:
-            pass
-    raise Error("Unable to create a unique temporary directory")
+    checked_path(prefix)
+    var status = c_int(0)
+    var value = external_call["tsonic_node_fs_mkdtemp", OptionalPointer[UInt8, MutUntrackedOrigin]](prefix.as_c_string_slice(), Pointer(to=status))
+    check_status(Int32(status), "mkdtemp")
+    try:
+        return String(unsafe_from_utf8_ptr=value.value())
+    finally:
+        external_call["tsonic_node_fs_free", NoneType](value.value())
 
 
 def unlink(path: String) raises:
