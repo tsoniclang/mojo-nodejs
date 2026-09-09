@@ -92,8 +92,16 @@ for test_file in tests/native/*.c; do
   fi
 done
 
-for test_file in tests/*.mojo; do
-  test_name="$(basename "${test_file}" .mojo)"
+test_inventory="$(find tests -type f -name '*.mojo' -print)"
+if [[ -z "$test_inventory" ]]; then
+  printf 'No native Node proofs found\n' >&2
+  exit 1
+fi
+mapfile -t test_files < <(printf '%s\n' "$test_inventory" | LC_ALL=C sort)
+for test_file in "${test_files[@]}"; do
+  test_name="${test_file#tests/}"
+  test_name="${test_name%.mojo}"
+  mkdir -p "$(dirname "${NATIVE_BUILD}/${test_name}")"
   if "${PIXI_BIN}" run mojo build \
     -j 2 \
     -I mojo \
@@ -110,6 +118,6 @@ for test_file in tests/*.mojo; do
   fi
 done
 
-if ! "${NATIVE_BUILD}/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
-if ! node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/path_oracle_test"; then failed=1; fi
+if ! "${NATIVE_BUILD}/process/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
+if ! node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/path/path_oracle_test"; then failed=1; fi
 exit "$failed"
