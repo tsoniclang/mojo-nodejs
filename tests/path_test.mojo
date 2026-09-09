@@ -9,7 +9,13 @@ from tsonic_node import (
     normalize,
     parse,
     relative,
+    resolve,
 )
+
+
+@no_inline
+def joined(first: String, second: String) -> String:
+    return join([first, second])
 
 
 def main() raises:
@@ -19,7 +25,10 @@ def main() raises:
     assert_true(is_absolute("/alpha"))
     assert_false(is_absolute("alpha"))
 
-    assert_equal(join("alpha", "beta", "..", "gamma"), "alpha/gamma")
+    assert_equal(join(["alpha", "beta", "..", "gamma"]), "alpha/gamma")
+    assert_equal(join([]), ".")
+    assert_equal(joined("alpha", "beta"), "alpha/beta")
+    assert_equal(resolve(["/alpha", "beta"]), "/alpha/beta")
 
     assert_equal(dirname("/alpha/beta.txt"), "/alpha")
     assert_equal(basename("/alpha/beta.txt"), "beta.txt")

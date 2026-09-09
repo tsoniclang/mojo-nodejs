@@ -120,6 +120,20 @@ test("Node aliases materialize the canonical declaration identities", () => {
   assert.ok(model.exports.some((entry) => entry.id === "node:path::normalize"));
 });
 
+test("Node path rest calls retain source signatures and explicitly pack one native collection", () => {
+  const [{ definition }] = createMojoNodejsCapability().createTargetContributions({});
+  const module = definition.modules.find((value) => value.moduleSpecifier === "node:path");
+  for (const name of ["join", "resolve"]) {
+    const source = module.exports.find((value) => value.name === name);
+    const operation = definition.operations.find((value) => value.exportId === source.id);
+    assert.equal(source.signatures[0].parameters[0].rest, true);
+    assert.equal(operation.target.arguments.length, 1);
+    assert.equal(operation.target.arguments[0].variadic, true);
+    assert.equal(operation.target.arguments[0].restPacking, "list");
+    assert.equal(operation.parameterTypes[0].kind, "native-string");
+  }
+});
+
 test("every public Node carrier declares its exact Mojo lifecycle", () => {
   const capability = createMojoNodejsCapability();
   const [{ definition }] = capability.createTargetContributions({});
