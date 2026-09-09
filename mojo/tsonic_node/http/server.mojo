@@ -1,12 +1,12 @@
 from std.collections import List
 from std.ffi import c_int, external_call
 from std.memory import ArcPointer
-from std.sys._libc import close
 from tsonic_runtime import GlobalCell, RaisingCallable
 
 from .messages import IncomingMessage, ServerResponse
 from .connections import accept_connection, has_pending_connections, poll_connections
 from .transport import HttpTransport
+from ..internal.network_endpoint import NetworkEndpoint, network_error, poll_network_resolution
 
 
 comptime RequestArguments = Tuple[IncomingMessage, ServerResponse]
@@ -16,7 +16,7 @@ comptime ListenCallback = RaisingCallable[Tuple[], NoneType]
 
 @fieldwise_init
 struct ServerState:
-    var descriptor: Int32
+    var endpoint: Optional[NetworkEndpoint]
     var handler: RequestHandler
     var listening_callback: Optional[ListenCallback]
     var listening_callback_pending: Bool
@@ -28,7 +28,7 @@ struct Server(ImplicitlyCopyable):
     var _state: ArcPointer[ServerState]
 
     def __init__(out self, handler: RequestHandler):
-        self._state = ArcPointer(ServerState(-1, handler, None, False, False, True))
+        self._state = ArcPointer(ServerState(None, handler, None, False, False, True))
 
     def listen_default_host(
         self,
@@ -50,11 +50,11 @@ struct Server(ImplicitlyCopyable):
             if server._state[].active:
                 retained.append(server)
         _servers.get()[] = retained^
-        var descriptor = _listen_socket(port, host)
         if len(_servers.get()[]) >= _max_servers:
-            _ = close(descriptor)
             raise Error("Active HTTP servers exceed the finite runtime limit")
-        self._state[].descriptor = descriptor
+        if host.find("\0") >= 0:
+            raise Error("HTTP host contains a null byte")
+        self._state[].endpoint = NetworkEndpoint(host, Float64(port), True)
         self._state[].listening_callback = Optional(callback)
         self._state[].listening_callback_pending = True
         self._state[].active = True
@@ -62,9 +62,9 @@ struct Server(ImplicitlyCopyable):
         return self
 
     def close(self):
-        if self._state[].descriptor >= 0:
-            _ = close(self._state[].descriptor)
-        self._state[].descriptor = -1
+        if self._state[].endpoint:
+            self._state[].endpoint.value().close()
+        self._state[].endpoint = None
         self._state[].active = False
 
     def ref(self) -> Self:
@@ -96,17 +96,23 @@ def has_active_servers() -> Bool:
 
 
 def poll_servers() raises -> Bool:
-    var did_work = False
+    var did_work = poll_network_resolution()
     var servers = _servers.get()[].copy()
     for server in servers:
         if not server._state[].active:
+            continue
+        var status = server._state[].endpoint.value().progress()
+        if status < 0:
+            server.close()
+            raise network_error(status)
+        if status == 0:
             continue
         if server._state[].listening_callback_pending:
             server._state[].listening_callback_pending = False
             if server._state[].listening_callback:
                 server._state[].listening_callback.value().call(())
             did_work = True
-        if server._state[].active and _socket_readable(server._state[].descriptor):
+        if server._state[].active and _socket_readable(server._state[].endpoint.value().descriptor()):
             _accept_request(server)
             did_work = True
     var connection_work = poll_connections()
@@ -115,7 +121,7 @@ def poll_servers() raises -> Bool:
 
 def _accept_request(server: Server) raises:
     var status = c_int(0)
-    var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].descriptor, Pointer(to=status))
+    var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].endpoint.value().descriptor(), Pointer(to=status))
     if descriptor == -2:
         return
     if descriptor < 0:
@@ -128,34 +134,3 @@ def _socket_readable(descriptor: Int32) raises -> Bool:
     if result < 0:
         raise Error("Unable to poll HTTP server socket")
     return result > 0
-
-
-def _listen_socket(port: Int32, host: String) raises -> Int32:
-    if port < 0 or port > 65535:
-        raise Error("HTTP server port must be between 0 and 65535")
-    if host.find("\0") >= 0:
-        raise Error("HTTP host contains a null byte")
-    var host_buffer = String(host)
-    var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-    var descriptor = external_call["tsonic_node_net_listen", c_int](
-        host_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        c_int(port),
-        Pointer(to=error),
-    )
-    if descriptor < 0:
-        raise Error(_take_error(error, "Unable to listen for HTTP requests"))
-    if external_call["tsonic_node_socket_nonblocking", c_int](descriptor) != 0:
-        _ = close(descriptor)
-        raise Error("Unable to configure nonblocking HTTP listener")
-    return descriptor
-
-
-def _take_error(
-    pointer: OptionalPointer[UInt8, MutUntrackedOrigin],
-    fallback: String,
-) -> String:
-    if not pointer:
-        return fallback
-    var value = String(unsafe_from_utf8_ptr=pointer.value())
-    external_call["tsonic_node_free", NoneType](pointer.value())
-    return value^

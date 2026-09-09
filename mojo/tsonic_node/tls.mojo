@@ -6,6 +6,7 @@ from tsonic_runtime import GlobalCell, RaisingCallable
 
 from .buffer import Buffer
 from .validation import checked_integer
+from .internal.network_endpoint import NetworkEndpoint, network_error, poll_network_resolution
 
 
 comptime EmptyCallback = RaisingCallable[Tuple[], NoneType]
@@ -258,7 +259,7 @@ struct _TlsServerNativeState(Movable):
 struct _TlsServerState:
     var native: ArcPointer[_TlsServerNativeState]
     var callback: SocketCallback
-    var descriptor: Int32
+    var endpoint: Optional[NetworkEndpoint]
     var listen_callback: Optional[EmptyCallback]
     var listen_callback_pending: Bool
     var active: Bool
@@ -271,7 +272,7 @@ struct _TlsServerState:
     ):
         self.native = native
         self.callback = callback
-        self.descriptor = -1
+        self.endpoint = None
         self.listen_callback = None
         self.listen_callback_pending = False
         self.active = False
@@ -305,24 +306,9 @@ struct Server(ImplicitlyCopyable):
             if server._state[].active:
                 retained.append(server)
         _servers.get()[] = retained^
-        var host_buffer = String(host)
-        var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-        var descriptor = external_call["tsonic_node_net_listen", c_int](
-            host_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
-            c_int(_port(port)),
-            Pointer(to=error),
-        )
-        if descriptor < 0:
-            raise Error(
-                _take_error(error, "Unable to listen for TLS connections")
-            )
-        if external_call["tsonic_node_socket_nonblocking", c_int](descriptor) != 0:
-            _ = close(descriptor)
-            raise Error("Unable to configure nonblocking TLS listener")
         if len(_servers.get()[]) >= _MAX_SERVERS:
-            _ = close(descriptor)
             raise Error("TLS servers exceed the finite runtime limit")
-        self._state[].descriptor = descriptor
+        self._state[].endpoint = NetworkEndpoint(host, port, True)
         self._state[].listen_callback = Optional(callback)
         self._state[].listen_callback_pending = True
         self._state[].active = True
@@ -331,9 +317,9 @@ struct Server(ImplicitlyCopyable):
         return self
 
     def close(self):
-        if self._state[].descriptor >= 0:
-            _ = close(self._state[].descriptor)
-        self._state[].descriptor = -1
+        if self._state[].endpoint:
+            self._state[].endpoint.value().close()
+        self._state[].endpoint = None
         self._state[].active = False
 
     def ref(self) -> Self:
@@ -345,7 +331,7 @@ struct Server(ImplicitlyCopyable):
         return self
 
     def listening(self) -> Bool:
-        return self._state[].active
+        return self._state[].active and self._state[].endpoint.value().progress() == 1
 
 
 def _initial_servers() -> List[Server]:
@@ -454,20 +440,26 @@ def has_active_tls() -> Bool:
 
 
 def poll_tls() raises -> Bool:
-    var did_work = False
+    var did_work = poll_network_resolution()
     var servers = _servers.get()[].copy()
     for server in servers:
         if not server._state[].active:
+            continue
+        var readiness = server._state[].endpoint.value().progress()
+        if readiness < 0:
+            server.close()
+            raise network_error(readiness)
+        if readiness == 0:
             continue
         if server._state[].listen_callback_pending:
             server._state[].listen_callback_pending = False
             if server._state[].listen_callback:
                 server._state[].listen_callback.value().call(())
             did_work = True
-        if not server._state[].active or not _socket_readable(server._state[].descriptor):
+        if not server._state[].active or not _socket_readable(server._state[].endpoint.value().descriptor()):
             continue
         var status = c_int(0)
-        var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].descriptor, Pointer(to=status))
+        var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].endpoint.value().descriptor(), Pointer(to=status))
         if descriptor == -2:
             continue
         if descriptor < 0:

@@ -9,7 +9,7 @@ git diff --exit-code -- mojo tests
 
 mkdir -p "${NATIVE_BUILD}"
 native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
-for source in crypto_bridge crypto_catalog node_bridge compression/codec compression/constants tls_bridge tls_bio fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
+for source in crypto_bridge crypto_catalog node_bridge net/endpoint compression/codec compression/constants tls_bridge tls_bio fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
   object="${source//\//_}"
   "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- -O3 -fPIC -std=c11 \
     -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
@@ -30,6 +30,7 @@ link_arguments=(
   -Xlinker "${NATIVE_BUILD}/crypto_bridge.o"
   -Xlinker "${NATIVE_BUILD}/crypto_catalog.o"
   -Xlinker "${NATIVE_BUILD}/node_bridge.o"
+  -Xlinker "${NATIVE_BUILD}/net_endpoint.o"
   -Xlinker "${NATIVE_BUILD}/compression_codec.o"
   -Xlinker "${NATIVE_BUILD}/compression_constants.o"
   -Xlinker "${NATIVE_BUILD}/tls_bridge.o"
@@ -62,7 +63,7 @@ for test_file in tests/native/*.c; do
   test_name="$(basename "${test_file}" .c)"
   if "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- \
     -O2 -std=c11 -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
-    "$test_file" "${NATIVE_BUILD}/tls_bio.o" "${NATIVE_BUILD}/socket_io_bridge.o" \
+    "$test_file" "${NATIVE_BUILD}/tls_bio.o" "${NATIVE_BUILD}/socket_io_bridge.o" "${NATIVE_BUILD}/net_endpoint.o" \
     -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv \
     -o "${NATIVE_BUILD}/${test_name}" && "${NATIVE_BUILD}/${test_name}"; then
     printf 'PASS %s\n' "$test_file"

@@ -2,11 +2,10 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <netdb.h>
+#include "net/endpoint.h"
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
-#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +15,6 @@
 #include <unistd.h>
 #include <uv.h>
 
-int tsonic_node_socket_nonblocking(int descriptor);
 int tsonic_node_tls_attach_socket(SSL *ssl, int descriptor);
 
 typedef struct {
@@ -28,6 +26,7 @@ typedef struct {
 typedef struct {
     SSL_CTX *context;
     SSL *ssl;
+    TsonicNetEndpoint *endpoint;
     int descriptor;
     int authorized;
     int referenced;
@@ -137,45 +136,10 @@ static int apply_certificate(
     return 1;
 }
 
-static int connect_socket(const char *host, int32_t port, int *pending, char **error) {
-    if (host == NULL || host[0] == '\0' || port < 0 || port > 65535) {
-        set_error(error, "TLS host and port are invalid");
-        return -1;
-    }
-    char service[16];
-    snprintf(service, sizeof(service), "%d", port);
-    struct addrinfo hints;
-    struct addrinfo *addresses = NULL;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    int status = getaddrinfo(host, service, &hints, &addresses);
-    if (status != 0) {
-        set_error(error, gai_strerror(status));
-        return -1;
-    }
-    int descriptor = -1;
-    for (struct addrinfo *address = addresses; address != NULL; address = address->ai_next) {
-        descriptor = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-        if (descriptor >= 0 && tsonic_node_socket_nonblocking(descriptor) == 0) {
-            int result = connect(descriptor, address->ai_addr, address->ai_addrlen);
-            if (result == 0 || errno == EINPROGRESS) {
-                *pending = result != 0;
-                break;
-            }
-        }
-        if (descriptor >= 0) close(descriptor);
-        descriptor = -1;
-    }
-    freeaddrinfo(addresses);
-    if (descriptor < 0) set_error(error, "Unable to connect TLS socket");
-    return descriptor;
-}
-
 static TsonicTlsSocket *socket_from_ssl(
     SSL_CTX *context,
     SSL *ssl,
-    int descriptor,
+    TsonicNetEndpoint *endpoint,
     const char *servername,
     int context_owned
 ) {
@@ -183,7 +147,8 @@ static TsonicTlsSocket *socket_from_ssl(
     if (socket == NULL) return NULL;
     socket->context = context_owned ? context : NULL;
     socket->ssl = ssl;
-    socket->descriptor = descriptor;
+    socket->endpoint = endpoint;
+    socket->descriptor = tsonic_node_net_endpoint_descriptor(endpoint);
     socket->referenced = 1;
     socket->servername = copy_text(servername == NULL ? "" : servername);
     if (socket->servername == NULL) {
@@ -260,34 +225,34 @@ void *tsonic_node_tls_connect(
         SSL_CTX_free(context);
         return NULL;
     }
-    int pending = 0;
-    int descriptor = connect_socket(host, port, &pending, error);
-    if (descriptor < 0) {
+    TsonicNetEndpoint *endpoint = tsonic_node_net_endpoint_new(host, port, 0);
+    if (endpoint == NULL) {
+        set_error(error, "Unable to allocate TLS connection endpoint");
         SSL_CTX_free(context);
         return NULL;
     }
     SSL *ssl = SSL_new(context);
     unsigned char address[sizeof(struct in6_addr)];
     int numeric = inet_pton(AF_INET, servername, address) == 1 || inet_pton(AF_INET6, servername, address) == 1;
-    if (ssl == NULL || tsonic_node_tls_attach_socket(ssl, descriptor) != 1 ||
+    if (ssl == NULL ||
         (!numeric && servername[0] != '\0' && SSL_set_tlsext_host_name(ssl, servername) != 1) ||
         (numeric ? X509_VERIFY_PARAM_set1_ip_asc(SSL_get0_param(ssl), servername) : SSL_set1_host(ssl, servername)) != 1 ||
         (alpn_length != 0u && SSL_set_alpn_protos(ssl, alpn, (unsigned int)alpn_length) != 0)) {
         set_ssl_error(error, "TLS handshake failed");
         SSL_free(ssl);
-        close(descriptor);
+        tsonic_node_net_endpoint_free(endpoint);
         SSL_CTX_free(context);
         return NULL;
     }
     SSL_set_connect_state(ssl);
-    TsonicTlsSocket *socket = socket_from_ssl(context, ssl, descriptor, servername, 1);
+    TsonicTlsSocket *socket = socket_from_ssl(context, ssl, endpoint, servername, 1);
     if (socket == NULL) {
         set_error(error, "Unable to allocate TLS socket state");
         SSL_free(ssl);
-        close(descriptor);
+        tsonic_node_net_endpoint_free(endpoint);
         SSL_CTX_free(context);
     } else {
-        socket->connecting = pending;
+        socket->connecting = 1;
         socket->deadline = timeout_ms > 0 ? uv_hrtime() + (uint64_t)timeout_ms * 1000000u : 0u;
     }
     return socket;
@@ -364,21 +329,30 @@ void tsonic_node_tls_server_free(void *value) {
 
 void *tsonic_node_tls_server_accept(void *server_value, int32_t descriptor, char **error) {
     TsonicTlsServer *server = (TsonicTlsServer *)server_value;
-    if (server == NULL || descriptor < 0 || error == NULL) return NULL;
+    if (server == NULL || descriptor < 0 || error == NULL) {
+        if (descriptor >= 0) close(descriptor);
+        return NULL;
+    }
     *error = NULL;
+    int status = 0;
+    TsonicNetEndpoint *endpoint = tsonic_node_net_endpoint_adopt(descriptor, &status);
+    if (endpoint == NULL) {
+        set_error(error, uv_strerror(status));
+        return NULL;
+    }
     SSL *ssl = SSL_new(server->context);
-    if (ssl == NULL || tsonic_node_socket_nonblocking(descriptor) < 0 || tsonic_node_tls_attach_socket(ssl, descriptor) != 1) {
+    if (ssl == NULL || tsonic_node_tls_attach_socket(ssl, descriptor) != 1) {
         set_ssl_error(error, "TLS server handshake failed");
         SSL_free(ssl);
-        close(descriptor);
+        tsonic_node_net_endpoint_free(endpoint);
         return NULL;
     }
     SSL_set_accept_state(ssl);
-    TsonicTlsSocket *socket = socket_from_ssl(NULL, ssl, descriptor, "", 0);
+    TsonicTlsSocket *socket = socket_from_ssl(NULL, ssl, endpoint, "", 0);
     if (socket == NULL) {
         set_error(error, "Unable to allocate TLS socket state");
         SSL_free(ssl);
-        close(descriptor);
+        tsonic_node_net_endpoint_free(endpoint);
     }
     return socket;
 }
@@ -391,20 +365,22 @@ int tsonic_node_tls_progress(void *value, char **error) {
         set_error(error, "TLS connection has failed");
         return -1;
     }
-    if (socket->descriptor < 0) return 0;
+    if (socket->descriptor < 0 && !socket->connecting) return 0;
     if (!socket->ready) {
         if (socket->deadline != 0u && uv_hrtime() >= socket->deadline) {
             set_error(error, "TLS connection handshake timed out");
             goto failed;
         }
         if (socket->connecting) {
-            struct pollfd request = {socket->descriptor, POLLOUT, 0};
-            int polled = poll(&request, 1u, 0);
-            if (polled == 0 || (polled < 0 && errno == EINTR)) return 0;
-            int status = 0;
-            socklen_t length = sizeof(status);
-            if (polled < 0 || getsockopt(socket->descriptor, SOL_SOCKET, SO_ERROR, &status, &length) < 0 || status != 0) {
-                set_error(error, "Unable to connect TLS socket");
+            int status = tsonic_node_net_endpoint_progress(socket->endpoint);
+            if (status == 0) return 0;
+            if (status < 0) {
+                set_error(error, uv_strerror(status));
+                goto failed;
+            }
+            socket->descriptor = tsonic_node_net_endpoint_descriptor(socket->endpoint);
+            if (tsonic_node_tls_attach_socket(socket->ssl, socket->descriptor) != 1) {
+                set_ssl_error(error, "Unable to attach TLS connection transport");
                 goto failed;
             }
             socket->connecting = 0;
@@ -451,14 +427,15 @@ int tsonic_node_tls_progress(void *value, char **error) {
                 set_ssl_error(error, "TLS shutdown failed");
                 goto failed;
             }
-            close(socket->descriptor);
+            tsonic_node_net_endpoint_close(socket->endpoint);
             socket->descriptor = -1;
         }
     }
     return 1;
 failed:
     socket->failed = 1;
-    close(socket->descriptor);
+    tsonic_node_net_endpoint_close(socket->endpoint);
+    socket->connecting = 0;
     socket->descriptor = -1;
     return -1;
 }
@@ -470,12 +447,12 @@ int tsonic_node_tls_ready(void *value) {
 
 int tsonic_node_tls_closed(void *value) {
     TsonicTlsSocket *socket = value;
-    return socket == NULL || socket->descriptor < 0;
+    return socket == NULL || (socket->descriptor < 0 && !socket->connecting);
 }
 
 int tsonic_node_tls_pending(void *value) {
     TsonicTlsSocket *socket = value;
-    return socket != NULL && socket->descriptor >= 0 &&
+    return socket != NULL && !socket->failed && (socket->descriptor >= 0 || socket->connecting) &&
         (!socket->ready || socket->output_length != 0u || socket->ending);
 }
 
@@ -486,7 +463,8 @@ int64_t tsonic_node_tls_write(
     char **error
 ) {
     TsonicTlsSocket *socket = (TsonicTlsSocket *)value;
-    if (socket == NULL || socket->ssl == NULL || socket->ending || socket->descriptor < 0 ||
+    if (socket == NULL || socket->ssl == NULL || socket->ending || socket->failed ||
+        (socket->descriptor < 0 && !socket->connecting) ||
         (length != 0u && bytes == NULL) || error == NULL) return -1;
     *error = NULL;
     size_t retained = socket->output_length - socket->output_offset;
@@ -523,6 +501,7 @@ int64_t tsonic_node_tls_read(
     *error = NULL;
     if (capacity == 0u) return 0;
     if (tsonic_node_tls_progress(socket, error) < 0) return -1;
+    if (socket->connecting) return -2;
     if (socket->descriptor < 0) return 0;
     if (!socket->ready || socket->write_length != 0u) return -2;
     ERR_clear_error();
@@ -536,7 +515,7 @@ int64_t tsonic_node_tls_read(
     if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE) return -2;
     set_ssl_error(error, "TLS read failed");
     socket->failed = 1;
-    close(socket->descriptor);
+    tsonic_node_net_endpoint_close(socket->endpoint);
     socket->descriptor = -1;
     return -1;
 }
@@ -552,7 +531,8 @@ int32_t tsonic_node_tls_end(void *value, char **error) {
 void tsonic_node_tls_destroy(void *value) {
     TsonicTlsSocket *socket = value;
     if (socket == NULL) return;
-    if (socket->descriptor >= 0) close(socket->descriptor);
+    tsonic_node_net_endpoint_close(socket->endpoint);
+    socket->connecting = 0;
     socket->descriptor = -1;
     socket->ending = 1;
     free(socket->output);
@@ -564,7 +544,7 @@ void tsonic_node_tls_socket_free(void *value) {
     TsonicTlsSocket *socket = (TsonicTlsSocket *)value;
     if (socket == NULL) return;
     if (socket->ssl != NULL) SSL_free(socket->ssl);
-    if (socket->descriptor >= 0) close(socket->descriptor);
+    tsonic_node_net_endpoint_free(socket->endpoint);
     if (socket->context != NULL) SSL_CTX_free(socket->context);
     free(socket->authorization_error);
     free(socket->servername);

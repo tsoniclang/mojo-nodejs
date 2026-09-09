@@ -49,6 +49,15 @@ int64_t tsonic_node_socket_write(int descriptor, const void *bytes, size_t lengt
     return -1;
 }
 
+int tsonic_node_socket_peek(int descriptor) {
+    unsigned char byte;
+    ssize_t count;
+    do { count = recv(descriptor, &byte, 1, MSG_DONTWAIT | MSG_PEEK); } while (count < 0 && errno == EINTR);
+    if (count >= 0) return (int)count;
+    if (errno == EAGAIN || errno == EWOULDBLOCK) return -2;
+    return -1;
+}
+
 int tsonic_node_socket_readable(int descriptor) {
     struct pollfd request = {descriptor, POLLIN, 0};
     int result;
