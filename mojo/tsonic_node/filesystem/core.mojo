@@ -10,7 +10,6 @@ from std.os import (
 )
 from std.pathlib import Path
 
-from ..buffer import Buffer
 from .metadata import Stats, stat, lstat
 from .validation import checked_integer, checked_path, check_status
 
@@ -73,42 +72,6 @@ struct Dirent(Copyable):
 
 def exists(path: String) -> Bool:
     return std.os.path.exists(Path(path))
-
-
-def read_file(path: String) raises -> Buffer:
-    return Buffer(Path(path).read_bytes())
-
-
-def read_text_file(path: String) raises -> String:
-    return Path(path).read_text()
-
-
-def read_text_file_encoded(path: String, encoding: String) raises -> String:
-    if encoding != "utf8":
-        raise Error("Only the exact 'utf8' text encoding is supported")
-    return read_text_file(path)
-
-
-def write_file(path: String, buffer: Buffer) raises:
-    var bytes = buffer.copy_bytes()
-    Path(path).write_bytes(Span(bytes))
-
-
-def write_text_file(path: String, value: String) raises:
-    Path(path).write_text(value)
-
-
-def append_file(path: String, buffer: Buffer) raises:
-    from .streams import _open
-    var descriptor = _open(path, "a", None)
-    try:
-        _ = descriptor.write(buffer, None)
-    finally:
-        descriptor.close()
-
-
-def append_text_file(path: String, value: String) raises:
-    append_file(path, Buffer.from_string(value))
 
 
 def make_directory_default(path: String) raises:

@@ -9,7 +9,6 @@ import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
 import {
   booleanType,
   boolCarrier,
-  bufferCarrier,
   direntCarrier,
   direntListCarrier,
   float64Carrier,
@@ -41,6 +40,7 @@ import {
 import { filesystemWatchExports, filesystemWatchOperations, filesystemWatchTypes } from "./watch.js";
 import { filesystemStreamExports, filesystemStreamOperations, filesystemStreamTypes } from "./streams.js";
 import { filesystemCallExports, filesystemCallOperations } from "./call-records.js";
+import { filesystemContentsExports, filesystemContentsOperations } from "./contents.js";
 
 const moduleSpecifier = "node:fs";
 const statsId = `${moduleSpecifier}::Stats`;
@@ -60,6 +60,7 @@ export function filesystemModule(): MojoProviderModuleDefinition {
     Object.freeze({ moduleSpecifier: "node:http", namedImports: Object.freeze([{ exportedName: "ServerResponse" }]) })]),
     exports: Object.freeze([
       ...filesystemCallExports(),
+      ...filesystemContentsExports(),
       ...filesystemWatchExports(),
       ...filesystemStreamExports(),
       classExport(statsId, "Stats", [
@@ -97,57 +98,6 @@ export function filesystemModule(): MojoProviderModuleDefinition {
       fnExport(moduleSpecifier, "existsSync", [{ name: "path", type: stringType }], booleanType),
       fnExport(moduleSpecifier, "statSync", [{ name: "path", type: stringType }], providerRef(moduleSpecifier, "Stats")),
       fnExport(moduleSpecifier, "lstatSync", [{ name: "path", type: stringType }], providerRef(moduleSpecifier, "Stats")),
-      overloadedFunctionExport(moduleSpecifier, "readFileSync", [
-        {
-          parameters: [{ name: "path", type: stringType }],
-          returnType: providerRef("node:buffer", "Buffer"),
-          signatureSuffix: "path",
-        },
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "encoding", type: { kind: "literal", value: "utf8" } },
-          ],
-          returnType: stringType,
-          signatureSuffix: "path,encoding",
-        },
-      ]),
-      overloadedFunctionExport(moduleSpecifier, "writeFileSync", [
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "data", type: providerRef("node:buffer", "Buffer") },
-          ],
-          returnType: voidType,
-          signatureSuffix: "path,buffer",
-        },
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "data", type: stringType },
-          ],
-          returnType: voidType,
-          signatureSuffix: "path,string",
-        },
-      ]),
-      overloadedFunctionExport(moduleSpecifier, "appendFileSync", [
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "data", type: providerRef("node:buffer", "Buffer") },
-          ],
-          returnType: voidType,
-          signatureSuffix: "path,buffer",
-        },
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "data", type: stringType },
-          ],
-          returnType: voidType,
-          signatureSuffix: "path,string",
-        },
-      ]),
       overloadedFunctionExport(moduleSpecifier, "readdirSync", [
         {
           parameters: [{ name: "path", type: stringType }],
@@ -252,17 +202,12 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
   );
   return Object.freeze([
     ...filesystemCallOperations(),
+    ...filesystemContentsOperations(),
     ...filesystemWatchOperations(),
     ...filesystemStreamOperations(),
     operation("existsSync", "path", "exists", [nativeString], boolCarrier, false),
     operation("statSync", "path", "stat", [nativeString], statsCarrier),
     operation("lstatSync", "path", "lstat", [nativeString], statsCarrier),
-    operation("readFileSync", "path", "read_file", [nativeString], bufferCarrier),
-    operation("readFileSync", "path,encoding", "read_text_file_encoded", [nativeString, nativeString], nativeString),
-    operation("writeFileSync", "path,buffer", "write_file", [nativeString, bufferCarrier], unitCarrier),
-    operation("writeFileSync", "path,string", "write_text_file", [nativeString, nativeString], unitCarrier),
-    operation("appendFileSync", "path,buffer", "append_file", [nativeString, bufferCarrier], unitCarrier),
-    operation("appendFileSync", "path,string", "append_text_file", [nativeString, nativeString], unitCarrier),
     operation("readdirSync", "path", "read_directory_names", [nativeString], stringListCarrier),
     operation("readdirSync", "path,options", "read_directory", [nativeString, readdirOptionsCarrier], direntListCarrier),
     operation("mkdirSync", "path", "make_directory_default", [nativeString], unitCarrier),

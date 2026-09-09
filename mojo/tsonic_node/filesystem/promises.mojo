@@ -9,20 +9,22 @@ from .core import (
     make_directory as make_directory_sync,
     make_directory_default as make_directory_default_sync,
     read_directory_names,
-    read_file as read_file_sync,
-    read_text_file_encoded,
     remove_path as remove_path_sync,
     remove_path_default as remove_path_default_sync,
     rename_path as rename_path_sync,
     stat as stat_sync,
     unlink as unlink_sync,
+    real_path as real_path_sync,
+    symbolic_link as symbolic_link_sync,
+    make_temp_directory as make_temp_directory_sync,
+)
+from .contents import (
+    read_file as read_file_sync,
+    read_text_file_encoded,
     write_file as write_file_sync,
     write_text_file as write_text_file_sync,
     append_file as append_file_sync,
     append_text_file as append_text_file_sync,
-    real_path as real_path_sync,
-    symbolic_link as symbolic_link_sync,
-    make_temp_directory as make_temp_directory_sync,
 )
 from .descriptors import access as access_sync, chmod as chmod_sync, truncate_file as truncate_file_sync
 from .links import read_link as read_link_sync
@@ -32,8 +34,8 @@ async def append_file(path: String, value: Buffer) raises:
     append_file_sync(path, value)
 
 
-async def append_text_file(path: String, value: String) raises:
-    append_text_file_sync(path, value)
+async def append_text_file(path: String, value: String, encoding: String = "utf8") raises:
+    append_text_file_sync(path, value, encoding)
 
 
 async def real_path(path: String) raises -> String:
@@ -60,8 +62,8 @@ async def write_file(path: String, value: Buffer) raises:
     write_file_sync(path, value)
 
 
-async def write_text_file(path: String, value: String) raises:
-    write_text_file_sync(path, value)
+async def write_text_file(path: String, value: String, encoding: String = "utf8") raises:
+    write_text_file_sync(path, value, encoding)
 
 
 async def read_directory(path: String) raises -> List[String]:

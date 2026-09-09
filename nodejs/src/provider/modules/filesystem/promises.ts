@@ -4,7 +4,6 @@ import type {
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
 import {
-  bufferCarrier,
   fnExport,
   functionCall,
   mkdirOptionsCarrier,
@@ -22,6 +21,7 @@ import {
   voidType,
 } from "../../model.js";
 import { filesystemCallExports, filesystemCallOperations } from "./call-records.js";
+import { filesystemContentsExports, filesystemContentsOperations } from "./contents.js";
 
 const moduleSpecifier = "node:fs/promises";
 
@@ -45,39 +45,7 @@ export function filesystemPromisesModule(): MojoProviderModuleDefinition {
     ]),
     exports: Object.freeze([
       ...filesystemCallExports(true),
-      overloadedFunctionExport(moduleSpecifier, "readFile", [
-        {
-          parameters: [{ name: "path", type: stringType }],
-          returnType: sourcePromise(providerRef("node:buffer", "Buffer")),
-          signatureSuffix: "path",
-        },
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "encoding", type: Object.freeze({ kind: "literal" as const, value: "utf8" }) },
-          ],
-          returnType: sourcePromise(stringType),
-          signatureSuffix: "path,encoding",
-        },
-      ]),
-      overloadedFunctionExport(moduleSpecifier, "writeFile", [
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "data", type: providerRef("node:buffer", "Buffer") },
-          ],
-          returnType: sourcePromise(voidType),
-          signatureSuffix: "path,buffer",
-        },
-        {
-          parameters: [
-            { name: "path", type: stringType },
-            { name: "data", type: stringType },
-          ],
-          returnType: sourcePromise(voidType),
-          signatureSuffix: "path,string",
-        },
-      ]),
+      ...filesystemContentsExports(true),
       fnExport(moduleSpecifier, "readdir", [{ name: "path", type: stringType }], sourcePromise(stringArrayType)),
       fnExport(moduleSpecifier, "stat", [{ name: "path", type: stringType }], sourcePromise(providerRef("node:fs", "Stats"))),
       overloadedFunctionExport(moduleSpecifier, "mkdir", [
@@ -114,10 +82,6 @@ export function filesystemPromisesModule(): MojoProviderModuleDefinition {
       fnExport(moduleSpecifier, "realpath", [{ name: "path", type: stringType }], sourcePromise(stringType)),
       fnExport(moduleSpecifier, "mkdtemp", [{ name: "prefix", type: stringType }], sourcePromise(stringType)),
       fnExport(moduleSpecifier, "symlink", [{ name: "target", type: stringType }, { name: "path", type: stringType }], sourcePromise(voidType)),
-      overloadedFunctionExport(moduleSpecifier, "appendFile", [
-        { signatureSuffix: "path,buffer", parameters: [{ name: "path", type: stringType }, { name: "data", type: providerRef("node:buffer", "Buffer") }], returnType: sourcePromise(voidType) },
-        { signatureSuffix: "path,string", parameters: [{ name: "path", type: stringType }, { name: "data", type: stringType }], returnType: sourcePromise(voidType) },
-      ]),
       fnExport(moduleSpecifier, "copyFile", [
         { name: "source", type: stringType },
         { name: "destination", type: stringType },
@@ -148,15 +112,7 @@ export function filesystemPromisesOperations(): readonly MojoProviderOperationDe
   );
   return Object.freeze([
     ...filesystemCallOperations(true),
-    operation("readFile", "path", "read_file", [nativeString], Object.freeze({
-      kind: "future",
-      domain: "native",
-      output: bufferCarrier,
-      raises: true,
-    })),
-    operation("readFile", "path,encoding", "read_text_file", [nativeString, nativeString], nativeStringFutureCarrier),
-    operation("writeFile", "path,buffer", "write_file", [nativeString, bufferCarrier], unitFutureCarrier),
-    operation("writeFile", "path,string", "write_text_file", [nativeString, nativeString], unitFutureCarrier),
+    ...filesystemContentsOperations(true),
     operation("readdir", "path", "read_directory", [nativeString], stringListFutureCarrier),
     operation("stat", "path", "stat", [nativeString], Object.freeze({
       kind: "future",
@@ -172,8 +128,6 @@ export function filesystemPromisesOperations(): readonly MojoProviderOperationDe
     operation("realpath", "path", "real_path", [nativeString], nativeStringFutureCarrier),
     operation("mkdtemp", "prefix", "make_temp_directory", [nativeString], nativeStringFutureCarrier),
     operation("symlink", "target,path", "symbolic_link", [nativeString, nativeString], unitFutureCarrier),
-    operation("appendFile", "path,buffer", "append_file", [nativeString, bufferCarrier], unitFutureCarrier),
-    operation("appendFile", "path,string", "append_text_file", [nativeString, nativeString], unitFutureCarrier),
     operation("copyFile", "source,destination", "copy_file", [nativeString, nativeString], unitFutureCarrier),
     operation("rename", "oldPath,newPath", "rename_path", [nativeString, nativeString], unitFutureCarrier),
   ]);
