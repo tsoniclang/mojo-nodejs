@@ -24,6 +24,8 @@ import {
   propertyRead,
   providerRef,
   staticCall,
+  staticPropertyRead,
+  staticPropertyWrite,
   stringType,
 } from "../../model.js";
 import { extraBufferMembers, extraBufferOperations } from "./members.js";
@@ -140,6 +142,7 @@ export function bufferModule(): MojoProviderModuleDefinition {
           methodMember(bufferId, "equals", [{ name: "other", type: bufferType }], booleanType),
           methodMember(bufferId, "compare", [{ name: "other", type: bufferType }], numberType),
           propertyMember(bufferId, "length", numberType),
+          propertyMember(bufferId, "poolSize", numberType, { static: true, readonly: false }),
         ]),
       }),
       bufferPredicateExport(),
@@ -197,10 +200,10 @@ export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
     instanceOperation(member, "start,end", member, [float64Carrier, float64Carrier], bufferCarrier),
   ]);
   return Object.freeze([
-    staticOperation("from", "string", "buffer_from_string", [nativeString], bufferCarrier),
+    staticOperation("from", "string", "buffer_from_string", [nativeString], bufferCarrier, true),
     staticOperation("from", "string,encoding", "buffer_from_string_encoded", [nativeString, nativeString], bufferCarrier, true),
-    staticOperation("from", "numberArray", "buffer_from_numbers", [numberListCarrier], bufferCarrier),
-    staticOperation("from", "buffer", "buffer_from_buffer", [bufferCarrier], bufferCarrier),
+    staticOperation("from", "numberArray", "buffer_from_numbers", [numberListCarrier], bufferCarrier, true),
+    staticOperation("from", "buffer", "buffer_from_buffer", [bufferCarrier], bufferCarrier, true),
     ...extraBufferOperations(),
     staticOperation("byteLength", "string", "buffer_byte_length", [nativeString], float64Carrier, true),
     staticOperation("byteLength", "value,encoding", "buffer_byte_length", [nativeString, nativeString], float64Carrier, true),
@@ -221,6 +224,8 @@ export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
     instanceOperation("equals", "other", "equals", [bufferCarrier], boolCarrier),
     instanceOperation("compare", "other", "compare", [bufferCarrier], float64Carrier),
     propertyRead(bufferId, `${bufferId}.length`, "js_length", bufferCarrier, float64Carrier, "method"),
+    staticPropertyRead(bufferId, `${bufferId}.poolSize`, "buffer", "buffer_pool_size", float64Carrier),
+    staticPropertyWrite(bufferId, `${bufferId}.poolSize`, "buffer", "set_buffer_pool_size", float64Carrier),
     ...bufferPredicateOperations(),
     functionCall(`${moduleSpecifier}::isEncoding`, `${moduleSpecifier}::isEncoding(encoding)`, "buffer", "buffer_is_encoding", [nativeString], boolCarrier),
     functionCall(`${moduleSpecifier}::isAscii`, `${moduleSpecifier}::isAscii(value)`, "buffer", "buffer_is_ascii", [bufferCarrier], boolCarrier),

@@ -1,6 +1,7 @@
 from std.collections import List, Span
 from std.collections.string import StringSpan
 from std.memory import ArcPointer, bitcast
+from tsonic_runtime import WeakReferenceIdentity
 from tsonic_runtime.numeric import source_number_to_uint32
 from ..validation import checked_integer
 from .codec import decode_bytes, encode_bytes, encoding_name, writable_byte_count
@@ -8,17 +9,20 @@ from .search import search_bytes, search_number
 from .ranges import copy_offset, clamp_offset, slice_offset
 
 
-struct Buffer(ImplicitlyCopyable, Sized):
+struct Buffer(Equatable, ImplicitlyCopyable, Sized):
+    var _identity: ArcPointer[Bool]
     var _bytes: ArcPointer[List[Byte]]
     var _offset: Int
     var _length: Int
 
     def __init__(out self):
+        self._identity = ArcPointer(False)
         self._bytes = ArcPointer(List[Byte]())
         self._offset = 0
         self._length = 0
 
     def __init__(out self, var bytes: List[Byte]):
+        self._identity = ArcPointer(False)
         self._length = len(bytes)
         self._bytes = ArcPointer(bytes^)
         self._offset = 0
@@ -29,6 +33,7 @@ struct Buffer(ImplicitlyCopyable, Sized):
         offset: Int,
         length: Int,
     ):
+        self._identity = ArcPointer(False)
         self._bytes = storage
         self._offset = offset
         self._length = length
@@ -51,6 +56,12 @@ struct Buffer(ImplicitlyCopyable, Sized):
 
     def __len__(self) -> Int:
         return self._length
+
+    def __eq__(self, other: Self) -> Bool:
+        return self._identity is other._identity
+
+    def weak_identity(self) -> WeakReferenceIdentity:
+        return WeakReferenceIdentity(self._identity)
 
     def js_length(self) -> Float64:
         return Float64(self._length)
@@ -249,8 +260,11 @@ struct Buffer(ImplicitlyCopyable, Sized):
         return Float64(offset + 8)
 
     def copy_bytes(self) -> List[Byte]:
-        var result = List[Byte](capacity=self._length)
-        for index in range(self._length):
+        return self._range_bytes(0, self._length)
+
+    def _range_bytes(self, start: Int, end: Int) -> List[Byte]:
+        var result = List[Byte](capacity=end - start)
+        for index in range(start, end):
             result.append(self._bytes[][self._offset + index])
         return result^
 
@@ -259,7 +273,7 @@ struct Buffer(ImplicitlyCopyable, Sized):
         var last = clamp_offset(end.value(), self._length) if end else self._length
         if last <= first:
             return ""
-        return decode_bytes(self.subarray(Float64(first), Float64(last)).copy_bytes(), encoding)
+        return decode_bytes(self._range_bytes(first, last), encoding)
 
     def write(self, value: String, offset: Float64 = 0, length: Optional[Float64] = None, encoding: String = "utf8") raises -> Float64:
         var first = Int(checked_integer(offset, Float64(self._length), "offset"))

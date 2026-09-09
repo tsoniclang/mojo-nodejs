@@ -1,3 +1,4 @@
 from .core import Buffer
 from .factories import buffer_from_string, buffer_from_string_encoded, buffer_from_numbers, buffer_from_buffer, buffer_alloc, buffer_alloc_number, buffer_alloc_string, buffer_alloc_buffer, buffer_concat, buffer_byte_length, buffer_byte_length_buffer, buffer_compare, buffer_is_encoding, buffer_is_ascii, buffer_is_utf8, buffer_transcode, buffer_btoa, buffer_atob
 from .predicates import buffer_is_buffer
+from .allocation import buffer_alloc_unsafe, buffer_alloc_unsafe_slow, buffer_pool_size, set_buffer_pool_size

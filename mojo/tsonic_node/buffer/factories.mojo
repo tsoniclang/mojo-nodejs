@@ -2,32 +2,37 @@ from std.collections import List
 from tsonic_runtime.numeric import source_number_to_uint32
 from ..validation import checked_integer
 from .core import Buffer
+from .allocation import checked_buffer_size, pooled_buffer, pooled_bytes
 from .codec import encode_bytes, encoded_byte_length, is_encoding, encode_binary_string, decode_binary_string, transcode_bytes
 
 
-def buffer_from_string(value: String) -> Buffer:
-    return Buffer.from_string(value)
+def buffer_from_string(value: String) raises -> Buffer:
+    var result = pooled_buffer(value.byte_length())
+    var bytes = value.as_bytes()
+    for index in range(len(bytes)):
+        result.set(index, UInt8(bytes[index]))
+    return result
 
 
 def buffer_from_string_encoded(value: String, encoding: String) raises -> Buffer:
-    return Buffer(encode_bytes(value, encoding))
+    return pooled_bytes(encode_bytes(value, encoding))
 
 
-def buffer_from_numbers(values: List[Float64]) -> Buffer:
-    var bytes = List[Byte](capacity=len(values))
-    for value in values:
-        bytes.append(Byte(source_number_to_uint32(value) & 255))
-    return Buffer(bytes^)
+def buffer_from_numbers(values: List[Float64]) raises -> Buffer:
+    var result = pooled_buffer(len(values))
+    for index in range(len(values)):
+        result.set(index, UInt8(source_number_to_uint32(values[index]) & 255))
+    return result
 
 
-def buffer_from_buffer(value: Buffer) -> Buffer:
-    return Buffer(value.copy_bytes())
+def buffer_from_buffer(value: Buffer) raises -> Buffer:
+    var result = pooled_buffer(len(value))
+    _ = value.copy(result)
+    return result
 
 
 def buffer_alloc(size: Float64) raises -> Buffer:
-    if not (size >= 0 and size <= 9007199254740991):
-        raise Error("Buffer size is outside the valid range")
-    return Buffer.allocate(Int(size))
+    return Buffer.allocate(checked_buffer_size(size))
 
 
 def buffer_alloc_number(size: Float64, fill: Float64) raises -> Buffer:
@@ -48,6 +53,8 @@ def buffer_alloc_buffer(size: Float64, fill: Buffer) raises -> Buffer:
 
 
 def buffer_concat(values: List[Buffer], total_length: Optional[Float64] = None) raises -> Buffer:
+    if not values:
+        return Buffer()
     var length = 0
     if total_length:
         length = Int(checked_integer(total_length.value(), 9007199254740991, "totalLength"))
@@ -56,7 +63,7 @@ def buffer_concat(values: List[Buffer], total_length: Optional[Float64] = None) 
             if len(value) > 9007199254740991 - length:
                 raise Error("Buffer concatenation exceeds the supported length")
             length += len(value)
-    var result = Buffer.allocate(length)
+    var result = pooled_buffer(length)
     var offset = 0
     for value in values:
         if offset >= length:

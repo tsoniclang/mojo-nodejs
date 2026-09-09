@@ -144,9 +144,9 @@ const methods: readonly Method[] = [
       )),
     ],
   },
-  ...["allocUnsafe", "allocUnsafeSlow"].map((name) => ({
+  ...([["allocUnsafe", "buffer_alloc_unsafe"], ["allocUnsafeSlow", "buffer_alloc_unsafe_slow"]] as const).map(([name, targetName]) => ({
     name, static: true, result: buffer,
-    signatures: [{ id: "size", targetName: "buffer_alloc", parameters: [argument("size", number)], raises: true }],
+    signatures: [{ id: "size", targetName, parameters: [argument("size", number)], raises: true }],
   })),
   {
     name: "compare", static: true, result: number,
@@ -192,6 +192,7 @@ export function extraBufferOperations(): readonly MojoProviderOperationDefinitio
     Object.freeze({
       ...variadicFunctionCall(bufferId, `${bufferId}.of(items)`, "buffer", "buffer_from_numbers", float64Carrier, bufferCarrier),
       memberId: `${bufferId}.of`,
+      raises: true,
     }),
   ]);
 }
