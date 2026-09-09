@@ -17,6 +17,7 @@
 #include <uv.h>
 
 int tsonic_node_socket_nonblocking(int descriptor);
+int tsonic_node_tls_attach_socket(SSL *ssl, int descriptor);
 
 typedef struct {
     SSL_CTX *context;
@@ -67,6 +68,12 @@ static void set_ssl_error(char **error, const char *fallback) {
     char buffer[256];
     ERR_error_string_n(code, buffer, sizeof(buffer));
     set_error(error, buffer);
+}
+
+static int allow_unverified(int valid, X509_STORE_CTX *store) {
+    (void)valid;
+    (void)store;
+    return 1;
 }
 
 static int apply_ca_text(SSL_CTX *context, const char *pem, char **error) {
@@ -190,9 +197,13 @@ static TsonicTlsSocket *socket_from_ssl(
 
 static int complete_handshake(TsonicTlsSocket *socket, char **error) {
     long verification = SSL_get_verify_result(socket->ssl);
-    socket->authorized = verification == X509_V_OK;
+    socket->authorized = SSL_get0_peer_certificate(socket->ssl) != NULL && verification == X509_V_OK;
     if (!socket->authorized) {
-        socket->authorization_error = copy_text(X509_verify_cert_error_string(verification));
+        socket->authorization_error = copy_text(verification == X509_V_OK ? "TLS peer did not provide a certificate" : X509_verify_cert_error_string(verification));
+        if (socket->authorization_error == NULL) {
+            set_error(error, "Unable to retain TLS verification result");
+            return 0;
+        }
     }
     const unsigned char *selected = NULL;
     unsigned int selected_length = 0u;
@@ -226,6 +237,7 @@ void *tsonic_node_tls_connect(
     int32_t port,
     int32_t reject_unauthorized,
     const char *ca_pem,
+    int32_t ca_present,
     const unsigned char *alpn,
     size_t alpn_length,
     int32_t timeout_ms,
@@ -238,8 +250,8 @@ void *tsonic_node_tls_connect(
         set_ssl_error(error, "Unable to create TLS client context");
         return NULL;
     }
-    SSL_CTX_set_verify(context, reject_unauthorized ? SSL_VERIFY_PEER : SSL_VERIFY_NONE, NULL);
-    if (reject_unauthorized && SSL_CTX_set_default_verify_paths(context) != 1) {
+    SSL_CTX_set_verify(context, SSL_VERIFY_PEER, reject_unauthorized ? NULL : allow_unverified);
+    if (!ca_present && SSL_CTX_set_default_verify_paths(context) != 1) {
         set_ssl_error(error, "Unable to load default TLS trust roots");
         SSL_CTX_free(context);
         return NULL;
@@ -255,9 +267,11 @@ void *tsonic_node_tls_connect(
         return NULL;
     }
     SSL *ssl = SSL_new(context);
-    if (ssl == NULL || SSL_set_fd(ssl, descriptor) != 1 ||
-        SSL_set_tlsext_host_name(ssl, servername) != 1 ||
-        (reject_unauthorized && SSL_set1_host(ssl, servername) != 1) ||
+    unsigned char address[sizeof(struct in6_addr)];
+    int numeric = inet_pton(AF_INET, servername, address) == 1 || inet_pton(AF_INET6, servername, address) == 1;
+    if (ssl == NULL || tsonic_node_tls_attach_socket(ssl, descriptor) != 1 ||
+        (!numeric && servername[0] != '\0' && SSL_set_tlsext_host_name(ssl, servername) != 1) ||
+        (numeric ? X509_VERIFY_PARAM_set1_ip_asc(SSL_get0_param(ssl), servername) : SSL_set1_host(ssl, servername)) != 1 ||
         (alpn_length != 0u && SSL_set_alpn_protos(ssl, alpn, (unsigned int)alpn_length) != 0)) {
         set_ssl_error(error, "TLS handshake failed");
         SSL_free(ssl);
@@ -324,7 +338,7 @@ void *tsonic_node_tls_server_create(
     }
     int verify = request_certificate ? SSL_VERIFY_PEER : SSL_VERIFY_NONE;
     if (request_certificate && reject_unauthorized) verify |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-    SSL_CTX_set_verify(server->context, verify, NULL);
+    SSL_CTX_set_verify(server->context, verify, reject_unauthorized ? NULL : allow_unverified);
     if (alpn_length != 0u) {
         server->alpn = (unsigned char *)malloc(alpn_length);
         if (server->alpn == NULL) {
@@ -353,7 +367,7 @@ void *tsonic_node_tls_server_accept(void *server_value, int32_t descriptor, char
     if (server == NULL || descriptor < 0 || error == NULL) return NULL;
     *error = NULL;
     SSL *ssl = SSL_new(server->context);
-    if (ssl == NULL || tsonic_node_socket_nonblocking(descriptor) < 0 || SSL_set_fd(ssl, descriptor) != 1) {
+    if (ssl == NULL || tsonic_node_socket_nonblocking(descriptor) < 0 || tsonic_node_tls_attach_socket(ssl, descriptor) != 1) {
         set_ssl_error(error, "TLS server handshake failed");
         SSL_free(ssl);
         close(descriptor);
@@ -475,11 +489,17 @@ int64_t tsonic_node_tls_write(
     if (socket == NULL || socket->ssl == NULL || socket->ending || socket->descriptor < 0 ||
         (length != 0u && bytes == NULL) || error == NULL) return -1;
     *error = NULL;
-    if (length > 268435456u - socket->output_length) {
+    size_t retained = socket->output_length - socket->output_offset;
+    if (length > 268435456u - retained) {
         set_error(error, "TLS queued writes exceed the byte budget");
         return -1;
     }
     if (length == 0u) return 0;
+    if (socket->output_offset != 0u) {
+        memmove(socket->output, socket->output + socket->output_offset, retained);
+        socket->output_length = retained;
+        socket->output_offset = 0u;
+    }
     unsigned char *output = realloc(socket->output, socket->output_length + length);
     if (output == NULL) {
         set_error(error, "Unable to allocate queued TLS write");
@@ -501,6 +521,7 @@ int64_t tsonic_node_tls_read(
     if (socket == NULL || socket->ssl == NULL || capacity > INT_MAX ||
         (capacity != 0u && bytes == NULL) || error == NULL) return -1;
     *error = NULL;
+    if (capacity == 0u) return 0;
     if (tsonic_node_tls_progress(socket, error) < 0) return -1;
     if (socket->descriptor < 0) return 0;
     if (!socket->ready || socket->write_length != 0u) return -2;
@@ -514,6 +535,9 @@ int64_t tsonic_node_tls_read(
     if (ssl_error == SSL_ERROR_ZERO_RETURN) return 0;
     if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE) return -2;
     set_ssl_error(error, "TLS read failed");
+    socket->failed = 1;
+    close(socket->descriptor);
+    socket->descriptor = -1;
     return -1;
 }
 

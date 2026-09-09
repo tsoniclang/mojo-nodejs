@@ -9,7 +9,7 @@ git diff --exit-code -- mojo tests
 
 mkdir -p "${NATIVE_BUILD}"
 native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
-for source in crypto_bridge crypto_catalog node_bridge compression/codec compression/constants tls_bridge fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
+for source in crypto_bridge crypto_catalog node_bridge compression/codec compression/constants tls_bridge tls_bio fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
   object="${source//\//_}"
   "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- -O3 -fPIC -std=c11 \
     -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
@@ -33,6 +33,7 @@ link_arguments=(
   -Xlinker "${NATIVE_BUILD}/compression_codec.o"
   -Xlinker "${NATIVE_BUILD}/compression_constants.o"
   -Xlinker "${NATIVE_BUILD}/tls_bridge.o"
+  -Xlinker "${NATIVE_BUILD}/tls_bio.o"
   -Xlinker "${NATIVE_BUILD}/fs_watch_bridge.o"
   -Xlinker "${NATIVE_BUILD}/fs_stream_bridge.o"
   -Xlinker "${NATIVE_BUILD}/fs_bridge.o"
@@ -57,6 +58,20 @@ link_arguments=(
 )
 
 failed=0
+for test_file in tests/native/*.c; do
+  test_name="$(basename "${test_file}" .c)"
+  if "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- \
+    -O2 -std=c11 -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
+    "$test_file" "${NATIVE_BUILD}/tls_bio.o" "${NATIVE_BUILD}/socket_io_bridge.o" \
+    -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv \
+    -o "${NATIVE_BUILD}/${test_name}" && "${NATIVE_BUILD}/${test_name}"; then
+    printf 'PASS %s\n' "$test_file"
+  else
+    printf 'FAIL %s\n' "$test_file"
+    failed=1
+  fi
+done
+
 for test_file in tests/*.mojo; do
   test_name="$(basename "${test_file}" .mojo)"
   if "${PIXI_BIN}" run mojo build \

@@ -46,6 +46,7 @@ struct EmptyEnvironment:
 @fieldwise_init
 struct SocketEnvironment:
     var socket: Location[Optional[TLSSocket]]
+    var throw_on_accept: Bool
 
     @staticmethod
     def invoke(
@@ -53,6 +54,8 @@ struct SocketEnvironment:
     ) raises:
         var environment = context.unsafe_bitcast[SocketEnvironment]()
         environment[].socket.write(Optional(arguments[0]))
+        if environment[].throw_on_accept:
+            raise Error("selected accept callback failure")
 
     @staticmethod
     def destroy(context: ErasedCallableContext):
@@ -107,9 +110,10 @@ def empty_callback(count: Location[Int]) -> RaisingCallable[Tuple[], NoneType]:
 
 def socket_callback(
     socket: Location[Optional[TLSSocket]],
+    throw_on_accept: Bool = False,
 ) -> RaisingCallable[Tuple[TLSSocket], NoneType]:
     var environment = allocate_callable_environment(
-        SocketEnvironment(socket), SocketEnvironment.destroy
+        SocketEnvironment(socket, throw_on_accept), SocketEnvironment.destroy
     )
     return RaisingCallable[Tuple[TLSSocket], NoneType](
         environment, SocketEnvironment.invoke
@@ -143,6 +147,49 @@ def main() raises:
     var private_key = read_text_file("tests/fixtures/localhost-key.pem")
     _prove_tls(certificate, private_key)
     _prove_https(certificate, private_key)
+    _prove_throwing_accept(certificate, private_key)
+
+
+def _prove_throwing_accept(certificate: String, private_key: String) raises:
+    var server_options = TlsOptions(cert=Optional(certificate), key=Optional(private_key))
+    var accepted = Location[Optional[TLSSocket]](None)
+    var listening = Location(0)
+    var server = create_tls_server(server_options, socket_callback(accepted, True))
+    _ = server.listen(18093, "127.0.0.1", empty_callback(listening))
+    var certificates = List[String]()
+    certificates.append(certificate)
+    var client = connect(ConnectionOptions(
+        host=Optional("127.0.0.1"), servername=Optional("localhost"),
+        port=Optional(Float64(18093)), ca=Optional(certificates^),
+    ))
+    var callback_failures = 0
+    for _ in range(2000):
+        try:
+            _ = poll_tls()
+        except error:
+            assert_equal(String(error), "selected accept callback failure")
+            callback_failures += 1
+        if accepted.read() and client.ready():
+            break
+        sleep(0.001)
+    assert_equal(callback_failures, 1)
+    assert_true(accepted.read())
+    var peer = accepted.read().value()
+    assert_true(peer.ready())
+    assert_true(not peer.closed())
+    assert_true(peer.write_string("retained"))
+    var response: Optional[Buffer] = None
+    for _ in range(2000):
+        _ = poll_tls()
+        response = client.read()
+        if response:
+            break
+        sleep(0.001)
+    assert_true(response)
+    assert_equal(response.value().to_string(), "retained")
+    peer.destroy()
+    client.destroy()
+    server.close()
 
 
 def _prove_tls(certificate: String, private_key: String) raises:

@@ -51,14 +51,13 @@ struct Server(ImplicitlyCopyable):
                 retained.append(server)
         _servers.get()[] = retained^
         var descriptor = _listen_socket(port, host)
+        if len(_servers.get()[]) >= _max_servers:
+            _ = close(descriptor)
+            raise Error("Active HTTP servers exceed the finite runtime limit")
         self._state[].descriptor = descriptor
         self._state[].listening_callback = Optional(callback)
         self._state[].listening_callback_pending = True
         self._state[].active = True
-        if len(_servers.get()[]) >= _max_servers:
-            _ = close(descriptor)
-            self._state[].active = False
-            raise Error("Active HTTP servers exceed the finite runtime limit")
         _servers.get()[].append(self)
         return self
 
@@ -134,6 +133,8 @@ def _socket_readable(descriptor: Int32) raises -> Bool:
 def _listen_socket(port: Int32, host: String) raises -> Int32:
     if port < 0 or port > 65535:
         raise Error("HTTP server port must be between 0 and 65535")
+    if host.find("\0") >= 0:
+        raise Error("HTTP host contains a null byte")
     var host_buffer = String(host)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var descriptor = external_call["tsonic_node_net_listen", c_int](

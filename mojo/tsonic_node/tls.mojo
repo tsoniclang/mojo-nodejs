@@ -106,8 +106,6 @@ struct TLSSocket(ImplicitlyCopyable):
 
     def write_buffer(self, value: Buffer) raises -> Bool:
         var bytes = value.copy_bytes()
-        if len(bytes) == 0:
-            return True
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var written = external_call["tsonic_node_tls_write", Int64](
             self._handle(),
@@ -300,6 +298,8 @@ struct Server(ImplicitlyCopyable):
     ) raises -> Self:
         if self._state[].active:
             raise Error("TLS server is already listening")
+        if host.find("\0") >= 0:
+            raise Error("TLS host contains a null byte")
         var retained = List[Server]()
         for server in _servers.get()[]:
             if server._state[].active:
@@ -392,6 +392,7 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
         c_int(port),
         c_int(reject),
         ca.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        c_int(Bool(options.ca)),
         alpn.unsafe_ptr(),
         c_size_t(len(alpn)),
         c_int(timeout),
@@ -419,6 +420,8 @@ def create_server(
     var alpn = _alpn_wire(options.alpn_protocols)
     var key = String(options.key.value())
     var certificate = String(options.cert.value())
+    if key.find("\0") >= 0 or certificate.find("\0") >= 0:
+        raise Error("TLS identity contains a null byte")
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var handle = external_call[
         "tsonic_node_tls_server_create",
@@ -492,12 +495,19 @@ def poll_tls() raises -> Bool:
     for index in range(len(pending)):
         var socket = pending[index]
         socket._state[].scheduled = False
+        var was_ready = socket.ready()
+        var written = socket.bytes_written()
         try:
-            var was_ready = socket.ready()
-            var written = socket.bytes_written()
             socket.progress()
+        except error:
+            socket.destroy()
+            for remaining in range(index + 1, len(pending)):
+                _activities.get()[].append(pending[remaining])
+            raise error
+        try:
             did_work = did_work or socket.ready() != was_ready or socket.bytes_written() != written
             if socket.ready() and not socket.closed():
+                socket._state[].native_owner = None
                 if socket._state[].callback:
                     var callback = socket._state[].callback.value()
                     socket._state[].callback = None
@@ -508,11 +518,11 @@ def poll_tls() raises -> Bool:
                     socket._state[].accepted = None
                     callback.call((socket,))
                     did_work = True
-                socket._state[].native_owner = None
             if socket.pending():
                 _schedule_socket(socket)
         except error:
-            socket.destroy()
+            if socket.pending():
+                _schedule_socket(socket)
             for remaining in range(index + 1, len(pending)):
                 _activities.get()[].append(pending[remaining])
             raise error
@@ -537,11 +547,13 @@ def _alpn_wire(protocols: Optional[List[String]]) raises -> List[Byte]:
     return output^
 
 
-def _join_certificates(certificates: Optional[List[String]]) -> String:
+def _join_certificates(certificates: Optional[List[String]]) raises -> String:
     if not certificates:
         return ""
     var result = String()
     for certificate in certificates.value():
+        if certificate.find("\0") >= 0:
+            raise Error("TLS authority contains a null byte")
         if result.byte_length() != 0:
             result += "\n"
         result += certificate
