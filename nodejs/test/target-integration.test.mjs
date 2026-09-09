@@ -312,10 +312,9 @@ test("open resource and dynamic utility lanes fail at their exact boundaries", (
     () => compileNode(`import { watch } from "node:fs"; export function main(): void { watch("."); }`),
     /TS2305/u,
   );
-  assert.throws(
-    () => compileNode(`import process from "node:process"; export function main(): void { process.stdin; }`),
-    /TS2339/u,
-  );
+  const input = compileNode(`import process from "node:process"; export function main(): void { process.stdin; }`);
+  assert.deepEqual(input.diagnostics, []);
+  assert.ok(input.artifacts.some(({ path }) => path.endsWith(".mojo")));
   const dynamic = compileNode(`
 import { inspect } from "node:util";
 export function main(): void { inspect({ value: 1 }); }

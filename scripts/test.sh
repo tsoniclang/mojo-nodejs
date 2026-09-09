@@ -8,14 +8,18 @@ NATIVE_BUILD=".temp/native-tests"
 git diff --exit-code -- mojo tests
 
 mkdir -p "${NATIVE_BUILD}"
-for source in node_bridge zlib_bridge tls_bridge; do
-  "${PIXI_BIN}" run cc -O3 -fPIC -std=c11 \
+native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
+for source in crypto_bridge node_bridge zlib_bridge tls_bridge; do
+  "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- -O3 -fPIC -std=c11 \
     -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
     -c "mojo/tsonic_node.native/${source}.c" \
     -o "${NATIVE_BUILD}/${source}.o"
 done
 
 link_arguments=(
+  -Xlinker "$native_object"
+  -Xlinker -lstdc++
+  -Xlinker "${NATIVE_BUILD}/crypto_bridge.o"
   -Xlinker "${NATIVE_BUILD}/node_bridge.o"
   -Xlinker "${NATIVE_BUILD}/zlib_bridge.o"
   -Xlinker "${NATIVE_BUILD}/tls_bridge.o"
@@ -28,18 +32,24 @@ link_arguments=(
   -Xlinker -lz
 )
 
+failed=0
 for test_file in tests/*.mojo; do
   test_name="$(basename "${test_file}" .mojo)"
-  "${PIXI_BIN}" run mojo build \
+  if "${PIXI_BIN}" run mojo build \
     -j 2 \
     -I mojo \
     -I ../mojo-runtime/mojo \
     -I ../mojo-js/mojo \
     "${link_arguments[@]}" \
     "${test_file}" \
-    -o "${NATIVE_BUILD}/${test_name}"
-  SSL_CERT_FILE="${PWD}/tests/fixtures/localhost-cert.pem" \
-    "${NATIVE_BUILD}/${test_name}"
+    -o "${NATIVE_BUILD}/${test_name}" && \
+    SSL_CERT_FILE="${PWD}/tests/fixtures/localhost-cert.pem" "${NATIVE_BUILD}/${test_name}"; then
+    printf 'PASS %s\n' "$test_file"
+  else
+    printf 'FAIL %s\n' "$test_file"
+    failed=1
+  fi
 done
 
-"${NATIVE_BUILD}/process_arguments_test" "first" "" "two words" "--flag" "😀"
+if ! "${NATIVE_BUILD}/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
+exit "$failed"

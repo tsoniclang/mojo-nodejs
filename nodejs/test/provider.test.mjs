@@ -143,6 +143,7 @@ test("every public Node carrier declares its exact Mojo lifecycle", () => {
     ["node:buffer::Buffer", implicitlyCopyable],
     ["node:child_process::SpawnSyncReturns", copyable],
     ["node:crypto::Hash", implicitlyCopyable],
+    ["node:crypto::Hmac", implicitlyCopyable],
     ["node:dns::LookupAddress", copyable],
     ["node:events::EventEmitter", implicitlyCopyable],
     ["node:fs::Stats", copyable],
@@ -217,7 +218,7 @@ test("Node parity rows expose exact closed contracts and omit unsupported open r
   ]) assert.equal(modules.has(moduleSpecifier), true, moduleSpecifier);
   assert.equal(modules.get("node:fs").exports.some((entry) => entry.name === "watch"), false);
   assert.equal(modules.get("node:fs/promises").exports.some((entry) => entry.name === "readFile"), true);
-  assert.equal(modules.get("node:process").exports.some((entry) => entry.name === "stdin"), false);
+  assert.equal(modules.get("node:process").exports.some((entry) => entry.name === "stdin"), true);
 
   for (const exportId of [
     "node:process::argv0",
