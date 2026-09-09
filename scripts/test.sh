@@ -99,4 +99,5 @@ for test_file in tests/*.mojo; do
 done
 
 if ! "${NATIVE_BUILD}/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
+if ! node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/path_oracle_test"; then failed=1; fi
 exit "$failed"
