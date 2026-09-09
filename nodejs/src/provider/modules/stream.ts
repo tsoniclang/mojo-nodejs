@@ -7,16 +7,19 @@ import {
   booleanType,
   boolCarrier,
   bufferCarrier,
+  float64Carrier,
   httpServerResponseCarrier,
   instanceCall,
   methodMember,
   nativeString,
   nodeProviderType,
+  numberType,
+  propertyMember,
+  propertyRead,
   providerRef,
   readableCarrier,
   stringType,
   unitCarrier,
-  undefinedType,
   writableCarrier,
 } from "../model.js";
 
@@ -24,7 +27,7 @@ const moduleSpecifier = "node:stream";
 const readableId = `${moduleSpecifier}::Readable`;
 const writableId = `${moduleSpecifier}::Writable`;
 const bufferType = providerRef("node:buffer", "Buffer");
-const optionalBufferType = Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, undefinedType]) });
+const nullableBufferType = Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]) });
 
 export function streamModule(): MojoProviderModuleDefinition {
   return Object.freeze({
@@ -40,7 +43,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         name: "Readable",
         kind: "class",
         members: Object.freeze([
-          methodMember(readableId, "read", [], optionalBufferType),
+          methodMember(readableId, "read", [], nullableBufferType),
           Object.freeze({
             id: `${readableId}.pipe`, name: "pipe", kind: "method",
             signatures: Object.freeze([
@@ -75,6 +78,7 @@ export function streamModule(): MojoProviderModuleDefinition {
           }),
           methodMember(writableId, "cork", [], Object.freeze({ kind: "void" })),
           methodMember(writableId, "uncork", [], Object.freeze({ kind: "void" })),
+          propertyMember(writableId, "writableCorked", numberType),
         ]),
       }),
     ]),
@@ -103,5 +107,6 @@ export function streamOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(writableId, `${writableId}.end`, `${writableId}.end(string)`, "end_string", writableCarrier, [nativeString], writableCarrier, true, "mut"),
     instanceCall(writableId, `${writableId}.cork`, `${writableId}.cork()`, "cork", writableCarrier, [], unitCarrier, false, "mut"),
     instanceCall(writableId, `${writableId}.uncork`, `${writableId}.uncork()`, "uncork", writableCarrier, [], unitCarrier, true, "mut"),
+    propertyRead(writableId, `${writableId}.writableCorked`, "writable_corked", writableCarrier, float64Carrier, "method"),
   ]);
 }

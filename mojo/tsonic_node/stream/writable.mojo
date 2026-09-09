@@ -8,7 +8,7 @@ from .descriptor import StreamDescriptor
 struct _WritableState:
     var descriptor: Optional[StreamDescriptor]
     var chunks: List[Buffer]
-    var corked: Bool
+    var corked: Int
     var ended: Bool
     var path: String
     var position: Optional[Int64]
@@ -21,21 +21,21 @@ struct Writable(ImplicitlyCopyable):
     var _state: ArcPointer[_WritableState]
 
     def __init__(out self):
-        self._state = ArcPointer(_WritableState(None, List[Buffer](), False, False, "", None, 0, False, False))
+        self._state = ArcPointer(_WritableState(None, List[Buffer](), 0, False, "", None, 0, False, False))
 
     def __init__(out self, descriptor: Int32):
         self = Self()
         self._state[].descriptor = StreamDescriptor(descriptor)
 
     def __init__(out self, descriptor: StreamDescriptor, path: String, start: Optional[Int64], auto_close: Bool, flush: Bool):
-        self._state = ArcPointer(_WritableState(Optional(descriptor), List[Buffer](), False, False,
+        self._state = ArcPointer(_WritableState(Optional(descriptor), List[Buffer](), 0, False,
                                                path, start, 0, auto_close, flush))
 
     def write_buffer(mut self, value: Buffer) raises -> Bool:
         if self._state[].ended:
             raise Error("Cannot write after stream end")
         self._state[].chunks.append(value)
-        if not self._state[].corked:
+        if self._state[].corked == 0:
             self._flush()
         return True
 
@@ -43,7 +43,9 @@ struct Writable(ImplicitlyCopyable):
         return self.write_buffer(Buffer.from_string(value))
 
     def end(mut self) raises -> Self:
-        self._state[].corked = False
+        if self._state[].ended:
+            return self
+        self._state[].corked = 0
         try:
             self._flush()
             if self._state[].flush and self._state[].descriptor:
@@ -76,11 +78,16 @@ struct Writable(ImplicitlyCopyable):
         return Float64(self._state[].bytes_written)
 
     def cork(mut self):
-        self._state[].corked = True
+        self._state[].corked += 1
 
     def uncork(mut self) raises:
-        self._state[].corked = False
-        self._flush()
+        if self._state[].corked > 0:
+            self._state[].corked -= 1
+            if self._state[].corked == 0:
+                self._flush()
+
+    def writable_corked(self) -> Float64:
+        return Float64(self._state[].corked)
 
     def _flush(mut self) raises:
         if not self._state[].descriptor:

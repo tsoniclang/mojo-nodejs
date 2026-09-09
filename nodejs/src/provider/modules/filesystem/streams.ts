@@ -8,7 +8,7 @@ import {
   nodeProviderType, numberType, optionalBoolCarrier, optionalFloat64Carrier,
   optionalStringCarrier, overloadedFunctionExport, overloadedMethodMember,
   propertyMember, propertyRead, propertyWrite, providerRef, readableCarrier,
-  stringType, undefinedType, unitCarrier, voidType, writableCarrier,
+  stringType, unitCarrier, voidType, writableCarrier,
 } from "../../model.js";
 
 const moduleSpecifier = "node:fs";
@@ -40,7 +40,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
     })),
     Object.freeze({ id: readId, name: "ReadStream", kind: "class" as const,
       heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Readable") }]), members: Object.freeze([
-      methodMember(readId, "read", [], Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, undefinedType]) })),
+      methodMember(readId, "read", [], Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]) })),
       overloadedMethodMember(readId, "pipe", [
         { signatureSuffix: "writeStream", parameters: [{ name: "destination", type: writeType }], returnType: writeType },
         { signatureSuffix: "writable", parameters: [{ name: "destination", type: providerRef("node:stream", "Writable") }], returnType: providerRef("node:stream", "Writable") },

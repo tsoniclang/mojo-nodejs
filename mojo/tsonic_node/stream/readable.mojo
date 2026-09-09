@@ -1,4 +1,4 @@
-from std.collections import List
+from std.collections import Deque
 from std.memory import ArcPointer
 from ..buffer import Buffer
 from ..http import ServerResponse
@@ -9,7 +9,7 @@ from .writable import Writable
 @fieldwise_init
 struct _ReadableState:
     var descriptor: Optional[StreamDescriptor]
-    var chunks: List[Buffer]
+    var chunks: Deque[Buffer]
     var paused: Bool
     var ended: Bool
     var path: String
@@ -24,7 +24,7 @@ struct Readable(ImplicitlyCopyable):
     var _state: ArcPointer[_ReadableState]
 
     def __init__(out self):
-        self._state = ArcPointer(_ReadableState(None, List[Buffer](), False, False, "", 4096, None, None, 0, False))
+        self._state = ArcPointer(_ReadableState(None, Deque[Buffer](), False, False, "", 4096, None, None, 0, False))
 
     def __init__(out self, descriptor: Int32):
         self = Self()
@@ -32,7 +32,7 @@ struct Readable(ImplicitlyCopyable):
 
     def __init__(out self, descriptor: StreamDescriptor, path: String, chunk_size: Int,
                  start: Optional[Int64], end: Optional[Int64], auto_close: Bool):
-        self._state = ArcPointer(_ReadableState(Optional(descriptor), List[Buffer](), False, False,
+        self._state = ArcPointer(_ReadableState(Optional(descriptor), Deque[Buffer](), False, False,
                                                path, chunk_size, start, end, 0, auto_close))
 
     def append(mut self, value: Buffer):
@@ -40,12 +40,7 @@ struct Readable(ImplicitlyCopyable):
 
     def read(mut self) raises -> Optional[Buffer]:
         if len(self._state[].chunks) != 0:
-            var first = self._state[].chunks[0]
-            var remaining = List[Buffer](capacity=len(self._state[].chunks) - 1)
-            for index in range(1, len(self._state[].chunks)):
-                remaining.append(self._state[].chunks[index])
-            self._state[].chunks = remaining^
-            return first
+            return self._state[].chunks.popleft()
         if self._state[].ended or not self._state[].descriptor:
             return None
         var size = self._state[].chunk_size
