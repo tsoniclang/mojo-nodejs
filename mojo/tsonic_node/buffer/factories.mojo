@@ -77,10 +77,6 @@ def buffer_byte_length_buffer(value: Buffer) -> Float64:
     return value.js_length()
 
 
-def buffer_is_buffer(value: Buffer) -> Bool:
-    return True
-
-
 def buffer_is_encoding(encoding: String) -> Bool:
     return is_encoding(encoding)
 

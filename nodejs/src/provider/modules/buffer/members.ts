@@ -156,10 +156,6 @@ const methods: readonly Method[] = [
     name: "isEncoding", static: true, result: boolean,
     signatures: [{ id: "encoding", targetName: "buffer_is_encoding", parameters: [argument("encoding", string)] }],
   },
-  {
-    name: "isBuffer", static: true, result: boolean,
-    signatures: [{ id: "value", targetName: "buffer_is_buffer", parameters: [argument("value", buffer)] }],
-  },
 ];
 
 export function extraBufferMembers(): readonly Member[] {

@@ -27,6 +27,7 @@ import {
   stringType,
 } from "../../model.js";
 import { extraBufferMembers, extraBufferOperations } from "./members.js";
+import { bufferPredicateExport, bufferPredicateMember, bufferPredicateOperations } from "./predicates.js";
 
 const moduleSpecifier = "node:buffer";
 const bufferId = `${moduleSpecifier}::Buffer`;
@@ -96,6 +97,7 @@ export function bufferModule(): MojoProviderModuleDefinition {
         name: "Buffer",
         kind: "class",
         members: Object.freeze([
+          bufferPredicateMember(),
           overloadedMethodMember(bufferId, "from", [
             { parameters: [{ name: "value", type: stringType }], returnType: bufferType, signatureSuffix: "string" },
             {
@@ -140,7 +142,7 @@ export function bufferModule(): MojoProviderModuleDefinition {
           propertyMember(bufferId, "length", numberType),
         ]),
       }),
-      fnExport(moduleSpecifier, "isBuffer", [{ name: "value", type: bufferType }], booleanType),
+      bufferPredicateExport(),
       fnExport(moduleSpecifier, "isEncoding", [{ name: "encoding", type: stringType }], booleanType),
       fnExport(moduleSpecifier, "isAscii", [{ name: "value", type: bufferType }], booleanType),
       fnExport(moduleSpecifier, "isUtf8", [{ name: "value", type: bufferType }], booleanType),
@@ -219,7 +221,7 @@ export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
     instanceOperation("equals", "other", "equals", [bufferCarrier], boolCarrier),
     instanceOperation("compare", "other", "compare", [bufferCarrier], float64Carrier),
     propertyRead(bufferId, `${bufferId}.length`, "js_length", bufferCarrier, float64Carrier, "method"),
-    functionCall(`${moduleSpecifier}::isBuffer`, `${moduleSpecifier}::isBuffer(value)`, "buffer", "buffer_is_buffer", [bufferCarrier], boolCarrier),
+    ...bufferPredicateOperations(),
     functionCall(`${moduleSpecifier}::isEncoding`, `${moduleSpecifier}::isEncoding(encoding)`, "buffer", "buffer_is_encoding", [nativeString], boolCarrier),
     functionCall(`${moduleSpecifier}::isAscii`, `${moduleSpecifier}::isAscii(value)`, "buffer", "buffer_is_ascii", [bufferCarrier], boolCarrier),
     functionCall(`${moduleSpecifier}::isUtf8`, `${moduleSpecifier}::isUtf8(value)`, "buffer", "buffer_is_utf8", [bufferCarrier], boolCarrier),
