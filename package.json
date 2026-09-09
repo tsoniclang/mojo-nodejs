@@ -22,7 +22,7 @@
   },
   "scripts": {
     "build": "bash scripts/build.sh",
-    "test": "npm run build && node --test nodejs/test/*.test.mjs && bash scripts/test.sh",
+    "test": "npm run build && bash scripts/test-all.sh",
     "prepack": "npm run build"
   },
   "peerDependencies": {
