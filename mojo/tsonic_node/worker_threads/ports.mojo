@@ -1,5 +1,6 @@
-from std.collections import List
+from std.collections import Dict, List
 from std.memory import ArcPointer
+from std.memory.arc_pointer import WeakPointer
 from tsonic_js import JsString, JsValue, js_value_error
 from tsonic_runtime import GlobalCell, RaisingCallable
 from ..events import EventEmitter
@@ -46,12 +47,55 @@ struct PortState:
         self.peer_closed = False
         self.terminating = False
 
+    def __deinit__(deinit self):
+        self.channel.close()
 
-def _initial_ports() -> List[ArcPointer[PortState]]:
-    return List[ArcPointer[PortState]]()
+
+def _initial_ports() -> List[WeakPointer[PortState]]:
+    return List[WeakPointer[PortState]]()
+
+
+def _initial_retained_ports() -> Dict[UInt, ArcPointer[PortState]]:
+    return Dict[UInt, ArcPointer[PortState]]()
+
+
+def _initial_compaction_threshold() -> Int:
+    return 1024
 
 
 comptime _ports = GlobalCell["tsonic.node.worker-threads.ports", _initial_ports]()
+comptime _retained_ports = GlobalCell["tsonic.node.worker-threads.retained-ports", _initial_retained_ports]()
+comptime _compaction_threshold = GlobalCell["tsonic.node.worker-threads.compaction-threshold", _initial_compaction_threshold]()
+
+
+def _retain_port(state: ArcPointer[PortState]):
+    var required = state[].channel.pending() or (state[].worker and not state[].exited)
+    required = required or (state[].closed and not state[].worker and not state[].close_emitted)
+    required = required or (state[].referenced and state[].started and not state[].closed)
+    var identity = UInt(Int(state.ptr()))
+    if required:
+        _retained_ports.get()[][identity] = state
+    else:
+        _ = _retained_ports.get()[].pop(identity, state)
+
+
+def _compact_ports():
+    var retained = List[WeakPointer[PortState]]()
+    for identity in _ports.get()[]:
+        var state = identity.try_upgrade()
+        if state:
+            var live = state.value()
+            if live[].channel.pending() or not (live[].exited if live[].worker else live[].close_emitted):
+                retained.append(identity)
+    _ports.get()[] = retained^
+    _compaction_threshold.get()[] = min(1048576, max(1024, len(_ports.get()[]) * 2))
+
+
+def _reserve_ports(count: Int) raises:
+    if len(_ports.get()[]) >= _compaction_threshold.get()[] or len(_ports.get()[]) > 1048576 - count:
+        _compact_ports()
+    if len(_ports.get()[]) > 1048576 - count:
+        raise Error("Message channel inventory exceeds its limit")
 
 
 struct MessagePort(ImplicitlyCopyable):
@@ -64,10 +108,12 @@ struct MessagePort(ImplicitlyCopyable):
         if self._state[].closing or self._state[].closed or self._state[].peer_closed:
             return
         self._state[].channel.send_value(value)
+        _retain_port(self._state)
 
     def start(mut self):
         if not self._state[].closed:
             self._state[].started = True
+            _retain_port(self._state)
 
     def close(mut self) raises:
         if self._state[].closing or self._state[].closed:
@@ -75,13 +121,16 @@ struct MessagePort(ImplicitlyCopyable):
         self._state[].channel.close_data()
         self._state[].closing = True
         self._state[].closed = True
+        _retain_port(self._state)
 
     def ref_chain(mut self) -> Self:
         self._state[].referenced = True
+        _retain_port(self._state)
         return self
 
     def unref_chain(mut self) -> Self:
         self._state[].referenced = False
+        _retain_port(self._state)
         return self
 
     def has_ref(self) -> Bool:
@@ -91,6 +140,7 @@ struct MessagePort(ImplicitlyCopyable):
         if event.is_string() and event.string_value() == JsString("message"):
             self.start()
             self._state[].referenced = True
+            _retain_port(self._state)
 
     def on_callable(mut self, event: JsValue, callback: Listener0) raises -> Self:
         _ = self._state[].events.on_callable(event, callback)
@@ -116,12 +166,14 @@ struct MessagePort(ImplicitlyCopyable):
         _ = self._state[].events.off_callable(event, callback)
         if self._state[].events.listener_count(JsValue(JsString("message"))) == 0:
             self._state[].referenced = False
+        _retain_port(self._state)
         return self
 
     def off_callable1(mut self, event: JsValue, callback: Listener1) raises -> Self:
         _ = self._state[].events.off_callable1(event, callback)
         if self._state[].events.listener_count(JsValue(JsString("message"))) == 0:
             self._state[].referenced = False
+        _retain_port(self._state)
         return self
 
 
@@ -141,16 +193,15 @@ def register_port(channel: WorkerChannel, worker: Bool = False) raises -> Messag
 
 
 def _register_transport(channel: PortTransport, worker: Bool) raises -> MessagePort:
-    if len(_ports.get()[]) >= 1048576:
-        raise Error("Message channel inventory exceeds its limit")
+    _reserve_ports(1)
     var state = ArcPointer(PortState(channel, worker))
-    _ports.get()[].append(state)
+    _ports.get()[].append(WeakPointer[PortState](downgrade=state))
+    _retain_port(state)
     return MessagePort(state)
 
 
 def message_channel_new() raises -> MessageChannel:
-    if len(_ports.get()[]) > 1048574:
-        raise Error("Message channel inventory exceeds its limit")
+    _reserve_ports(2)
     var pair = local_pair()
     var first = _register_transport(pair[0], False)
     var second = _register_transport(pair[1], False)
@@ -167,10 +218,12 @@ def receive_message_on_port(port: MessagePort) raises -> Optional[MessagePortMes
     if packet.kind == PORT_CLOSED:
         port._state[].peer_closed = True
         port._state[].closed = True
+        _retain_port(port._state)
         return None
     if packet.kind != MESSAGE:
         port._state[].closed = True
         port._state[].channel.close()
+        _retain_port(port._state)
         raise Error("MessagePort received an invalid protocol frame")
     return MessagePortMessage(packet.value)
 
@@ -202,7 +255,12 @@ def _poll_state(state: ArcPointer[PortState]) raises -> Bool:
                 var packet = frame.take()
                 worked = True
                 if packet.kind == MESSAGE:
-                    _ = state[].events.emit_callable1(JsValue(JsString("message")), packet.value)
+                    var event = JsValue(JsString("message"))
+                    try:
+                        _ = state[].events.emit_callable1(event, packet.value)
+                    finally:
+                        if not state[].worker and state[].events.listener_count(event) == 0:
+                            state[].referenced = False
                 elif packet.kind == ONLINE and state[].worker and not state[].online:
                     state[].online = True
                     _ = state[].events.emit_callable(JsValue(JsString("online")))
@@ -261,18 +319,19 @@ def _transport_failure(state: ArcPointer[PortState], message: String) raises:
 def poll_worker_threads() raises -> Bool:
     var worked = False
     var snapshot = _ports.get()[].copy()
-    for state in snapshot:
-        worked = _poll_state(state) or worked
-    var retained = List[ArcPointer[PortState]]()
-    for state in _ports.get()[]:
-        if state[].channel.pending() or (state[].worker and not state[].exited) or (not state[].worker and not state[].close_emitted):
-            retained.append(state)
-    _ports.get()[] = retained^
+    for identity in snapshot:
+        var state = identity.try_upgrade()
+        if state:
+            try:
+                worked = _poll_state(state.value()) or worked
+            finally:
+                _retain_port(state.value())
+    _compact_ports()
     return worked
 
 
 def has_active_worker_threads() -> Bool:
-    for state in _ports.get()[]:
+    for state in _retained_ports.get()[].values():
         if state[].channel.pending() or (state[].closing and not state[].close_emitted and not state[].worker):
             return True
         if state[].referenced and ((state[].worker and not state[].exited) or (state[].started and not state[].closed)):
