@@ -5,15 +5,24 @@ type Member = NonNullable<MojoProviderModuleDefinition["exports"][number]["membe
 
 const moduleObjects = Object.freeze([
   ["node:buffer", "NodeBufferModule"],
+  ["node:child_process", "NodeChildProcessModule"],
   ["node:crypto", "NodeCryptoModule"],
+  ["node:dns", "NodeDnsModule"],
+  ["node:dns/promises", "NodeDnsPromisesModule"],
   ["node:fs", "NodeFsModule"],
   ["node:fs/promises", "NodeFsPromisesModule"],
   ["node:http", "NodeHttpModule"],
+  ["node:https", "NodeHttpsModule"],
+  ["node:net", "NodeNetModule"],
   ["node:os", "NodeOsModule"],
   ["node:path", "NodePathModule"],
+  ["node:readline", "NodeReadlineModule"],
   ["node:timers", "NodeTimersModule"],
+  ["node:tls", "NodeTlsModule"],
   ["node:url", "NodeUrlModule"],
   ["node:util", "NodeUtilModule"],
+  ["node:worker_threads", "NodeWorkerThreadsModule"],
+  ["node:zlib", "NodeZlibModule"],
 ] as const);
 
 export function withNodeModuleObjects(definition: PackageDefinition): PackageDefinition {
@@ -36,11 +45,15 @@ export function withNodeModuleObjects(definition: PackageDefinition): PackageDef
       members.push(member);
       for (const operation of definition.operations) {
         if (operation.exportId !== declaration.id || operation.memberId !== undefined) continue;
+        const signatureId = operation.signatureId === undefined ? undefined : signatureIds.get(operation.signatureId);
+        if (operation.signatureId !== undefined && signatureId === undefined) {
+          throw new Error(`Module projection '${exportId}' has an operation for undeclared signature '${operation.signatureId}'.`);
+        }
         additions.push(Object.freeze({
           ...operation,
           exportId,
           memberId,
-          ...(operation.signatureId === undefined ? {} : { signatureId: signatureIds.get(operation.signatureId)! }),
+          ...(signatureId === undefined ? {} : { signatureId }),
           operationKind: declaration.kind === "value" ? "property" : operation.operationKind,
         }));
       }
