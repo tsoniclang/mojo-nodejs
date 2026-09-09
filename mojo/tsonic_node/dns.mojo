@@ -1,15 +1,12 @@
 from std.collections import List
 from std.ffi import c_int, external_call
-from tsonic_js import JsValue, js_value_error, js_value_from_undefined
+from tsonic_js import JsValue, js_value_error, js_value_from_null
 from tsonic_runtime import GlobalCell, RaisingCallable
+from .internal.callback_queue import CallbackQueue
 
 
-comptime LookupCallback = RaisingCallable[
-    Tuple[JsValue, String, Float64], NoneType
-]
-comptime AddressListCallback = RaisingCallable[
-    Tuple[JsValue, List[String]], NoneType
-]
+comptime LookupCallback = RaisingCallable[Tuple[JsValue, Optional[String], Optional[Float64]], NoneType]
+comptime AddressListCallback = RaisingCallable[Tuple[JsValue, Optional[List[String]]], NoneType]
 
 
 @fieldwise_init
@@ -24,61 +21,20 @@ struct LookupAddress(Copyable):
         return Float64(self.family)
 
 
-@fieldwise_init
-struct _PendingLookup:
-    var error: JsValue
-    var address: String
-    var family: Float64
-    var callback: LookupCallback
-
-    def invoke(deinit self) raises:
-        var callback = self.callback^
-        var error = self.error^
-        var address = self.address^
-        callback.call((error, address^, self.family))
+def _initial_queue() -> CallbackQueue:
+    return CallbackQueue(1 << 20)
 
 
-@fieldwise_init
-struct _PendingAddresses:
-    var error: JsValue
-    var addresses: List[String]
-    var callback: AddressListCallback
-
-    def invoke(deinit self) raises:
-        var callback = self.callback^
-        var error = self.error^
-        var addresses = self.addresses^
-        callback.call((error, addresses^))
-
-
-def _initial_lookup_queue() -> List[_PendingLookup]:
-    return List[_PendingLookup]()
-
-
-def _initial_addresses_queue() -> List[_PendingAddresses]:
-    return List[_PendingAddresses]()
-
-
-comptime _pending_lookups = GlobalCell[
-    "tsonic.node.dns.pending-lookups", _initial_lookup_queue
-]()
-comptime _pending_addresses = GlobalCell[
-    "tsonic.node.dns.pending-addresses", _initial_addresses_queue
-]()
-comptime _pending_limit = 1 << 20
+comptime _pending = GlobalCell["tsonic.node.dns.pending", _initial_queue]()
 
 
 def lookup(hostname: String) raises -> LookupAddress:
+    _validate_input(hostname)
     var hostname_buffer = String(hostname)
     var family = Int32(0)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-    var result = external_call[
-        "tsonic_node_dns_lookup",
-        OptionalPointer[UInt8, MutUntrackedOrigin],
-    ](
-        hostname_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        Pointer(to=family),
-        Pointer(to=error),
+    var result = external_call["tsonic_node_dns_lookup", OptionalPointer[UInt8, MutUntrackedOrigin]](
+        hostname_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(), Pointer(to=family), Pointer(to=error),
     )
     if not result:
         raise Error(_take_error(error, "DNS lookup failed"))
@@ -94,14 +50,11 @@ def resolve6(hostname: String) raises -> List[String]:
 
 
 def reverse(address: String) raises -> List[String]:
+    _validate_input(address)
     var address_buffer = String(address)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-    var result = external_call[
-        "tsonic_node_dns_reverse",
-        OptionalPointer[UInt8, MutUntrackedOrigin],
-    ](
-        address_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        Pointer(to=error),
+    var result = external_call["tsonic_node_dns_reverse", OptionalPointer[UInt8, MutUntrackedOrigin]](
+        address_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(), Pointer(to=error),
     )
     if not result:
         raise Error(_take_error(error, "Reverse DNS lookup failed"))
@@ -111,26 +64,18 @@ def reverse(address: String) raises -> List[String]:
 
 
 def lookup_callback(hostname: String, callback: LookupCallback) raises:
-    _require_capacity()
+    _validate_input(hostname)
+    _pending.get()[].require_capacity()
+    var failure = js_value_from_null()
+    var address = Optional[String]()
+    var family = Optional[Float64]()
     try:
         var result = lookup(hostname)
-        _pending_lookups.get()[].append(
-            _PendingLookup(
-                js_value_from_undefined(),
-                result.address,
-                Float64(result.family),
-                callback,
-            )
-        )
+        address = result.address^
+        family = Float64(result.family)
     except error:
-        _pending_lookups.get()[].append(
-            _PendingLookup(
-                js_value_error(String(error)),
-                "",
-                0,
-                callback,
-            )
-        )
+        failure = js_value_error(String(error))
+    _pending.get()[].defer(callback, (failure, address^, family))
 
 
 def resolve4_callback(hostname: String, callback: AddressListCallback) raises:
@@ -142,19 +87,7 @@ def resolve6_callback(hostname: String, callback: AddressListCallback) raises:
 
 
 def reverse_callback(address: String, callback: AddressListCallback) raises:
-    _require_capacity()
-    try:
-        _pending_addresses.get()[].append(
-            _PendingAddresses(
-                js_value_from_undefined(), reverse(address), callback
-            )
-        )
-    except error:
-        _pending_addresses.get()[].append(
-            _PendingAddresses(
-                js_value_error(String(error)), List[String](), callback
-            )
-        )
+    _enqueue_addresses(address, 0, callback)
 
 
 async def lookup_async(hostname: String) raises -> LookupAddress:
@@ -174,36 +107,19 @@ async def reverse_async(address: String) raises -> List[String]:
 
 
 def has_pending_dns() -> Bool:
-    return (
-        len(_pending_lookups.get()[]) != 0
-        or len(_pending_addresses.get()[]) != 0
-    )
+    return _pending.get()[].has_pending()
 
 
 def poll_dns() raises -> Bool:
-    if not has_pending_dns():
-        return False
-    var lookups = List[_PendingLookup]()
-    swap(_pending_lookups.get()[], lookups)
-    for var pending in lookups^:
-        pending^.invoke()
-    var addresses = List[_PendingAddresses]()
-    swap(_pending_addresses.get()[], addresses)
-    for var pending in addresses^:
-        pending^.invoke()
-    return True
+    return _pending.get()[].poll()
 
 
 def _resolve(hostname: String, family: Int32) raises -> List[String]:
+    _validate_input(hostname)
     var hostname_buffer = String(hostname)
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-    var result = external_call[
-        "tsonic_node_dns_resolve",
-        OptionalPointer[UInt8, MutUntrackedOrigin],
-    ](
-        hostname_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        family,
-        Pointer(to=error),
+    var result = external_call["tsonic_node_dns_resolve", OptionalPointer[UInt8, MutUntrackedOrigin]](
+        hostname_buffer.as_c_string_slice().ptr().as_unsafe_any_origin(), family, Pointer(to=error),
     )
     if not result:
         raise Error(_take_error(error, "DNS resolution failed"))
@@ -214,34 +130,21 @@ def _resolve(hostname: String, family: Int32) raises -> List[String]:
     return values^
 
 
-def _enqueue_addresses(
-    hostname: String,
-    family: Int32,
-    callback: AddressListCallback,
-) raises:
-    _require_capacity()
+def _enqueue_addresses(value: String, family: Int32, callback: AddressListCallback) raises:
+    _validate_input(value)
+    _pending.get()[].require_capacity()
+    var failure = js_value_from_null()
+    var addresses = Optional[List[String]]()
     try:
-        _pending_addresses.get()[].append(
-            _PendingAddresses(
-                js_value_from_undefined(),
-                _resolve(hostname, family),
-                callback,
-            )
-        )
+        addresses = reverse(value) if family == 0 else _resolve(value, family)
     except error:
-        _pending_addresses.get()[].append(
-            _PendingAddresses(
-                js_value_error(String(error)), List[String](), callback
-            )
-        )
+        failure = js_value_error(String(error))
+    _pending.get()[].defer(callback, (failure, addresses^))
 
 
-def _require_capacity() raises:
-    if (
-        len(_pending_lookups.get()[]) + len(_pending_addresses.get()[])
-        >= _pending_limit
-    ):
-        raise Error("Pending DNS callbacks exceed the finite runtime limit")
+def _validate_input(value: String) raises:
+    if value.find("\0") != -1:
+        raise Error("DNS input cannot contain a null byte")
 
 
 def _take_text(pointer: OptionalPointer[UInt8, MutUntrackedOrigin]) -> String:
@@ -250,8 +153,5 @@ def _take_text(pointer: OptionalPointer[UInt8, MutUntrackedOrigin]) -> String:
     return value^
 
 
-def _take_error(
-    pointer: OptionalPointer[UInt8, MutUntrackedOrigin],
-    fallback: String,
-) -> String:
-    return _take_text(pointer) if pointer else fallback
+def _take_error(pointer: OptionalPointer[UInt8, MutUntrackedOrigin], default_message: String) -> String:
+    return _take_text(pointer) if pointer else default_message

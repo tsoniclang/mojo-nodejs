@@ -26,7 +26,9 @@ struct NativeCodec(Movable):
         if not self.handle:
             raise Error("Compression engine is closed")
         var empty = Byte(0)
-        var pointer = input._bytes[].unsafe_ptr() + input._offset if len(input) != 0 else Pointer(to=empty)
+        var pointer = Pointer(to=empty).as_unsafe_any_origin()
+        if len(input) != 0:
+            pointer = (input._bytes[].unsafe_ptr() + input._offset).as_unsafe_any_origin()
         var output = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var length = c_size_t(0)
         var consumed = c_size_t(0)

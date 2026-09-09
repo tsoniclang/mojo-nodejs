@@ -20,6 +20,7 @@ import {
   stringListCarrier,
   stringType,
   unitCarrier,
+  undefinedType,
   voidType,
 } from "../model.js";
 
@@ -27,6 +28,9 @@ const moduleSpecifier = "node:dns";
 const promisesSpecifier = "node:dns/promises";
 const lookupAddressId = `${moduleSpecifier}::LookupAddress`;
 const anyType = Object.freeze({ kind: "any" as const });
+const optionalString = Object.freeze({ kind: "union" as const, types: Object.freeze([stringType, undefinedType]) });
+const optionalFamily = Object.freeze({ kind: "union" as const, types: Object.freeze([Object.freeze({ kind: "number" as const }), undefinedType]) });
+const optionalAddresses = Object.freeze({ kind: "union" as const, types: Object.freeze([stringArrayType, undefinedType]) });
 
 export function dnsModule(): MojoProviderModuleDefinition {
   const lookupCallback = providerCallbackType(
@@ -34,8 +38,8 @@ export function dnsModule(): MojoProviderModuleDefinition {
     "callback",
     [
       { name: "error", type: anyType },
-      { name: "address", type: stringType },
-      { name: "family", type: Object.freeze({ kind: "number" }) },
+      { name: "address", type: optionalString },
+      { name: "family", type: optionalFamily },
     ],
   );
   const addressesCallback = (signatureId: string) => providerCallbackType(
@@ -43,7 +47,7 @@ export function dnsModule(): MojoProviderModuleDefinition {
     "callback",
     [
       { name: "error", type: anyType },
-      { name: "addresses", type: stringArrayType },
+      { name: "addresses", type: optionalAddresses },
     ],
   );
   return Object.freeze({
