@@ -18,6 +18,7 @@ typedef struct TsonicWorkerFrame {
 struct TsonicWorkerChannel {
     int descriptor;
     int failure;
+    int write_failure;
     int eof;
     pid_t process;
     int exited;

@@ -164,7 +164,13 @@ def receive_message_on_port(port: MessagePort) raises -> Optional[MessagePortMes
     if not frame:
         return None
     var packet = frame.take()
+    if packet.kind == PORT_CLOSED:
+        port._state[].peer_closed = True
+        port._state[].closed = True
+        return None
     if packet.kind != MESSAGE:
+        port._state[].closed = True
+        port._state[].channel.close()
         raise Error("MessagePort received an invalid protocol frame")
     return MessagePortMessage(packet.value)
 
@@ -207,13 +213,15 @@ def _poll_state(state: ArcPointer[PortState]) raises -> Bool:
                 elif packet.kind == FAILURE and state[].worker:
                     var value = packet.value
                     if not value.is_string():
-                        raise Error("Worker failure frame has no message")
+                        _transport_failure(state, "Worker failure frame has no message")
+                        return True
                     var error = js_value_error(value.string_value().to_native_strict())
                     if state[].events.listener_count(JsValue(JsString("error"))) == 0:
                         raise Error(value.string_value().to_native_strict())
                     _ = state[].events.emit_callable1(JsValue(JsString("error")), error)
                 else:
-                    raise Error("Worker channel received an invalid protocol frame")
+                    _transport_failure(state, "Worker channel received an invalid protocol frame")
+                    return True
         if state[].channel.closed():
             state[].closed = True
     if state[].worker and not state[].exited:
@@ -230,7 +238,10 @@ def _poll_state(state: ArcPointer[PortState]) raises -> Bool:
     elif not state[].worker and state[].closed and not state[].close_emitted:
         state[].close_emitted = True
         worked = True
-        _ = state[].events.emit_callable(JsValue(JsString("close")))
+        try:
+            _ = state[].events.emit_callable(JsValue(JsString("close")))
+        finally:
+            _ = state[].events.remove_all_listeners()
     return worked
 
 

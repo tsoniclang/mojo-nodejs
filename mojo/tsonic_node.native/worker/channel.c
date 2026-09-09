@@ -48,9 +48,26 @@ static int fail(TsonicWorkerChannel *channel, int status) {
     return status;
 }
 
+static void discard_output(TsonicWorkerChannel *channel) {
+    while (channel->out_first != NULL) {
+        TsonicWorkerFrame *frame = channel->out_first;
+        channel->out_first = frame->next;
+        free(frame);
+    }
+    channel->out_last = NULL;
+    channel->out_bytes = 0;
+}
+
+static int fail_write(TsonicWorkerChannel *channel, int status) {
+    channel->write_failure = status;
+    discard_output(channel);
+    return status;
+}
+
 int tsonic_node_worker_send(TsonicWorkerChannel *channel, uint8_t kind, const uint8_t *bytes, size_t length) {
     if (channel == NULL || channel->descriptor < 0 || channel->eof) return EPIPE;
     if (channel->failure != 0) return channel->failure;
+    if (channel->write_failure != 0) return channel->write_failure;
     if ((length != 0 && bytes == NULL) || length >= TSONIC_WORKER_FRAME_LIMIT) return EMSGSIZE;
     size_t size = length + 5;
     if (size > TSONIC_WORKER_QUEUE_LIMIT - channel->out_bytes) return ENOBUFS;
@@ -67,7 +84,8 @@ int tsonic_node_worker_send(TsonicWorkerChannel *channel, uint8_t kind, const ui
     else channel->out_last->next = frame;
     channel->out_last = frame;
     channel->out_bytes += size;
-    return tsonic_node_worker_progress(channel);
+    int status = tsonic_node_worker_progress(channel);
+    return status != 0 ? status : channel->write_failure;
 }
 
 static int write_pending(TsonicWorkerChannel *channel) {
@@ -80,9 +98,9 @@ static int write_pending(TsonicWorkerChannel *channel) {
         if (written < 0) {
             if (errno == EINTR) continue;
             if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
-            return fail(channel, errno);
+            return fail_write(channel, errno);
         }
-        if (written == 0) return fail(channel, EPIPE);
+        if (written == 0) return fail_write(channel, EPIPE);
         frame->offset += (size_t)written;
         channel->out_bytes -= (size_t)written;
         budget -= (size_t)written;
@@ -143,8 +161,11 @@ static int read_pending(TsonicWorkerChannel *channel) {
 int tsonic_node_worker_progress(TsonicWorkerChannel *channel) {
     if (channel == NULL || channel->descriptor < 0) return EBADF;
     if (channel->failure != 0) return channel->failure;
-    int status = write_pending(channel);
-    return status == 0 ? read_pending(channel) : status;
+    int status = read_pending(channel);
+    if (status != 0) return status;
+    if (channel->eof && channel->out_first != NULL) fail_write(channel, EPIPE);
+    if (!channel->eof && channel->write_failure == 0) write_pending(channel);
+    return 0;
 }
 
 int tsonic_node_worker_message(TsonicWorkerChannel *channel, uint8_t *kind, const uint8_t **bytes, size_t *length) {
@@ -198,11 +219,14 @@ static int64_t milliseconds(void) {
 }
 
 int tsonic_node_worker_flush(TsonicWorkerChannel *channel, int timeout_ms) {
+    if (channel == NULL) return EINVAL;
+    if (channel->write_failure != 0) return channel->write_failure;
     int64_t start = milliseconds();
     if (start < 0 || timeout_ms < 0) return EINVAL;
     while (tsonic_node_worker_pending(channel)) {
         int status = tsonic_node_worker_progress(channel);
         if (status != 0) return status;
+        if (channel->write_failure != 0) return channel->write_failure;
         if (!tsonic_node_worker_pending(channel)) return 0;
         int64_t remaining = timeout_ms - (milliseconds() - start);
         if (remaining <= 0) return ETIMEDOUT;
@@ -232,13 +256,7 @@ void tsonic_node_worker_close(TsonicWorkerChannel *channel) {
     if (channel == NULL) return;
     if (channel->descriptor >= 0) close(channel->descriptor);
     channel->descriptor = -1;
-    while (channel->out_first != NULL) {
-        TsonicWorkerFrame *frame = channel->out_first;
-        channel->out_first = frame->next;
-        free(frame);
-    }
-    channel->out_last = NULL;
-    channel->out_bytes = 0;
+    discard_output(channel);
     tsonic_node_worker_consume(channel);
 }
 
