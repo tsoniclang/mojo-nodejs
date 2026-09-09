@@ -9,6 +9,8 @@ git diff --exit-code -- mojo tests
 
 mkdir -p "${NATIVE_BUILD}"
 native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
+js_native_output="$("${PIXI_BIN}" run bash ../mojo-js/scripts/build-native.sh)"
+mapfile -t js_native_arguments <<<"${js_native_output}"
 for source in crypto_bridge crypto_catalog node_bridge net/endpoint compression/codec compression/constants tls/context tls/handshake tls/connection tls/server tls/io tls/lifecycle tls_bio fs_watch_bridge fs_stream_bridge fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
   object="${source//\//_}"
   "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- -O3 -fPIC -std=c11 \
@@ -61,6 +63,7 @@ link_arguments=(
   -Xlinker -lz
   -Xlinker -luv
   -Xlinker -lcurl
+  "${js_native_arguments[@]}"
 )
 
 failed=0
