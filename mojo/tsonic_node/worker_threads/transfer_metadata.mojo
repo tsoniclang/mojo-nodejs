@@ -27,7 +27,7 @@ def _prune_and_find(value: JsValue) -> Bool:
 
 
 def mark_as_untransferable(value: JsValue) raises:
-    if not value.is_array() and not value.is_object() and not value.is_json_projection():
+    if not value.is_array() and not value.is_object():
         return
     if _prune_and_find(value):
         return
