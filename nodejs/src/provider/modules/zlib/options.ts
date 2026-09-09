@@ -90,7 +90,7 @@ export function compressionOptionOperations(): readonly MojoProviderOperationDef
       return fields(family, mode).flatMap((field) => [
         propertyRead(id, `${id}.${field.source}`, field.optional ? field.target : "info_value", carrier,
           field.optional ? mojoOptionalTargetType(field.targetType) : field.targetType,
-          field.optional ? "field" : "method"),
+          field.optional ? "member" : "method"),
         propertyWrite(id, `${id}.${field.source}`, field.target, carrier, mojoOptionalTargetType(field.targetType)),
       ]);
     })));
