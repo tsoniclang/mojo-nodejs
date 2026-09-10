@@ -336,7 +336,8 @@ def poll_readline() raises -> Bool:
     var snapshot = _interfaces.get()[].copy()
     try:
         for interface in snapshot:
-            worked = interface._poll() or worked
+            var retained_interface = interface
+            worked = retained_interface._poll() or worked
     finally:
         _prune_interfaces()
     return worked
