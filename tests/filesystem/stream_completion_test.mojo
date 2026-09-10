@@ -108,10 +108,30 @@ def failures_do_not_complete(root: String) raises:
     assert_equal(trace.read(), "")
 
 
+def successful_prefix_survives_failure(root: String) raises:
+    var path = root + "/prefix"
+    var trace = Location(String())
+    var output = create_write_stream(path)
+    _ = output.write_string_callback("éABC", notification(trace, path, "completed"))
+    output._state[].descriptor.value().close()
+    var rejected = False
+    try:
+        _ = output.write_string_callback("late", notification(trace, path, "not-completed"))
+    except:
+        rejected = True
+    assert_true(rejected)
+    assert_true(has_pending_streams())
+    assert_equal(trace.read(), "")
+    run_event_loop()
+    assert_equal(trace.read(), "completed")
+    assert_false(has_pending_streams())
+
+
 def main() raises:
     var root = mkdtemp(prefix="tsonic-stream-completion-")
     try:
         encoded_completion(root)
         failures_do_not_complete(root)
+        successful_prefix_survives_failure(root)
     finally:
         remove_path(root, RmOptions(recursive=True))
