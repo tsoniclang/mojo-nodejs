@@ -73,19 +73,19 @@ def drain() raises:
 
 def manual_and_listener_identity() raises:
     var input = Readable()
-    var alias = input
+    var retained_alias = input
     var trace = Location(String())
     var selected = data(trace, "selected:")
     _ = input.on_data("data", selected)
-    _ = alias.on_data("data", selected)
+    _ = retained_alias.on_data("data", selected)
     _ = input.off_data("data", selected)
     _ = input.once_data("data", data(trace, "once:"))
     input.append(Buffer.from_string("a"))
-    assert_equal(require_buffer(alias.read()).to_string(), "a")
+    assert_equal(require_buffer(retained_alias.read()).to_string(), "a")
     input.append(Buffer.from_string("b"))
     assert_equal(require_buffer(input.read()).to_string(), "b")
     assert_equal(trace.read(), "selected:aonce:aselected:b")
-    _ = alias.off_data("data", selected)
+    _ = retained_alias.off_data("data", selected)
     input.append(Buffer.from_string("c"))
     _ = input.read()
     assert_equal(trace.read(), "selected:aonce:aselected:b")

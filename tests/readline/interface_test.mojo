@@ -51,23 +51,23 @@ def retained_input() raises:
     var options = ReadLineOptions()
     var input = options.input
     var interface = create_interface(options)
-    var alias = interface
+    var retained_alias = interface
     var trace = Location(String())
     interface.question("first? ", answer(trace, interface, 3))
     assert_equal(trace.read(), "")
     _ = poll_input_events()
     assert_true(has_pending_readline())
-    _ = alias.pause()
+    _ = retained_alias.pause()
     assert_true(input.is_paused())
     input.append(Buffer.from_string("first\n\nlast\n"))
     assert_false(poll_input_events())
     assert_equal(trace.read(), "")
-    _ = alias.resume()
+    _ = retained_alias.resume()
     assert_false(input.is_paused())
     assert_true(poll_input_events())
     assert_equal(trace.read(), "[first][][last]")
     assert_true(has_pending_readline())
-    alias.close()
+    retained_alias.close()
     assert_false(has_pending_readline())
     assert_true(input.readable())
 

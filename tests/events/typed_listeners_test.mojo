@@ -60,17 +60,17 @@ struct RecursiveOwner(ImplicitlyCopyable):
 
 def recursive_payload() raises:
     var owner = RecursiveOwner()
-    var alias = owner
+    var retained_alias = owner
     var environment = allocate_callable_environment(0, destroy_callable_environment[Int])
     var callback = RaisingCallable[Tuple[TsError, RecursiveOwner], NoneType](environment, RecursiveOwner.receive)
     owner.state[].listeners.add(callback)
     owner.state[].listeners.add(callback, True)
     var error = TsError("SelectedError", "exact-payload", String("exact-stack"))
-    _ = alias.state[].listeners.emit((error.copy(), owner))
+    _ = retained_alias.state[].listeners.emit((error.copy(), owner))
     assert_equal(owner.state[].calls, 2)
-    _ = owner.state[].listeners.emit((error.copy(), alias))
-    assert_equal(alias.state[].calls, 3)
-    alias.state[].listeners.remove(callback)
+    _ = owner.state[].listeners.emit((error.copy(), retained_alias))
+    assert_equal(retained_alias.state[].calls, 3)
+    retained_alias.state[].listeners.remove(callback)
     assert_false(owner.state[].listeners.has_listeners())
 
 

@@ -43,7 +43,7 @@ def enqueue(state: ArcPointer[SocketState], value: Buffer) raises -> Bool:
     if len(value) != 0:
         state[].writes.append(Optional(WriteChunk(value.copy_bytes(), 0)))
         state[].queued_bytes += len(value)
-        state[].bytes_written += len(value)
+        state[].bytes_written += Int64(len(value))
     _ = flush(state)
     var accepted = state[].queued_bytes < 65536 and not state[].destroyed
     if not accepted:

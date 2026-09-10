@@ -11,12 +11,12 @@ def main() raises:
     assert_equal(url.pathname(), "/hello%20world")
     assert_equal(url.origin(), "https://xn--mnich-kva.example")
     var params = url.search_params()
-    var alias = url
+    var retained_alias = url
     assert_equal(params.get("name").value(), "A B")
     assert_equal(len(params.get_all("name")), 2)
     params.append("nul", "a\0b")
-    assert_true(alias.href().find("nul=a%00b") >= 0)
-    alias.set_search("?next=one&next=two")
+    assert_true(retained_alias.href().find("nul=a%00b") >= 0)
+    retained_alias.set_search("?next=one&next=two")
     assert_false(params.has("name"))
     assert_equal(params.get_all("next")[1], "two")
     params.set("next", "three")

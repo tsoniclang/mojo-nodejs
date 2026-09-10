@@ -120,14 +120,19 @@ def retained_connections() raises:
     _ = first.destroy()
     _ = second.destroy()
     for socket in accepted.read():
-        _ = socket.destroy()
+        var retained_socket = socket
+        _ = retained_socket.destroy()
     _ = server.close()
     _ = poll_net()
     assert_false(has_active_net())
 
 
 def invalid_construction() raises:
-    for timeout in List[Float64](-1, Float64(FloatLiteral.nan), Float64(FloatLiteral.inf)):
+    var timeouts = List[Float64](capacity=3)
+    timeouts.append(-1)
+    timeouts.append(Float64(FloatLiteral.nan))
+    timeouts.append(Float64(FloatLiteral.infinity))
+    for timeout in timeouts:
         var rejected = False
         try:
             _ = create_connection_options(ConnectionOptions(80, "localhost", timeout=timeout))

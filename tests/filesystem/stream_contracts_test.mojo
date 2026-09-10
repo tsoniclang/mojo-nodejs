@@ -15,9 +15,9 @@ def queued_reads() raises:
         var buffer = Buffer.allocate(1, UInt8(index % 251))
         retained.append(buffer)
         stream.append(buffer)
-    var alias = stream
+    var retained_alias = stream
     for index in range(4096):
-        var value = alias.read_sized(1.0)
+        var value = retained_alias.read_sized(1.0)
         assert_true(Bool(value))
         var buffer = require_buffer(value)
         assert_equal(buffer.get(0), UInt8(index % 251))
@@ -30,16 +30,16 @@ def nested_corks(root: String) raises:
     var options = WriteStreamOptions()
     options.flush = True
     var output = create_write_stream(path, options)
-    var alias = output
+    var retained_alias = output
     output.cork()
-    alias.cork()
+    retained_alias.cork()
     assert_equal(output.writable_corked(), 2.0)
     _ = output.write_string("first")
     output.uncork()
-    assert_equal(alias.writable_corked(), 1.0)
+    assert_equal(retained_alias.writable_corked(), 1.0)
     assert_equal(read_text_file(path), "")
-    _ = alias.write_string("second")
-    alias.uncork()
+    _ = retained_alias.write_string("second")
+    retained_alias.uncork()
     assert_equal(output.writable_corked(), 0.0)
     assert_equal(read_text_file(path), "firstsecond")
     output.uncork()
@@ -51,9 +51,9 @@ def nested_corks(root: String) raises:
     _ = output.end()
     assert_equal(output.writable_corked(), 0.0)
     assert_equal(read_text_file(path), "firstsecondthird")
-    _ = alias.end()
+    _ = retained_alias.end()
     assert_equal(read_text_file(path), "firstsecondthird")
-    _ = alias.end_string("late")
+    _ = retained_alias.end_string("late")
     require_unhandled_stream_error("Cannot write to an ended")
 
 

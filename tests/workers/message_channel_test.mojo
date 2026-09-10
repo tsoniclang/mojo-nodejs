@@ -44,7 +44,10 @@ def main() raises:
 
     var builder = _JsValueBuilder()
     var root = builder.append_array(List[Int]())
-    builder.set_aggregate_children(root, List[Int](root, root))
+    var children = List[Int](capacity=2)
+    children.append(root)
+    children.append(root)
+    builder.set_aggregate_children(root, children^)
     var source = builder.value(root)
     channel.port1.post_message(source)
     var clone = receive_message_on_port(channel.port2).value().message

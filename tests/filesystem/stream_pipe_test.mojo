@@ -25,11 +25,11 @@ def deferred_and_shared(root: String) raises:
     options.high_water_mark = 1
     options.encoding = "utf8"
     var source = create_read_stream(root + "/input", options)
-    var alias = source
+    var retained_alias = source
     var first = create_write_stream(root + "/first")
     var second = create_write_stream(root + "/second")
     var returned = source.pipe_to(first)
-    _ = alias.pipe_to(second)
+    _ = retained_alias.pipe_to(second)
     assert_equal(source.bytes_read(), 0.0)
     assert_equal(first.bytes_written(), 0.0)
     assert_false(returned.writable_ended())
@@ -38,7 +38,7 @@ def deferred_and_shared(root: String) raises:
     for _ in range(10):
         assert_false(poll_readables())
     assert_equal(source.bytes_read(), 0.0)
-    _ = alias.resume()
+    _ = retained_alias.resume()
     drain_pipes()
     assert_equal(read_text_file(root + "/first"), "a😀b")
     assert_equal(read_text_file(root + "/second"), "a😀b")

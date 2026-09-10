@@ -6,7 +6,9 @@ from tsonic_node.worker_threads import get_environment_data, set_environment_dat
 
 
 def expired_mark() raises -> JsValueWeakIdentity:
-    var value = js_value_from_array_values(List[JsValue](JsValue(1.0)))
+    var entries = List[JsValue](capacity=1)
+    entries.append(JsValue(1.0))
+    var value = js_value_from_array_values(entries^)
     mark_as_untransferable(value)
     assert_true(is_marked_as_untransferable(value))
     return JsValueWeakIdentity(value)
@@ -15,7 +17,9 @@ def expired_mark() raises -> JsValueWeakIdentity:
 def main() raises:
     var key = js_value_from_object_entries(List[JsString](), List[JsValue]())
     var other = js_value_from_object_entries(List[JsString](), List[JsValue]())
-    var value = js_value_from_array_values(List[JsValue](JsValue(42.0)))
+    var entries = List[JsValue](capacity=1)
+    entries.append(JsValue(42.0))
+    var value = js_value_from_array_values(entries^)
     set_environment_data(key, value)
     assert_true(get_environment_data(key).same_identity(value))
     assert_true(get_environment_data(other).is_undefined())

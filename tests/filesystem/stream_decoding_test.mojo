@@ -67,22 +67,22 @@ def invalid_and_eof() raises:
 def retained_units() raises:
     var source = Readable()
     source.append(Buffer.from_string("a😀z"))
-    var alias = source
-    _ = alias.set_encoding("utf8")
+    var retained_alias = source
+    _ = retained_alias.set_encoding("utf8")
     assert_equal(require_text(source.read_sized(1.0)), "a")
     var rejected = False
     try:
-        _ = alias.read_sized(1.0)
+        _ = retained_alias.read_sized(1.0)
     except error:
         rejected = "surrogate pair" in String(error)
     assert_true(rejected)
     assert_equal(require_text(source.read_sized(2.0)), "😀")
-    assert_equal(require_text(alias.read()), "z")
+    assert_equal(require_text(retained_alias.read()), "z")
     assert_false(Bool(source.read()))
     source.append(Buffer.from_string("é"))
     _ = source.set_encoding("hex")
     source.append(Buffer.from_string("A"))
-    assert_equal(require_text(alias.read()), "é41")
+    assert_equal(require_text(retained_alias.read()), "é41")
     var buffer = ReadBuffer()
     buffer.set_encoding("utf8")
     buffer.append(buffer_from_string_encoded("e282", "hex"))
@@ -100,9 +100,9 @@ def file_decoding(root: String) raises:
     options.high_water_mark = 1
     options.encoding = "utf8"
     var source = create_read_stream(path, options)
-    var alias = source
+    var retained_alias = source
     assert_equal(require_text(source.read_sized(2.0)), "😀")
-    assert_equal(require_text(alias.read_sized(1.0)), "é")
+    assert_equal(require_text(retained_alias.read_sized(1.0)), "é")
     assert_equal(require_text(source.read_sized(1.0)), "Z")
     assert_false(Bool(source.read()))
     run_event_loop()

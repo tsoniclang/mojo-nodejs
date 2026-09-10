@@ -64,7 +64,7 @@ def main() raises:
     assert_equal(trace.read(), "ABCD")
 
     var reserved = bounded.reserve()
-    var alias = reserved
+    var retained_alias = reserved
     var environment = allocate_callable_environment(Action(trace, bounded, "unused", False, False), Action.destroy)
     var typed = RaisingCallable[Tuple[String], NoneType](environment, Action.typed)
     rejected = False
@@ -78,7 +78,7 @@ def main() raises:
     assert_equal(trace.read(), "ABCD")
     rejected = False
     try:
-        alias.defer(typed, ("duplicate",))
+        retained_alias.defer(typed, ("duplicate",))
     except:
         rejected = True
     assert_true(rejected)

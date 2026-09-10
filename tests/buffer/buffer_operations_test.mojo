@@ -6,10 +6,10 @@ from tsonic_node.buffer import Buffer, buffer_alloc, buffer_alloc_number, buffer
 
 def main() raises:
     var original = Buffer.from_string("abcdef")
-    var alias = original.subarray(1, 5)
+    var retained_alias = original.subarray(1, 5)
     assert_equal(original.copy(original, 2, 0, 4), 4)
     assert_equal(original.to_string(), "ababcd")
-    assert_equal(alias.to_string(), "babc")
+    assert_equal(retained_alias.to_string(), "babc")
     assert_equal(original.copy(original, 0, 2), 4)
     assert_equal(original.to_string(), "abcdcd")
     var copied = buffer_from_buffer(original)

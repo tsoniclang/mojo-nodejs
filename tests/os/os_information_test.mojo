@@ -25,7 +25,12 @@ def main() raises:
     assert_equal(get_system_error_name(-2), "ENOENT")
     assert_equal(get_system_error_message(-2), "no such file or directory")
     assert_equal(get_system_error_name(-2147483648.0), "Unknown system error -2147483648")
-    for value in List[Float64](0.0, 1.0, -1.5, Float64(FloatLiteral.nan)):
+    var invalid_errors = List[Float64](capacity=4)
+    invalid_errors.append(0.0)
+    invalid_errors.append(1.0)
+    invalid_errors.append(-1.5)
+    invalid_errors.append(Float64(FloatLiteral.nan))
+    for value in invalid_errors:
         var rejected = False
         try:
             _ = get_system_error_name(value)

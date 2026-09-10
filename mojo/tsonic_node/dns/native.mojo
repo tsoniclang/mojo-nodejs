@@ -51,10 +51,15 @@ struct DnsRequest(ImplicitlyCopyable):
         return String(unsafe_from_utf8_ptr=code.value()) if code else String("EINPROGRESS")
 
     def error_value(self) raises -> JsValue:
-        return js_value_from_object_entries(
-            List[JsString](JsString("name"), JsString("message"), JsString("code")),
-            List[JsValue](JsValue(JsString("Error")), JsValue(JsString(self.error_message())), JsValue(JsString(self.error_code()))),
-        )
+        var keys = List[JsString](capacity=3)
+        keys.append(JsString("name"))
+        keys.append(JsString("message"))
+        keys.append(JsString("code"))
+        var values = List[JsValue](capacity=3)
+        values.append(JsValue(JsString("Error")))
+        values.append(JsValue(JsString(self.error_message())))
+        values.append(JsValue(JsString(self.error_code())))
+        return js_value_from_object_entries(keys^, values^)
 
     def values(self) raises -> List[String]:
         self._require_success()

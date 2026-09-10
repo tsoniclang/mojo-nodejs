@@ -182,7 +182,8 @@ def poll_servers() raises -> Bool:
         if server._state[].active:
             var status = server._state[].endpoint.value().progress()
             if status < 0:
-                _ = server.close()
+                var retained_server = server
+                _ = retained_server.close()
                 var error = network_error(status)
                 if not server._state[].errors.has_listeners():
                     raise error^
@@ -199,7 +200,7 @@ def poll_servers() raises -> Bool:
                     var endpoint = server._state[].endpoint.value().accept()
                     if not endpoint:
                         break
-                    var options = server._state[].options
+                    ref options = server._state[].options
                     var socket = Socket(endpoint.value(), True, options.allow_half_open.value() if options.allow_half_open else False)
                     if options.pause_on_connect and options.pause_on_connect.value():
                         _ = socket.pause()

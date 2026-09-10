@@ -18,16 +18,16 @@ def main() raises:
         var options = ReadStreamOptions()
         options.high_water_mark = 2.0
         var input = create_read_stream(source, options)
-        var alias = input
+        var retained_alias = input
         var output = create_write_stream(destination)
         _ = input.pipe_to(output)
         assert_equal(read_text_file(destination), "")
         run_event_loop()
         assert_equal(read_text_file(destination), "a😀b\0tail")
-        assert_equal(alias.bytes_read(), 11.0)
+        assert_equal(retained_alias.bytes_read(), 11.0)
         assert_equal(output.bytes_written(), 11.0)
-        assert_false(Bool(alias.read()))
-        alias.close()
+        assert_false(Bool(retained_alias.read()))
+        retained_alias.close()
         output.close()
         assert_equal(input.path(), source)
         assert_equal(output.path(), destination)

@@ -53,11 +53,11 @@ def create_server_callback(callback: ConnectionCallback) raises -> Server:
 
 
 def create_server_options(options: ServerOptions) -> Server:
-    return Server(options)
+    return Server(options.copy())
 
 
 def create_server_options_callback(options: ServerOptions, callback: ConnectionCallback) raises -> Server:
-    var server = Server(options)
+    var server = Server(options.copy())
     _ = server.on_connection("connection", callback)
     return server
 

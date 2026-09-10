@@ -33,9 +33,9 @@ def main() raises:
         rejected = True
     assert_true(rejected)
     var buffer = Buffer.allocate(32)
-    var alias = buffer
+    var retained_alias = buffer
     _ = random_fill(buffer)
-    assert_true(buffer.equals(alias))
+    assert_true(buffer.equals(retained_alias))
     assert_equal(random_int(7, 8), 7.0)
     assert_equal(random_int(-1, 0), -1.0)
     for _ in range(32):

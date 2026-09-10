@@ -68,7 +68,7 @@ def request_url(options: RequestOptions, scheme: String) raises -> URL:
 def certificate_bytes(value: Optional[Certificate]) -> Buffer:
     if not value:
         return Buffer()
-    var selected = value.value()
+    ref selected = value.value()
     if selected.isa[String]():
         return Buffer.from_string(selected.unsafe_get[String]())
     return selected.unsafe_get[Buffer]()
@@ -77,7 +77,7 @@ def certificate_bytes(value: Optional[Certificate]) -> Buffer:
 def authority_bytes(value: Optional[Authorities]) -> Buffer:
     if not value:
         return Buffer()
-    var selected = value.value()
+    ref selected = value.value()
     if selected.isa[String]():
         return Buffer.from_string(selected.unsafe_get[String]())
     if selected.isa[Buffer]():
