@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -141,8 +142,41 @@ static void retained_budgets(void) {
     close(descriptor);
 }
 
+static void idle_pipes_do_not_starve_files(void) {
+    int descriptors[33][2];
+    TsonicStreamRead *requests[32];
+    for (int index = 0; index < 32; index++) {
+        assert(pipe(descriptors[index]) == 0);
+        requests[index] = start(descriptors[index][0], 1, 0, 0);
+    }
+    assert(pipe(descriptors[32]) == 0);
+    int status = 0;
+    assert(tsonic_node_stream_read_start(descriptors[32][0], 1, 0, 0, &status) == NULL && status == UV_ENOBUFS);
+    FILE *file = tmpfile();
+    assert(file != NULL);
+    assert(write(fileno(file), "x", 1) == 1);
+    TsonicStreamRead *regular = start(fileno(file), 1, 0, 1);
+    wait_ready(regular);
+    assert(tsonic_node_stream_read_result(regular) == 1);
+    char byte = 0;
+    assert(tsonic_node_stream_read_copy(regular, &byte, 1) == 0 && byte == 'x');
+    tsonic_node_stream_read_drop(regular);
+    fclose(file);
+    for (int index = 0; index < 32; index++) {
+        close(descriptors[index][1]);
+        wait_ready(requests[index]);
+        assert(tsonic_node_stream_read_result(requests[index]) == 0);
+        tsonic_node_stream_read_drop(requests[index]);
+        close(descriptors[index][0]);
+    }
+    close(descriptors[32][0]);
+    close(descriptors[32][1]);
+}
+
 int main(void) {
     alarm(30);
+    assert(setenv("UV_THREADPOOL_SIZE", "2", 1) == 0);
+    idle_pipes_do_not_starve_files();
     pending_pipe();
     eof_and_offsets();
     retained_budgets();

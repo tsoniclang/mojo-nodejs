@@ -69,6 +69,7 @@ link_arguments=(
   -Xlinker -lssl
   -Xlinker -lz
   -Xlinker -luv
+  -Xlinker -lpthread
   -Xlinker -lcurl
   -Xlinker -lcares
   "${js_native_arguments[@]}"
@@ -85,7 +86,7 @@ for test_file in tests/native/*.c; do
     "${NATIVE_BUILD}/worker_channel.o" "${NATIVE_BUILD}/worker_spawn.o" \
     "${NATIVE_BUILD}/stream_read.o" \
     "${NATIVE_BUILD}/dns_request.o" "${NATIVE_BUILD}/dns_lookup.o" "${NATIVE_BUILD}/dns_resolver.o" "${NATIVE_BUILD}/dns_records.o" \
-    -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv -lcares \
+    -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv -lcares -lpthread \
     -o "${NATIVE_BUILD}/${test_name}" && "${NATIVE_BUILD}/${test_name}"; then
     printf 'PASS %s\n' "$test_file"
   else

@@ -34,6 +34,11 @@ combined storage to 64 MiB. The parser bounds each line at 16 MiB, retained text
 at 64 MiB and complete lines at 1,048,576. Exceeding a bound raises an error,
 never truncates input. Cancellation releases delivery ownership immediately;
 an OS read already running may retain its bounded storage until completion.
+Regular files use libuv's file workers. Pipes, terminals and other non-regular
+descriptors use a separate pool of at most 32 waiting native threads, each with
+a 256 KiB stack. Idle questions therefore cannot occupy the global libuv file
+workers and starve unrelated file IO. The descriptor's exact native metadata
+chooses this mechanism; no global worker setting or descriptor flag is changed.
 
 History controls retain their independent declared meanings for terminal input.
 This contract does not assert support for undeclared terminal key editing,

@@ -126,6 +126,7 @@
     "brotlienc",
     "crypto",
     "curl",
+    "pthread",
     "ssl",
     "stdc++",
     "uv",

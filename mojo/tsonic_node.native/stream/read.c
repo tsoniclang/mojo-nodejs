@@ -2,15 +2,18 @@
 #include "read.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <uv.h>
 
 #define STREAM_READ_LIMIT 256u
 #define STREAM_READ_BYTES (64u * 1024u * 1024u)
 #define STREAM_READ_CHUNK (1024u * 1024u)
+#define STREAM_WAIT_WORKERS 32u
 
 struct TsonicStreamRead {
     atomic_uint references;
@@ -20,15 +23,19 @@ struct TsonicStreamRead {
     char *bytes;
     size_t capacity;
     int64_t result;
+    int worker_read;
+    int positioned;
+    int64_t offset;
 };
 
 static atomic_uint live_reads;
 static atomic_size_t live_bytes;
+static atomic_uint waiting_workers;
 static uv_once_t stream_once = UV_ONCE_INIT;
 static uv_mutex_t stream_mutex;
 static uv_loop_t stream_loop;
 static int stream_status;
-static size_t completed_reads;
+static atomic_size_t completed_reads;
 
 static void initialize_stream_loop(void) {
     stream_status = uv_mutex_init(&stream_mutex);
@@ -43,15 +50,55 @@ static void release_read(TsonicStreamRead *request) {
     free(request);
 }
 
-static void complete_read(uv_fs_t *operation) {
-    TsonicStreamRead *request = operation->data;
-    request->result = operation->result;
-    uv_fs_req_cleanup(operation);
+static void finish_read(TsonicStreamRead *request, int64_t result) {
+    request->result = result;
     close(request->descriptor);
     request->descriptor = -1;
-    completed_reads++;
+    atomic_fetch_add_explicit(&completed_reads, 1, memory_order_relaxed);
     atomic_store_explicit(&request->ready, 1, memory_order_release);
     release_read(request);
+}
+
+static void complete_read(uv_fs_t *operation) {
+    TsonicStreamRead *request = operation->data;
+    int64_t result = operation->result;
+    uv_fs_req_cleanup(operation);
+    finish_read(request, result);
+}
+
+static void *read_waiting_descriptor(void *context) {
+    TsonicStreamRead *request = context;
+    ssize_t result;
+    do {
+        result = request->positioned
+            ? pread(request->descriptor, request->bytes, request->capacity, request->offset)
+            : read(request->descriptor, request->bytes, request->capacity);
+    } while (result < 0 && errno == EINTR);
+    int64_t selected = result < 0 ? uv_translate_sys_error(errno) : result;
+    atomic_fetch_sub_explicit(&waiting_workers, 1, memory_order_relaxed);
+    finish_read(request, selected);
+    return NULL;
+}
+
+static int start_waiting_read(TsonicStreamRead *request) {
+    unsigned count = atomic_fetch_add_explicit(&waiting_workers, 1, memory_order_relaxed);
+    if (count >= STREAM_WAIT_WORKERS) {
+        atomic_fetch_sub_explicit(&waiting_workers, 1, memory_order_relaxed);
+        return UV_ENOBUFS;
+    }
+    pthread_attr_t attributes;
+    int status = pthread_attr_init(&attributes);
+    if (status == 0) {
+        status = pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);
+        if (status == 0) status = pthread_attr_setstacksize(&attributes, 256u * 1024u);
+        if (status == 0) {
+            pthread_t worker;
+            status = pthread_create(&worker, &attributes, read_waiting_descriptor, request);
+        }
+        pthread_attr_destroy(&attributes);
+    }
+    if (status != 0) atomic_fetch_sub_explicit(&waiting_workers, 1, memory_order_relaxed);
+    return status == 0 ? 0 : uv_translate_sys_error(status);
 }
 
 TsonicStreamRead *tsonic_node_stream_read_start(int descriptor, size_t size, int64_t offset, int positioned, int *error) {
@@ -89,6 +136,8 @@ TsonicStreamRead *tsonic_node_stream_read_start(int descriptor, size_t size, int
     atomic_init(&request->references, 2);
     atomic_init(&request->ready, 0);
     request->capacity = size;
+    request->positioned = positioned;
+    request->offset = offset;
     request->descriptor = fcntl(descriptor, F_DUPFD_CLOEXEC, 0);
     int descriptor_error = request->descriptor < 0 ? uv_translate_sys_error(errno) : 0;
     request->bytes = malloc(size);
@@ -99,15 +148,24 @@ TsonicStreamRead *tsonic_node_stream_read_start(int descriptor, size_t size, int
         release_read(request);
         return NULL;
     }
-    request->operation.data = request;
-    uv_buf_t buffer = uv_buf_init(request->bytes, (unsigned int)size);
-    uv_mutex_lock(&stream_mutex);
-    int status = uv_fs_read(&stream_loop, &request->operation, request->descriptor, &buffer, 1,
+    struct stat metadata;
+    int status = fstat(request->descriptor, &metadata);
+    if (status < 0) {
+        status = uv_translate_sys_error(errno);
+    } else if (S_ISREG(metadata.st_mode)) {
+        request->operation.data = request;
+        uv_buf_t buffer = uv_buf_init(request->bytes, (unsigned int)size);
+        uv_mutex_lock(&stream_mutex);
+        status = uv_fs_read(&stream_loop, &request->operation, request->descriptor, &buffer, 1,
                             positioned ? offset : -1, complete_read);
-    uv_mutex_unlock(&stream_mutex);
+        uv_mutex_unlock(&stream_mutex);
+        if (status < 0) uv_fs_req_cleanup(&request->operation);
+    } else {
+        request->worker_read = 1;
+        status = start_waiting_read(request);
+    }
     if (status < 0) {
         *error = status;
-        uv_fs_req_cleanup(&request->operation);
         close(request->descriptor);
         release_read(request);
         release_read(request);
@@ -120,9 +178,9 @@ int tsonic_node_stream_read_poll(void) {
     uv_once(&stream_once, initialize_stream_loop);
     if (stream_status != 0) return 0;
     uv_mutex_lock(&stream_mutex);
-    size_t previous = completed_reads;
+    size_t previous = atomic_load_explicit(&completed_reads, memory_order_relaxed);
     uv_run(&stream_loop, UV_RUN_NOWAIT);
-    int progressed = previous != completed_reads;
+    int progressed = previous != atomic_load_explicit(&completed_reads, memory_order_relaxed);
     uv_mutex_unlock(&stream_mutex);
     return progressed;
 }
@@ -150,7 +208,7 @@ int tsonic_node_stream_read_copy(TsonicStreamRead *request, void *output, size_t
 void tsonic_node_stream_read_drop(TsonicStreamRead *request) {
     if (request == NULL) return;
     uv_mutex_lock(&stream_mutex);
-    if (!tsonic_node_stream_read_ready(request)) uv_cancel((uv_req_t *)&request->operation);
+    if (!request->worker_read && !tsonic_node_stream_read_ready(request)) uv_cancel((uv_req_t *)&request->operation);
     uv_mutex_unlock(&stream_mutex);
     release_read(request);
 }
