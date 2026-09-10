@@ -28,6 +28,10 @@ struct StreamDecoder(Movable):
     var name: String
     var _pending: List[Byte]
 
+    def __init__(out self):
+        self.name = "utf8"
+        self._pending = List[Byte]()
+
     def __init__(out self, name: String) raises:
         self.name = encoding_name(name)
         self._pending = List[Byte]()

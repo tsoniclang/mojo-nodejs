@@ -2,6 +2,7 @@ from std.collections import List
 from std.ffi import c_int, c_size_t, external_call, get_errno
 from std.memory import ArcPointer
 from ..buffer import Buffer
+from .native_read import NativeRead
 
 
 struct _DescriptorState(Movable):
@@ -30,6 +31,11 @@ struct StreamDescriptor(ImplicitlyCopyable):
 
     def bytes_written(self) -> Int64:
         return self._state[].bytes_written
+
+    def begin_read(self, size: Int, offset: Optional[Int64]) raises -> NativeRead:
+        if not self.is_open():
+            raise Error("Cannot read a closed stream descriptor")
+        return NativeRead(self._state[].descriptor, size, offset)
 
     def close(self) raises:
         if not self.is_open():

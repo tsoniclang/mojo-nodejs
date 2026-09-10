@@ -10,6 +10,7 @@ from .zlib import has_pending_zlib, poll_zlib
 from .worker_threads import has_active_worker_threads, poll_worker_threads
 from .filesystem.watch import has_active_watchers, poll_watchers
 from .stream.completion import has_pending_streams, poll_streams
+from .readline import has_pending_readline, poll_readline
 
 
 def run_event_loop() raises:
@@ -24,6 +25,7 @@ def run_event_loop() raises:
         or has_active_worker_threads()
         or has_active_watchers()
         or has_pending_streams()
+        or has_pending_readline()
     ):
         var timer_work = poll_timers()
         var server_work = poll_servers()
@@ -35,6 +37,7 @@ def run_event_loop() raises:
         var worker_work = poll_worker_threads()
         var watcher_work = poll_watchers()
         var stream_work = poll_streams()
+        var readline_work = poll_readline()
         if (
             timer_work
             or server_work
@@ -46,6 +49,7 @@ def run_event_loop() raises:
             or worker_work
             or watcher_work
             or stream_work
+            or readline_work
         ):
             continue
         var delay = next_timer_delay_ns()

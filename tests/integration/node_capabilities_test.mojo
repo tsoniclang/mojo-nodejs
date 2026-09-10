@@ -8,7 +8,7 @@ from tsonic_runtime import (
     destroy_callable_environment,
 )
 from tsonic_node.events import EventEmitter, listener_count
-from tsonic_node.readline import ReadLineOptions, create_interface
+from tsonic_node.readline import ReadLineOptions, create_interface, poll_readline
 from tsonic_node.stream import Readable, Writable
 from tsonic_node.worker_threads import (
     get_environment_data,
@@ -147,4 +147,7 @@ def main() raises:
     var lines = create_interface(options)
     var answer = Location(String())
     lines.question("name? ", answer_callback(answer))
+    assert_equal(answer.read(), "")
+    assert_true(poll_readline())
     assert_equal(answer.read(), "answer")
+    lines.close()
