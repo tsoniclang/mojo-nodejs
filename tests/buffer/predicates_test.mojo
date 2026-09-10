@@ -6,7 +6,9 @@ from tsonic_node.buffer import Buffer, buffer_is_buffer, buffer_to_js_value
 def main() raises:
     var buffer = Buffer.from_string("bytes")
     assert_true(buffer_is_buffer(buffer_to_js_value(buffer)))
-    assert_true(buffer_is_buffer(buffer_to_js_value(buffer.subarray(1, Float64(3)))))
+    assert_true(
+        buffer_is_buffer(buffer_to_js_value(buffer.subarray(1, Float64(3))))
+    )
     assert_false(buffer_is_buffer(JsValue(JsString("bytes"))))
     assert_false(buffer_is_buffer(JsValue(Float64(0))))
     assert_false(buffer_is_buffer(JsValue(True)))
