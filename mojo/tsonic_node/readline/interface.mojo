@@ -47,16 +47,18 @@ struct Interface(ImplicitlyCopyable):
             raise Error("readline interface is closed")
         if self._state[].callback:
             self._output(self._state[].query)
+            _ = self.resume()
             return
         self._register()
         self._output(query)
         self._state[].query = query
         self._state[].callback = callback
-        self._state[].paused = False
+        _ = self.resume()
 
     def write(mut self, text: String) raises:
         if self._state[].closed:
             raise Error("readline interface is closed")
+        _ = self.resume()
         self._state[].lines.feed(text)
         self._dispatch()
 
@@ -66,10 +68,12 @@ struct Interface(ImplicitlyCopyable):
 
     def pause(mut self) -> Self:
         self._state[].paused = True
+        _ = self._state[].input.pause()
         return self
 
     def resume(mut self) -> Self:
         self._state[].paused = False
+        _ = self._state[].input.resume()
         return self
 
     def is_paused(self) -> Bool:
@@ -90,7 +94,7 @@ struct Interface(ImplicitlyCopyable):
     def prompt(mut self) raises:
         if self._state[].closed:
             raise Error("readline interface is closed")
-        self._state[].paused = False
+        _ = self.resume()
         self._output(self._state[].prompt)
 
     def line(self) -> String:
@@ -144,9 +148,12 @@ struct Interface(ImplicitlyCopyable):
             self._state[].dispatching = False
 
     def _poll(mut self) raises -> Bool:
-        if self._state[].closed or self._state[].paused or not self._state[].callback:
+        if self._state[].closed or self._state[].paused or self._state[].dispatching or not self._state[].callback:
             return False
         self._dispatch()
+        if self._state[].lines.finished():
+            self.close()
+            return True
         if self._state[].closed or self._state[].paused or not self._state[].callback:
             return True
         var result: Tuple[Bool, Bool]

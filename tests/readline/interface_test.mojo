@@ -15,6 +15,7 @@ struct AnswerAction:
     var interface: Optional[Interface]
     var remaining: Int
     var fail: Bool
+    var reenter: Bool
 
     @staticmethod
     def invoke(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
@@ -22,6 +23,8 @@ struct AnswerAction:
         action[].trace.write(action[].trace.read() + "[" + arguments[0] + "]")
         if action[].remaining > 1:
             action[].interface.value().question("next? ", answer(action[].trace, action[].interface, action[].remaining - 1))
+        if action[].reenter:
+            _ = poll_readline()
         if action[].fail:
             raise Error("deliberate answer failure")
 
@@ -30,8 +33,8 @@ struct AnswerAction:
         destroy_callable_environment[Self](context)
 
 
-def answer(trace: Location[String], interface: Optional[Interface] = None, remaining: Int = 1, fail: Bool = False) -> QuestionCallback:
-    var context = allocate_callable_environment(AnswerAction(trace, interface, remaining, fail), AnswerAction.destroy)
+def answer(trace: Location[String], interface: Optional[Interface] = None, remaining: Int = 1, fail: Bool = False, reenter: Bool = False) -> QuestionCallback:
+    var context = allocate_callable_environment(AnswerAction(trace, interface, remaining, fail, reenter), AnswerAction.destroy)
     return QuestionCallback(context, AnswerAction.invoke)
 
 
@@ -53,7 +56,13 @@ def retained_input() raises:
     assert_equal(trace.read(), "")
     assert_false(poll_readline())
     assert_true(has_pending_readline())
+    _ = alias.pause()
+    assert_true(input.is_paused())
     input.append(Buffer.from_string("first\n\nlast\n"))
+    assert_false(poll_readline())
+    assert_equal(trace.read(), "")
+    _ = alias.resume()
+    assert_false(input.is_paused())
     assert_true(poll_readline())
     assert_equal(trace.read(), "[first][][last]")
     assert_false(has_pending_readline())
@@ -83,9 +92,6 @@ def simulated_input(root: String) raises:
     var output = create_write_stream(root + "/prompts")
     var options = ReadLineOptions()
     options.output = output
-    options.terminal = True
-    options.historySize = 2.0
-    options.removeHistoryDuplicates = True
     var interface = create_interface(options)
     var trace = Location(String())
     var ignored = Location(String())
@@ -96,18 +102,12 @@ def simulated_input(root: String) raises:
     assert_equal(interface.line(), "😀")
     assert_equal(interface.cursor(), 2.0)
     _ = interface.pause()
-    interface.write("\n")
-    assert_equal(trace.read(), "")
     assert_true(interface.is_paused())
-    _ = interface.resume()
-    _ = poll_readline()
+    interface.write("\n")
+    assert_false(interface.is_paused())
     assert_equal(trace.read(), "[😀]")
     assert_equal(ignored.read(), "")
     assert_equal(interface.line(), "")
-    interface.write("next\n😀\nthird\n")
-    assert_equal(len(interface._state[].history), 2)
-    assert_equal(interface._state[].history[0], "third")
-    assert_equal(interface._state[].history[1], "😀")
     interface.set_prompt("custom> ")
     assert_equal(interface.get_prompt(), "custom> ")
     interface.prompt()
@@ -124,6 +124,27 @@ def simulated_input(root: String) raises:
         rejected = True
     assert_true(rejected)
     assert_equal(trace.read(), "[😀]")
+
+
+def retained_history() raises:
+    var options = ReadLineOptions()
+    options.terminal = True
+    options.historySize = 2.0
+    options.removeHistoryDuplicates = True
+    var interface = create_interface(options)
+    interface.write("😀\nnext\n😀\nthird\n")
+    assert_equal(len(interface._state[].history), 2)
+    assert_equal(interface._state[].history[0], "third")
+    assert_equal(interface._state[].history[1], "😀")
+    interface.close()
+    for invalid in (-1.0, 1.5, 1048577.0):
+        options.historySize = invalid
+        var rejected = False
+        try:
+            _ = create_interface(options)
+        except:
+            rejected = True
+        assert_true(rejected)
 
 
 def eof_and_ranges(root: String) raises:
@@ -174,10 +195,42 @@ def callback_failure_retains_other_work() raises:
     second.close()
 
 
+def eof_reentry_and_failure() raises:
+    var options = ReadLineOptions()
+    options.input.append(Buffer.from_string("first\nsecond"))
+    options.input._accept_read(None)
+    var interface = create_interface(options)
+    var trace = Location(String())
+    interface.question("", answer(trace, interface, 2, False, True))
+    drain_questions()
+    assert_equal(trace.read(), "[first][second]")
+    assert_true(interface._state[].closed)
+    options.input = Readable()
+    options.input.append(Buffer.from_string("tail"))
+    options.input._accept_read(None)
+    interface = create_interface(options)
+    trace = Location(String())
+    interface.question("", answer(trace, interface, 2, True))
+    var rejected = False
+    var deadline = monotonic() + 10000000000
+    while not rejected:
+        assert_true(monotonic() < deadline)
+        try:
+            _ = poll_readline()
+        except error:
+            rejected = "deliberate answer failure" in String(error)
+    assert_equal(trace.read(), "[tail]")
+    drain_questions()
+    assert_equal(trace.read(), "[tail]")
+    assert_true(interface._state[].closed)
+
+
 def main() raises:
     retained_input()
     chunk_splits()
+    retained_history()
     callback_failure_retains_other_work()
+    eof_reentry_and_failure()
     var root = mkdtemp(prefix="mojo-readline-")
     try:
         simulated_input(root)
