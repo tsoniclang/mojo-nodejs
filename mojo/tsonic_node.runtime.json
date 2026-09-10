@@ -3,11 +3,75 @@
   "dependencies": {
     "brotli": "==1.2.0",
     "c-compiler": "==2.0.0",
+    "c-ares": "==1.34.8",
+    "cxx-compiler": "==2.0.0",
     "openssl": "==3.6.4",
+    "libuv": "==1.51.0",
+    "libcurl": "==8.21.0",
     "sysroot_linux-64": "==2.34",
     "zlib": "==1.3.2"
   },
   "translationUnits": [
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/dns/request.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/dns/lookup.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/dns/resolver.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/dns/records.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/worker/channel.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/worker/spawn.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/net/endpoint.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls_bio.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/compression/constants.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/compression/codec.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/http_parser_bridge.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/socket_io_bridge.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/vendor/llhttp/src/llhttp.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/vendor/llhttp/src/api.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/vendor/llhttp/src/http.c" },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/http_client_bridge.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/fs_bridge.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/crypto_catalog.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/os_bridge.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/fs_stream_bridge.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/stream/read.c"
+    },
+    {
+      "language": "c",
+      "standard": "c11",
+      "path": "tsonic_node.native/fs_watch_bridge.c"
+    },
+    {
+      "language": "c++",
+      "standard": "c++20",
+      "path": "tsonic_node.native/vendor/ada/ada.cpp"
+    },
+    {
+      "language": "c++",
+      "standard": "c++20",
+      "path": "tsonic_node.native/url_bridge.cpp"
+    },
     {
       "language": "c",
       "standard": "c11",
@@ -21,22 +85,51 @@
     {
       "language": "c",
       "standard": "c11",
-      "path": "tsonic_node.native/zlib_bridge.c"
+      "path": "tsonic_node.native/tls/context.c"
     },
-    {
-      "language": "c",
-      "standard": "c11",
-      "path": "tsonic_node.native/tls_bridge.c"
-    }
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/handshake.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/connection.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/server.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/io.c" },
+    { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/lifecycle.c" }
+  ],
+  "assets": [
+    "tsonic_node.native/stream/read.h",
+    "tsonic_node.native/dns/api.h",
+    "tsonic_node.native/dns/model.h",
+    "tsonic_node.native/worker/api.h",
+    "tsonic_node.native/worker/model.h",
+    "tsonic_node.native/tls/model.h",
+    "tsonic_node.native/tls/api.h",
+    "tsonic_node.native/net/endpoint.h",
+    "tsonic_node.native/fs_metadata.h",
+    "tsonic_node.native/compression/output.h",
+    "tsonic_node.native/vendor/ada/ada.h",
+    "tsonic_node.native/vendor/ada/ada_c.h",
+    "tsonic_node.native/vendor/ada/LICENSE-APACHE",
+    "tsonic_node.native/vendor/ada/LICENSE-MIT",
+    "tsonic_node.native/vendor/ada/UPSTREAM.md",
+    "tsonic_node.native/vendor/llhttp/include/llhttp.h",
+    "tsonic_node.native/vendor/llhttp/LICENSE-MIT",
+    "tsonic_node.native/vendor/llhttp/UPSTREAM.md"
   ],
   "includeDirectories": [],
+  "sourceIncludeDirectories": [
+    "tsonic_node.native/vendor/ada",
+    "tsonic_node.native/vendor/llhttp/include"
+  ],
   "staticLibraries": [],
   "dynamicLibraries": [
+    "cares",
     "brotlicommon",
     "brotlidec",
     "brotlienc",
     "crypto",
+    "curl",
+    "pthread",
     "ssl",
+    "stdc++",
+    "uv",
     "z"
   ]
 }

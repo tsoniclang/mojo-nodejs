@@ -178,6 +178,14 @@ def memory_usage() -> MemoryUsage:
     return MemoryUsage(_resident_set_size(), 0.0, 0.0, 0.0, 0.0)
 
 
+def available_memory() -> Float64:
+    return Float64(external_call["uv_get_available_memory", UInt64]())
+
+
+def constrained_memory() -> Float64:
+    return Float64(external_call["uv_get_constrained_memory", UInt64]())
+
+
 def _resident_set_size() -> Float64:
     comptime if CompilationTarget.is_linux():
         try:

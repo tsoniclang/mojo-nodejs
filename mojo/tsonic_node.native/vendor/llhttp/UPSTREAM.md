@@ -1,0 +1,12 @@
+# Pinned llhttp source
+
+llhttp 9.4.3: unmodified generated C distribution bundled by Node.js v26.8.1.
+https://github.com/nodejs/node/tree/v26.8.1/deps/llhttp
+
+The pin includes the empty Transfer-Encoding rejection fix in 9.4.3.
+
+- include/llhttp.h: 31469 bytes; SHA-256 5bc82fa51b19aa8bee7d921038393fbfc74e8cc9bae0844c2d82c102fb8cfd68
+- src/llhttp.c: 321801 bytes; SHA-256 391e7c99912abf3b1c9dd8a9c85fdeaac2663e9fa55b6f3871154d16fef8b892
+- src/api.c: 13384 bytes; SHA-256 0f8590206fe2f264db2825401b5fb856b979ee1363dc88b06f36dc9577afb941
+- src/http.c: 5209 bytes; SHA-256 a1f2b23168f8e9b5bfa464c89027d3ca259fc649ae3d7e72bfff997d1aeb5d72
+- LICENSE-MIT: 1105 bytes; SHA-256 ebca854e0134cd256d673627c20499f42577eb74bacf08b9f25b626a73c91277

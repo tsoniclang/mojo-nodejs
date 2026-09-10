@@ -11,6 +11,7 @@ import {
   functionCall,
   methodMember,
   nativeString,
+  numberType,
   nodeProviderType,
   propertyMember,
   propertyRead,
@@ -56,6 +57,8 @@ export function readlineModule(): MojoProviderModuleDefinition {
           propertyMember(optionsId, "output", providerRef("node:stream", "Writable"), { readonly: false, optional: true }),
           propertyMember(optionsId, "terminal", booleanType, { readonly: false, optional: true }),
           propertyMember(optionsId, "prompt", stringType, { readonly: false, optional: true }),
+          propertyMember(optionsId, "historySize", numberType, { readonly: false, optional: true }),
+          propertyMember(optionsId, "removeHistoryDuplicates", booleanType, { readonly: false, optional: true }),
         ]),
       }),
       Object.freeze({
@@ -115,6 +118,8 @@ export function readlineOperations(): readonly MojoProviderOperationDefinition[]
     ...option("output", optionalWritable),
     ...option("terminal", optionalBool),
     ...option("prompt", optionalString),
+    ...option("historySize", Object.freeze({ kind: "optional", value: float64Carrier })),
+    ...option("removeHistoryDuplicates", optionalBool),
     functionCall(
       `${moduleSpecifier}::createInterface`,
       `${moduleSpecifier}::createInterface(options)`,
@@ -122,6 +127,7 @@ export function readlineOperations(): readonly MojoProviderOperationDefinition[]
       "create_interface",
       [readlineOptionsCarrier],
       readlineInterfaceCarrier,
+      true,
     ),
     call("question", "question", [nativeString, readlineQuestionCallbackCarrier], unitCarrier, true),
     call("write", "write", [nativeString], unitCarrier, true),

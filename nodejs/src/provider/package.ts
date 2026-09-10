@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { createMojoProviderPackage } from "@tsonic/target-mojo/provider";
 import type { MojoProviderPackageImplementation } from "@tsonic/target-mojo/provider";
 import { assertModule, assertOperations } from "./modules/assert.js";
-import { bufferModule, bufferOperations, bufferTypes } from "./modules/buffer.js";
+import { bufferModule, bufferOperations, bufferTypes } from "./modules/buffer/index.js";
 import {
   childProcessModule,
   childProcessOperations,
@@ -24,17 +24,18 @@ import {
 import {
   filesystemModule,
   filesystemOperations,
+  filesystemSurfaceMembers,
   filesystemTypes,
-} from "./modules/filesystem.js";
+} from "./modules/filesystem/index.js";
 import {
   filesystemPromisesModule,
   filesystemPromisesOperations,
-} from "./modules/filesystem-promises.js";
-import { httpModule, httpOperations, httpTypes } from "./modules/http.js";
+} from "./modules/filesystem/promises.js";
+import { httpModule, httpOperations, httpTypes } from "./modules/http/index.js";
 import { httpsModule, httpsOperations, httpsTypes } from "./modules/https.js";
-import { netModule, netOperations, netTypes } from "./modules/net.js";
+import { netModule, netOperations, netTypes } from "./modules/net/index.js";
 import { osModule, osOperations } from "./modules/os.js";
-import { pathModule, pathOperations } from "./modules/path.js";
+import { pathModule, pathOperations, pathTypes } from "./modules/path/index.js";
 import {
   processModule,
   processOperations,
@@ -50,21 +51,22 @@ import {
   streamOperations,
   streamTypes,
 } from "./modules/stream.js";
-import { tlsModule, tlsOperations, tlsTypes } from "./modules/tls.js";
+import { tlsModule, tlsOperations, tlsTypes } from "./modules/tls/index.js";
 import { utilModule, utilOperations, utilTypes } from "./modules/util.js";
-import { urlModule, urlOperations, urlTypes } from "./modules/url.js";
+import { urlModule, urlOperations, urlTypes } from "./modules/url/index.js";
 import { timersModule, timersOperations, timersTypes } from "./modules/timers.js";
 import {
   workerThreadsModule,
   workerThreadsOperations,
   workerThreadsTypes,
 } from "./modules/worker-threads.js";
-import { zlibModule, zlibOperations, zlibTypes } from "./modules/zlib.js";
+import { zlibModule, zlibOperations, zlibTypes } from "./modules/zlib/index.js";
+import { withNodeModuleObjects } from "./module-objects.js";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementation {
-  return createMojoProviderPackage({
+  return createMojoProviderPackage(withNodeModuleObjects({
     id: "@tsonic/mojo-nodejs",
     displayName: "Node.js for Mojo",
     version: "0.0.1",
@@ -127,6 +129,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       ...dnsTypes(),
       ...eventsTypes(),
       ...filesystemTypes(),
+      ...pathTypes(),
       ...httpTypes(),
       ...httpsTypes(),
       ...netTypes(),
@@ -140,6 +143,7 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       ...workerThreadsTypes(),
       ...zlibTypes(),
     ]),
+    surfaceMembers: Object.freeze([filesystemSurfaceMembers()]),
     operations: Object.freeze([
       ...assertOperations(),
       ...bufferOperations(),
@@ -184,5 +188,5 @@ export function createMojoNodejsProviderPackage(): MojoProviderPackageImplementa
       packageName: "tsonic_js",
       packagePath: resolve(packageRoot, "node_modules/@tsonic/mojo-js/mojo"),
     })]),
-  });
+  }));
 }

@@ -2,6 +2,7 @@
 #include <openssl/evp.h>
 #include <openssl/params.h>
 #include <openssl/rand.h>
+#include <openssl/crypto.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -19,6 +20,26 @@ void tsonic_node_digest_free(TsonicDigest *state) {
     EVP_MD_free(state->algorithm);
     EVP_MAC_CTX_free(state->mac);
     free(state);
+}
+
+TsonicDigest *tsonic_node_digest_copy(const TsonicDigest *source) {
+    if (source->finalized || source->mac != NULL) return NULL;
+    TsonicDigest *result = calloc(1, sizeof(*result));
+    if (result == NULL) return NULL;
+    result->size = source->size;
+    if (EVP_MD_up_ref(source->algorithm) != 1) goto failure;
+    result->algorithm = source->algorithm;
+    result->digest = EVP_MD_CTX_new();
+    if (result->digest == NULL || EVP_MD_CTX_copy_ex(result->digest, source->digest) != 1) goto failure;
+    return result;
+failure:
+    tsonic_node_digest_free(result);
+    return NULL;
+}
+
+int tsonic_node_timing_safe_equal(const unsigned char *left,
+                                 const unsigned char *right, size_t length) {
+    return CRYPTO_memcmp(left, right, length) == 0;
 }
 
 TsonicDigest *tsonic_node_digest_create(const char *algorithm,

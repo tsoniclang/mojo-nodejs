@@ -261,12 +261,12 @@ test("new Node families retain exact declarations and target operations", () => 
     ["node:dns/promises", ["lookup", "resolve4", "resolve6", "reverse"]],
     ["node:events", ["EventEmitter", "listenerCount"]],
     ["node:https", ["ServerOptions", "Server", "ClientRequest", "createServer", "request", "get"]],
-    ["node:net", ["Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6"]],
+    ["node:net", ["AddressInfo", "ServerOpts", "NetConnectOpts", "Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6"]],
     ["node:readline", ["ReadLineOptions", "Interface", "createInterface"]],
     ["node:stream", ["Readable", "Writable"]],
     ["node:tls", ["ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer"]],
     ["node:worker_threads", [
-      "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
+      "MessagePortMessage", "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
       "receiveMessageOnPort", "getEnvironmentData", "setEnvironmentData",
       "markAsUntransferable", "isMarkedAsUntransferable", "isMainThread",
       "threadId", "workerData", "parentPort",
@@ -311,10 +311,10 @@ test("new Node families retain exact declarations and target operations", () => 
   assert.equal(workerConstructors.length, 2);
   assert.deepEqual(
     workerConstructors.map((operation) => operation.target.kind),
-    ["unsupported", "unsupported"],
+    ["function-call", "function-call"],
   );
   assert.deepEqual(
-    [...new Set(workerConstructors.map((operation) => operation.target.code))],
-    ["MOJO_NODE_WORKER_SOURCE_MODULE_CONSTRUCTION_UNAVAILABLE"],
+    [...new Set(workerConstructors.map((operation) => operation.target.sourceModule.bootstrap.id))],
+    ["tsonic.mojo.node.worker-threads"],
   );
 });

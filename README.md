@@ -18,8 +18,9 @@ The provider exposes these canonical module families:
 - `node:url`, `node:util`, `node:worker_threads`, and `node:zlib`.
 
 Module presence does not imply the complete Node API. In particular, the
-filesystem watch/stream factory families, modern URL objects, process memory
-queries and additional APIs present in the C# capability are not yet at parity.
+worker executable-dispatch contract, complete stream/event integration and
+additional network/path options are still being completed. The architecture
+parity branch contains unverified implementation work, not a new certification.
 
 Hash and HMAC use the existing pinned OpenSSL dependency, with shared native
 handle ownership, incremental updates and exact finalization behavior. String
@@ -30,3 +31,91 @@ as `node:stream`; `process.version` identifies this runtime as `tsonic-mojo`.
 
 Provider identities and overloads are exact closed data. Missing operations do
 not fall back to runtime name lookup.
+
+Buffer's provider type explicitly supplies its retained closed-value factory.
+Assigning a Buffer to `unknown` preserves live bytes and Buffer identity; no
+conversion to a JSON object occurs at assignment. Its `toJSON` presentation is
+selected only by JSON serialization. Structured clone instead produces the
+standard unsigned-byte view without the Buffer brand, while preserving shared
+backing between related cloned views. This source/runtime slice has authored
+proofs but is not yet certified.
+
+Provider construction is nested under `nodejs/src/provider/model/`: source
+types, native carriers, lifecycle definitions, declarations, and call/property
+relations have separate owners. `model.ts` is the stable explicit export surface.
+Feature records live beneath `provider/modules/`; native implementations live
+in their corresponding `mojo/tsonic_node/` domains. Shared callback scheduling
+belongs to `internal/callback_queue.mojo`, not to a feature's semantic model.
+
+Native headers and vendored licenses are explicit runtime-manifest assets;
+published projects do not require the original package source directory.
+
+## Compression contracts
+
+One native codec lifecycle serves convenience calls and incremental transforms.
+Zlib and Brotli have distinct option records. Brotli uses its native numeric
+`params` keys, exported through `constants`; it has no invented `quality` field.
+
+```typescript
+import { Buffer } from "node:buffer";
+import { gzipSync, gunzipSync, createGzip } from "node:zlib";
+
+const compressed = gzipSync(Buffer.from("payload"), { level: 1 });
+const inspected = gunzipSync(compressed, { info: true });
+const text = inspected.buffer.toString();
+const consumedBytes = inspected.engine.bytesWritten;
+
+const stream = createGzip();
+stream.write("first");
+stream.flush();
+const firstChunk = stream.read();
+stream.end("second");
+const lastChunk = stream.read();
+```
+
+Literal `info: true` selects the engine/result record; `info: false` or an omitted
+flag selects Buffer. An options variable with a runtime boolean returns their
+union rather than pretending its result is always Buffer. `bytesWritten` counts
+input consumed by the codec, including decompression's treatment of unused tails.
+Flush/reset/parameter changes operate on retained native state. Outputs and
+pending data have explicit finite limits; exceeding them raises an error.
+
+## Path patterns
+
+`path.matchesGlob(path, pattern)` and the explicit `posix`/`win32` dialects
+share one lexical matcher. They do not read the filesystem. Input remains
+native `String`; braces, character classes, extended patterns and whole-segment
+`**` have separate grammar handling rather than wildcard text replacement.
+
+```typescript
+import path from "node:path";
+
+path.matchesGlob("posts/2026/entry.md", "posts/**/*.{md,html}");
+path.win32.matchesGlob("C:\\posts\\entry.md", "c:/posts/*.md");
+```
+
+Literal components compare directly. Pattern components use the existing
+ECMAScript regex primitive, while globstars match component positions with
+bounded state storage. A pattern exceeding 65,536 UTF-16 units, 65,536 brace
+alternatives, 128 nesting levels or the 16 MiB generated-source budget rejects
+explicitly. Matching is also capped at 16,777,216 component states across all
+alternatives. These are resource errors, not false match results. The new native,
+source, differential and Pudding proofs are authored but remain unexecuted in
+the coding-only phase.
+
+DNS and compression callbacks receive `null` on success. Failed operations have
+absent results, reflected in their source declarations. For example:
+
+```typescript
+import { gzip } from "node:zlib";
+
+gzip(Buffer.from("payload"), (error, result) => {
+  if (result !== undefined) {
+    const bytes = result.length;
+  }
+});
+```
+
+Callbacks remain queued. If a callback throws, later queued completions are
+retained ahead of callbacks enqueued during that invocation. This does not claim
+that a native synchronous operation executes on a worker thread.

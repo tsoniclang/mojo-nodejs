@@ -1,0 +1,60 @@
+from std.testing import assert_equal, assert_false, assert_true
+from tsonic_node import (
+    basename,
+    dirname,
+    extname,
+    format_path,
+    is_absolute,
+    join,
+    normalize,
+    parse,
+    relative,
+    resolve,
+)
+
+
+@no_inline
+def joined(first: String, second: String) -> String:
+    return join([first, second])
+
+
+def main() raises:
+    assert_equal(normalize("/alpha//beta/../gamma/"), "/alpha/gamma/")
+    assert_equal(normalize("alpha/./beta"), "alpha/beta")
+    assert_equal(normalize(""), ".")
+    assert_equal(normalize("a/../"), "./")
+    assert_true(is_absolute("/alpha"))
+    assert_false(is_absolute("alpha"))
+
+    assert_equal(join(["alpha", "beta", "..", "gamma"]), "alpha/gamma")
+    assert_equal(join([]), ".")
+    assert_equal(joined("alpha", "beta"), "alpha/beta")
+    assert_equal(resolve(["/alpha", "beta"]), "/alpha/beta")
+    assert_equal(resolve(["/alpha/beta/"]), "/alpha/beta")
+
+    assert_equal(dirname("/alpha/beta.txt"), "/alpha")
+    assert_equal(basename("/alpha/beta.txt"), "beta.txt")
+    assert_equal(basename("/alpha/beta.txt", ".txt"), "beta")
+    assert_equal(extname("/alpha/beta.txt"), ".txt")
+    assert_equal(extname("/alpha/.profile"), "")
+    assert_equal(dirname("a/../b"), "a/..")
+    assert_equal(dirname("a//b"), "a/")
+    assert_equal(dirname("//b"), "//")
+    assert_equal(basename("a/../"), "..")
+    assert_equal(basename("file", "file"), "")
+    assert_equal(basename("/file", "file"), "file")
+    assert_equal(basename("/file/", "/file"), "file/")
+    assert_equal(extname(".."), "")
+    assert_equal(extname("..."), ".")
+    assert_equal(parse("./file").directory, ".")
+    assert_equal(parse("a/../file").directory, "a/..")
+
+    var parsed = parse("/alpha/beta.txt")
+    assert_equal(parsed.root, "/")
+    assert_equal(parsed.directory, "/alpha")
+    assert_equal(parsed.base, "beta.txt")
+    assert_equal(parsed.name, "beta")
+    assert_equal(parsed.extension, ".txt")
+    assert_equal(format_path(parsed), "/alpha/beta.txt")
+
+    assert_equal(relative("/alpha/beta", "/alpha/gamma/item"), "../gamma/item")
