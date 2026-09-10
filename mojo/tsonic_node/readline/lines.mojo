@@ -2,6 +2,12 @@ from std.collections import Deque
 from std.time import monotonic
 
 
+@fieldwise_init
+struct InputLine(Copyable):
+    var text: String
+    var terminated: Bool
+
+
 struct LineBuffer(Movable):
     var _complete: Deque[String]
     var current: String
@@ -54,16 +60,19 @@ struct LineBuffer(Movable):
     def finish(mut self) raises:
         if self._finished:
             return
-        if self.current.byte_length() != 0:
-            self._emit()
         self._finished = True
 
-    def take(mut self) raises -> Optional[String]:
-        if len(self._complete) == 0:
-            return None
-        var line = self._complete.popleft()
-        self._bytes -= line.byte_length()
-        return Optional(line^)
+    def take(mut self) raises -> Optional[InputLine]:
+        if len(self._complete) != 0:
+            var line = self._complete.popleft()
+            self._bytes -= line.byte_length()
+            return InputLine(line^, True)
+        if self._finished and self.current.byte_length() != 0:
+            var line = self.current^
+            self.current = ""
+            self._bytes -= line.byte_length()
+            return InputLine(line^, False)
+        return None
 
     def clear(mut self):
         self._complete.clear()
@@ -73,7 +82,7 @@ struct LineBuffer(Movable):
         return self._finished
 
     def has_lines(self) -> Bool:
-        return len(self._complete) != 0
+        return len(self._complete) != 0 or (self._finished and self.current.byte_length() != 0)
 
     def cursor(self) -> Int:
         var result = 0

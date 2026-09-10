@@ -150,11 +150,11 @@ def retained_history() raises:
 
 
 def eof_and_ranges(root: String) raises:
-    write_text_file(root + "/lines", "xxfirst\r\n😀\nlastyy")
+    write_text_file(root + "/lines", "xxfirst\r\n😀\nlast\nyy")
     var read_options = ReadStreamOptions()
     read_options.high_water_mark = 1
     read_options.start = 2
-    read_options.end = 17
+    read_options.end = 18
     var options = ReadLineOptions()
     options.input = create_read_stream(root + "/lines", read_options)
     var interface = create_interface(options)
@@ -163,7 +163,7 @@ def eof_and_ranges(root: String) raises:
     drain_questions()
     assert_equal(trace.read(), "[first][😀][last]")
     assert_true(interface._state[].closed)
-    assert_equal(options.input.bytes_read(), 16.0)
+    assert_equal(options.input.bytes_read(), 17.0)
     write_text_file(root + "/empty", "")
     options.input = create_read_stream(root + "/empty")
     interface = create_interface(options)
@@ -201,7 +201,7 @@ def callback_failure_retains_other_work() raises:
 
 def eof_reentry() raises:
     var options = ReadLineOptions()
-    options.input.append(Buffer.from_string("first\nsecond"))
+    options.input.append(Buffer.from_string("first\nsecond\n"))
     options.input._accept_read(None)
     var interface = create_interface(options)
     var trace = Location(String())
@@ -238,7 +238,7 @@ def eof_callback_failure() raises:
     options.input._accept_read(None)
     var interface = create_interface(options)
     var trace = Location(String())
-    interface.question("", answer(trace, interface, 2, True))
+    _ = interface.once_line("line", answer(trace, interface, 2, True))
     var rejected = False
     var deadline = monotonic() + 10000000000
     while not rejected:
