@@ -9,6 +9,7 @@ export const booleanType = Object.freeze({ kind: "boolean" as const });
 export const voidType = Object.freeze({ kind: "void" as const });
 
 export const undefinedType = Object.freeze({ kind: "undefined" as const });
+export const nullType = Object.freeze({ kind: "literal" as const, value: null });
 
 export const int32Type = Object.freeze({ kind: "source-primitive" as const, name: "int32" as const });
 

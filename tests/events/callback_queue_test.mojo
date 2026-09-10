@@ -21,6 +21,11 @@ struct Action:
             raise Error("deliberate callback failure")
 
     @staticmethod
+    def typed(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
+        var action = context.unsafe_bitcast[Self]()
+        action[].trace.write(action[].trace.read() + arguments[0])
+
+    @staticmethod
     def destroy(context: ErasedCallableContext):
         destroy_callable_environment[Action](context)
 
@@ -57,3 +62,27 @@ def main() raises:
     assert_true(rejected)
     assert_true(bounded.poll())
     assert_equal(trace.read(), "ABCD")
+
+    var reserved = bounded.reserve()
+    var alias = reserved
+    var environment = allocate_callable_environment(Action(trace, bounded, "unused", False, False), Action.destroy)
+    var typed = RaisingCallable[Tuple[String], NoneType](environment, Action.typed)
+    rejected = False
+    try:
+        bounded.defer(typed, ("not-accepted",))
+    except:
+        rejected = True
+    assert_true(rejected)
+    assert_false(bounded.has_pending())
+    reserved.defer(typed, ("E",))
+    assert_equal(trace.read(), "ABCD")
+    rejected = False
+    try:
+        alias.defer(typed, ("duplicate",))
+    except:
+        rejected = True
+    assert_true(rejected)
+    assert_equal(bounded.pending_count(), 1)
+    assert_true(bounded.poll())
+    assert_equal(trace.read(), "ABCDE")
+    assert_false(bounded.has_pending())

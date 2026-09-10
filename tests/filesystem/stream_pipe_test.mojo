@@ -1,17 +1,20 @@
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from std.time import monotonic, sleep
+from support.stream_events import require_unhandled_stream_error
 from tsonic_node.buffer import Buffer
 from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
 from tsonic_node.filesystem.streams import ReadStreamOptions, WriteStreamOptions, create_read_stream, create_write_stream
 from tsonic_node.stream import Readable, stdout, stderr
 from tsonic_node.stream.readable import has_active_pipes, poll_pipes
+from tsonic_node.stream.completion import poll_streams
 
 
 def drain_pipes() raises:
     var deadline = monotonic() + 10000000000
     while has_active_pipes():
         assert_true(monotonic() < deadline)
+        _ = poll_streams()
         _ = poll_pipes()
         sleep(0.001)
 
@@ -104,12 +107,8 @@ def independent_errors(root: String) raises:
     good_source._accept_read(None)
     var output = create_write_stream(root + "/good")
     _ = good_source.pipe_to(output)
-    var rejected = False
-    try:
-        _ = poll_pipes()
-    except:
-        rejected = True
-    assert_true(rejected)
+    _ = poll_pipes()
+    require_unhandled_stream_error("Unable to write stream")
     assert_true(has_active_pipes())
     drain_pipes()
     assert_equal(read_text_file(root + "/good"), "retained")

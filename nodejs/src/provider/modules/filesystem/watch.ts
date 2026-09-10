@@ -3,7 +3,7 @@ import type {
 } from "@tsonic/target-mojo/provider";
 import { mojoCallableTargetType, mojoNamedTargetType, mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
-  booleanType, boolCarrier, fnExport, functionCall, instanceCall, methodMember,
+  booleanType, boolCarrier, functionCall, instanceCall, methodMember,
   nativeString, nodeProviderType, numberType, optionalBoolCarrier, optionalFloat64Carrier,
   optionalStringCarrier, overloadedFunctionExport, propertyMember, propertyRead,
   propertyWrite, providerCallbackType, providerRef, statsCarrier, stringType, unitCarrier, voidType,

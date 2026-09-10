@@ -1,7 +1,7 @@
-import { mojoOptionalTargetType, mojoUnionTargetType } from "@tsonic/target-mojo/provider";
+import { mojoCallableTargetType, mojoOptionalTargetType, mojoSourceErrorType, mojoUnionTargetType } from "@tsonic/target-mojo/provider";
 import type { MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
 import {
-  booleanType, boolCarrier, bufferCarrier, emptyCallbackCarrier, instanceCall,
+  booleanType, boolCarrier, bufferCarrier, instanceCall,
   nativeString, optionalStringCarrier, overloadedMethodMember,
   providerCallbackType, providerRef, stringType, undefinedType, unitCarrier,
 } from "../../model.js";
@@ -23,6 +23,12 @@ interface Row {
 const bufferType = providerRef("node:buffer", "Buffer");
 const chunkType: ProviderTypeExpression = { kind: "union", types: [bufferType, stringType] };
 const chunkCarrier = mojoUnionTargetType([bufferCarrier, nativeString]);
+const completionError: ProviderTypeExpression = {
+  kind: "union", types: [{ kind: "source-global", name: "Error" }, undefinedType],
+};
+const completionCarrier = mojoCallableTargetType([
+  { convention: "imm", passing: "plain", type: mojoOptionalTargetType(mojoSourceErrorType()) },
+], unitCarrier, true);
 const encoding: Argument = {
   name: "encoding", source: { kind: "union", types: [stringType, undefinedType] },
   target: optionalStringCarrier,
@@ -31,8 +37,10 @@ const encoding: Argument = {
 function completion(owner: string, method: string, suffix: string): Argument {
   return {
     name: "callback",
-    source: { kind: "union", types: [providerCallbackType(`${owner}.${method}(${suffix})`, "callback", []), undefinedType] },
-    target: mojoOptionalTargetType(emptyCallbackCarrier),
+    source: { kind: "union", types: [providerCallbackType(`${owner}.${method}(${suffix})`, "callback", [
+      { name: "error", type: completionError },
+    ]), undefinedType] },
+    target: mojoOptionalTargetType(completionCarrier),
   };
 }
 

@@ -19,6 +19,7 @@ import {
   netServerCarrier,
   netSocketCarrier,
   numberType,
+  nullType,
   overloadedFunctionExport,
   overloadedMethodMember,
   propertyMember,
@@ -38,8 +39,8 @@ const moduleSpecifier = "node:net";
 const socketId = `${moduleSpecifier}::Socket`;
 const serverId = `${moduleSpecifier}::Server`;
 const bufferType = providerRef("node:buffer", "Buffer");
-const nullableBufferType = Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]) });
-const nullableAddressType = Object.freeze({ kind: "union" as const, types: Object.freeze([addressType, Object.freeze({ kind: "null" as const })]) });
+const nullableBufferType = Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, nullType]) });
+const nullableAddressType = Object.freeze({ kind: "union" as const, types: Object.freeze([addressType, nullType]) });
 
 export function netModule(): MojoProviderModuleDefinition {
   const emptyCallback = (id: string) => providerCallbackType(id, "callback", []);

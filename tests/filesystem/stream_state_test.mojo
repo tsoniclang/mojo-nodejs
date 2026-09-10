@@ -1,4 +1,5 @@
 from support.stream_values import require_buffer
+from support.stream_events import require_unhandled_stream_error
 from std.collections import List
 from std.math import FloatLiteral
 from std.testing import assert_equal, assert_false, assert_true
@@ -39,12 +40,8 @@ def write_pressure(root: String) raises:
     assert_true(output.writable_ended())
     assert_equal(output.writable_corked(), 0)
     alias.close()
-    var rejected = False
-    try:
-        _ = output.write_string("late")
-    except:
-        rejected = True
-    assert_true(rejected)
+    assert_false(output.write_string("late"))
+    require_unhandled_stream_error("Cannot write to an ended")
     assert_equal(read_text_file(path), "éa12345c")
 
     options.high_water_mark = 0
@@ -100,12 +97,8 @@ def validation_and_failure(root: String) raises:
     options.high_water_mark = 3
     options.flags = String("r")
     var output = create_write_stream(path, options)
-    var rejected = False
-    try:
-        _ = output.write_string("cannot-write")
-    except:
-        rejected = True
-    assert_true(rejected)
+    assert_false(output.write_string("cannot-write"))
+    require_unhandled_stream_error("Unable to write stream")
     assert_false(output.writable())
     assert_false(output.writable_ended())
     assert_equal(output.bytes_written(), 0)

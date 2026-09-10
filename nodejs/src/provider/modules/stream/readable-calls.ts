@@ -2,11 +2,11 @@ import { mojoOptionalTargetType, mojoUnionTargetType } from "@tsonic/target-mojo
 import type { MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
 import {
   bufferCarrier, instanceCall, nativeString, numberType, optionalFloat64Carrier,
-  overloadedMethodMember, providerRef, stringType, undefinedType,
+  overloadedMethodMember, providerRef, stringType, undefinedType, nullType,
 } from "../../model.js";
 
 const result = Object.freeze({ kind: "union" as const,
-  types: Object.freeze([providerRef("node:buffer", "Buffer"), stringType, { kind: "null" as const }]) });
+  types: Object.freeze([providerRef("node:buffer", "Buffer"), stringType, nullType]) });
 const chunk = mojoUnionTargetType([bufferCarrier, nativeString]);
 const size = Object.freeze({ kind: "union" as const, types: Object.freeze([numberType, undefinedType]) });
 

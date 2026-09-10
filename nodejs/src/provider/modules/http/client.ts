@@ -1,7 +1,7 @@
 import { mojoNamedTargetType, mojoOptionalTargetType, mojoUnionTargetType } from "@tsonic/target-mojo/provider";
 import type { MojoProviderModuleDefinition, MojoProviderOperationDefinition, MojoProviderTypeDefinition, MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
 import {
-  booleanType, boolCarrier, bufferCarrier, float64Carrier, functionCall, httpResponseCallbackCarrier,
+  booleanType, boolCarrier, bufferCarrier, functionCall, httpResponseCallbackCarrier,
   instanceCall, methodMember, nativeString, nodeProviderType, numberType, optionalBoolCarrier,
   optionalFloat64Carrier, optionalStringCarrier, overloadedFunctionExport, overloadedMethodMember,
   propertyMember, propertyRead, propertyWrite, providerCallbackType, providerRef,

@@ -16,6 +16,7 @@ import {
   nativeString,
   nodeProviderType,
   numberType,
+  nullType,
   overloadedMethodMember,
   methodMember,
   propertyMember,
@@ -42,7 +43,7 @@ const serverId = `${moduleSpecifier}::Server`;
 const bufferType = providerRef("node:buffer", "Buffer");
 const optionalBufferType = Object.freeze({
   kind: "union" as const,
-  types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]),
+  types: Object.freeze([bufferType, nullType]),
 });
 const optionalStringType = Object.freeze({
   kind: "union" as const,
@@ -107,7 +108,7 @@ export function tlsModule(): MojoProviderModuleDefinition {
           propertyMember(socketId, "authorized", booleanType),
           propertyMember(socketId, "authorizationError", optionalStringType),
           propertyMember(socketId, "encrypted", booleanType),
-          propertyMember(socketId, "servername", { kind: "union", types: [negotiatedStringType, { kind: "null" }] }),
+          propertyMember(socketId, "servername", { kind: "union", types: [negotiatedStringType, nullType] }),
           propertyMember(socketId, "alpnProtocol", negotiatedStringType),
           propertyMember(socketId, "bytesRead", numberType),
           propertyMember(socketId, "bytesWritten", numberType),
@@ -120,7 +121,7 @@ export function tlsModule(): MojoProviderModuleDefinition {
         kind: "class",
         members: Object.freeze([
           ...tlsEventMembers("Server"),
-          methodMember(serverId, "address", [], { kind: "union", types: [addressType, { kind: "null" }] }),
+          methodMember(serverId, "address", [], { kind: "union", types: [addressType, nullType] }),
           overloadedMethodMember(serverId, "listen", [
             { parameters: [{ name: "port", type: numberType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port" },
             { parameters: [{ name: "port", type: numberType }, { name: "host", type: stringType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port,host" },

@@ -3,6 +3,7 @@ import type {
 } from "@tsonic/target-mojo/provider";
 import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "../stream/writable-calls.js";
+import { writableEventMembers, writableEventOperations } from "../stream/writable-events.js";
 import { readableReadMember, readableReadOperations } from "../stream/readable-calls.js";
 import {
   booleanType, boolCarrier, float64Carrier, functionCall,
@@ -59,6 +60,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
     Object.freeze({ id: writeId, name: "WriteStream", kind: "class" as const,
       heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Writable") }]), members: Object.freeze([
       ...writableCallMembers(writeId, writeType),
+      ...writableEventMembers(moduleSpecifier, "WriteStream"),
       methodMember(writeId, "close", [], voidType),
       methodMember(writeId, "cork", [], voidType),
       methodMember(writeId, "uncork", [], voidType),
@@ -122,6 +124,7 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
   for (const name of ["pause", "resume"] as const) operations.push(instanceCall(readId, `${readId}.${name}`, `${readId}.${name}()`, name, readableCarrier, [], readableCarrier, false, "mut"));
   operations.push(instanceCall(readId, `${readId}.isPaused`, `${readId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier));
   operations.push(...writableCallOperations(writeId, writableCarrier));
+  operations.push(...writableEventOperations(moduleSpecifier, "WriteStream", writableCarrier));
   for (const name of ["cork", "uncork"] as const) operations.push(instanceCall(writeId, `${writeId}.${name}`, `${writeId}.${name}()`, name, writableCarrier, [], unitCarrier, name === "uncork", "mut"));
   return Object.freeze(operations);
 }

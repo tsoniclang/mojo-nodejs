@@ -4,6 +4,7 @@ import type {
   MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
+import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
 import { readableReadMember, readableReadOperations } from "./stream/readable-calls.js";
 import {
   booleanType,
@@ -64,6 +65,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         kind: "class",
         members: Object.freeze([
           ...writableCallMembers(writableId, providerRef(moduleSpecifier, "Writable")),
+          ...writableEventMembers(moduleSpecifier, "Writable"),
           methodMember(writableId, "cork", [], Object.freeze({ kind: "void" })),
           methodMember(writableId, "uncork", [], Object.freeze({ kind: "void" })),
           propertyMember(writableId, "writableCorked", numberType),
@@ -92,6 +94,7 @@ export function streamOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(readableId, `${readableId}.resume`, `${readableId}.resume()`, "resume", readableCarrier, [], readableCarrier, false, "mut"),
     instanceCall(readableId, `${readableId}.isPaused`, `${readableId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier),
     ...writableCallOperations(writableId, writableCarrier),
+    ...writableEventOperations(moduleSpecifier, "Writable", writableCarrier),
     instanceCall(writableId, `${writableId}.cork`, `${writableId}.cork()`, "cork", writableCarrier, [], unitCarrier, false, "mut"),
     instanceCall(writableId, `${writableId}.uncork`, `${writableId}.uncork()`, "uncork", writableCarrier, [], unitCarrier, true, "mut"),
     propertyRead(writableId, `${writableId}.writableCorked`, "writable_corked", writableCarrier, float64Carrier, "method"),

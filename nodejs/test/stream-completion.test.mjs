@@ -49,3 +49,45 @@ export function invalid(path: string): void { createWriteStream(path).${call}; }
     }), /TS(?:2345|2769)/, call);
   }
 });
+
+test("stream completion errors and lifecycle listeners retain their selected carriers", () => {
+  const result = compileMojo({
+    capabilities: [capability],
+    files: { "index.ts": `
+import { createWriteStream } from "node:fs";
+import type { Writable } from "node:stream";
+export function observe(path: string): () => string {
+  let trace = "";
+  const output = createWriteStream(path, { flags: "r" });
+  const alias: Writable = output;
+  const failed = (error: Error): void => { trace += error.message; };
+  output.on("error", failed);
+  alias.once("close", (): void => { trace += "closed"; });
+  output.on("finish", (): void => { trace += "finished"; });
+  output.write("text", error => { trace += error === undefined ? "ok" : error.message; });
+  output.end(error => { trace += error === undefined ? "ended" : error.name; });
+  alias.off("error", failed);
+  return (): string => trace;
+}` },
+  });
+  assert.deepEqual(result.diagnostics, []);
+  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  for (const target of ["write_string_callback", "end_callback", "on_error", "once_empty", "off_error", "TsError"]) {
+    assert.ok(emitted.includes(target), target);
+  }
+});
+
+test("stream lifecycle listeners reject wrong selected payloads", () => {
+  for (const call of [
+    `on("error", (error: number): void => {})`,
+    `on("finish", (value: string): void => {})`,
+    `write("text", (error: number): void => {})`,
+    `end((error: string): void => {})`,
+  ]) {
+    assert.throws(() => compileMojo({
+      capabilities: [capability],
+      files: { "index.ts": `import { createWriteStream } from "node:fs";
+export function invalid(path: string): void { createWriteStream(path).${call}; }` },
+    }), /TS(?:2345|2769)/, call);
+  }
+});

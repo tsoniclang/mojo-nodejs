@@ -44,6 +44,14 @@ struct CallbackReservation(ImplicitlyCopyable):
         queue[].committed += 1
         queue[].pending.append(callback)
 
+    def defer[Arguments: Copyable](
+        self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
+    ) raises:
+        var environment = allocate_callable_environment(
+            _Invocation[Arguments](callback, arguments^), _Invocation[Arguments].destroy,
+        )
+        self.commit(Notification(environment, _Invocation[Arguments].invoke))
+
 
 @fieldwise_init
 struct _Invocation[Arguments: Copyable]:
@@ -86,11 +94,7 @@ struct CallbackQueue(ImplicitlyCopyable):
     def defer[Arguments: Copyable](
         self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
     ) raises:
-        self.require_capacity()
-        var environment = allocate_callable_environment(
-            _Invocation[Arguments](callback, arguments^), _Invocation[Arguments].destroy,
-        )
-        self.push(Notification(environment, _Invocation[Arguments].invoke))
+        self.reserve().defer(callback, arguments^)
 
     def poll(self) raises -> Bool:
         if self._state[].polling or not self.has_pending():

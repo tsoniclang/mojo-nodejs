@@ -1,4 +1,5 @@
 from support.stream_values import require_buffer
+from support.stream_events import require_unhandled_stream_error
 from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
@@ -52,12 +53,8 @@ def nested_corks(root: String) raises:
     assert_equal(read_text_file(path), "firstsecondthird")
     _ = alias.end()
     assert_equal(read_text_file(path), "firstsecondthird")
-    var rejected = False
-    try:
-        _ = alias.end_string("late")
-    except:
-        rejected = True
-    assert_true(rejected)
+    _ = alias.end_string("late")
+    require_unhandled_stream_error("Cannot write to an ended")
 
 
 def main() raises:

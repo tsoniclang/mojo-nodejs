@@ -1,4 +1,5 @@
 from support.stream_values import require_buffer
+from support.stream_events import require_unhandled_stream_error
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.event_loop import run_event_loop
@@ -51,15 +52,11 @@ def main() raises:
         _ = output.end()
         assert_equal(read_text_file(destination), "0xy34")
         assert_equal(output.bytes_written(), 2.0)
-        var rejected = False
-        try:
-            _ = output.write_string("late")
-        except:
-            rejected = True
-        assert_true(rejected)
+        assert_false(output.write_string("late"))
+        require_unhandled_stream_error("Cannot write to an ended")
 
         writes.flags = String("wx")
-        rejected = False
+        var rejected = False
         try:
             _ = create_write_stream(destination, writes)
         except:
