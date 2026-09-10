@@ -6,6 +6,7 @@ import type {
 import {
   booleanType,
   boolCarrier,
+  jsValueCarrier,
   nativeString,
   stringType,
   targetTypeParameter,
@@ -30,7 +31,7 @@ export function assertModule(): MojoProviderModuleDefinition {
       booleanAssertion(okId, "ok"),
       equalityAssertion(strictEqualId, "strictEqual"),
       equalityAssertion(notStrictEqualId, "notStrictEqual"),
-      equalityAssertion(deepStrictEqualId, "deepStrictEqual"),
+      deepEqualityAssertion(),
     ]),
   });
 }
@@ -41,8 +42,27 @@ export function assertOperations(): readonly MojoProviderOperationDefinition[] {
     ...booleanAssertionOperations(okId),
     ...equalityAssertionOperations(strictEqualId, "strict_equal", "strict_equal_with_message"),
     ...equalityAssertionOperations(notStrictEqualId, "not_strict_equal", "not_strict_equal_with_message"),
-    ...equalityAssertionOperations(deepStrictEqualId, "strict_equal", "strict_equal_with_message"),
+    callOperation(deepStrictEqualId, `${deepStrictEqualId}(actual,expected)`, "deep_strict_equal", [jsValueCarrier, jsValueCarrier]),
+    callOperation(deepStrictEqualId, `${deepStrictEqualId}(actual,expected,message)`, "deep_strict_equal_with_message", [jsValueCarrier, jsValueCarrier, nativeString]),
   ]);
+}
+
+function deepEqualityAssertion(): MojoProviderModuleDefinition["exports"][number] {
+  const valueType = Object.freeze({ kind: "unknown" as const });
+  const parameters = Object.freeze([
+    Object.freeze({ name: "actual", type: valueType }),
+    Object.freeze({ name: "expected", type: valueType }),
+  ]);
+  return Object.freeze({
+    id: deepStrictEqualId,
+    name: "deepStrictEqual",
+    kind: "function",
+    signatures: Object.freeze([
+      Object.freeze({ id: `${deepStrictEqualId}(actual,expected)`, name: "deepStrictEqual", parameters, returnType: voidType }),
+      Object.freeze({ id: `${deepStrictEqualId}(actual,expected,message)`, name: "deepStrictEqual",
+        parameters: Object.freeze([...parameters, Object.freeze({ name: "message", type: stringType })]), returnType: voidType }),
+    ]),
+  });
 }
 
 function booleanAssertion(
