@@ -7,8 +7,8 @@ def stdin() -> Readable:
 
 
 def stdout() -> Writable:
-    return Writable(1)
+    return Writable(1, False)
 
 
 def stderr() -> Writable:
-    return Writable(2)
+    return Writable(2, False)

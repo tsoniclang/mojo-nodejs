@@ -29,21 +29,23 @@ struct _WritableState:
     var bytes_written: Int64
     var auto_close: Bool
     var flush: Bool
+    var end_on_pipe: Bool
 
 
 struct Writable(ImplicitlyCopyable):
     var _state: ArcPointer[_WritableState]
 
     def __init__(out self):
-        self._state = ArcPointer(_WritableState(None, List[_WriteRequest](), 0, False, False, False, 0, 65536, "", None, 0, False, False))
+        self._state = ArcPointer(_WritableState(None, List[_WriteRequest](), 0, False, False, False, 0, 65536, "", None, 0, False, False, True))
 
-    def __init__(out self, descriptor: Int32):
+    def __init__(out self, descriptor: Int32, end_on_pipe: Bool = True):
         self = Self()
         self._state[].descriptor = StreamDescriptor(descriptor)
+        self._state[].end_on_pipe = end_on_pipe
 
     def __init__(out self, descriptor: StreamDescriptor, path: String, start: Optional[Int64], auto_close: Bool, flush: Bool, high_water_mark: Int64):
         self._state = ArcPointer(_WritableState(Optional(descriptor), List[_WriteRequest](), 0, False,
-                                               False, False, 0, high_water_mark, path, start, 0, auto_close, flush))
+                                               False, False, 0, high_water_mark, path, start, 0, auto_close, flush, True))
 
     def write_buffer(mut self, value: Buffer) raises -> Bool:
         return self._write(value, None)
@@ -202,6 +204,13 @@ struct Writable(ImplicitlyCopyable):
 
     def writable_ended(self) -> Bool:
         return self._state[].ended
+
+    def pipe_needs_drain(self) -> Bool:
+        return self._state[].buffered_bytes != 0
+
+    def end_from_pipe(mut self) raises:
+        if self._state[].end_on_pipe:
+            _ = self.end()
 
     def path(self) -> String:
         return self._state[].path

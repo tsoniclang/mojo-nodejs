@@ -4,6 +4,7 @@ from tsonic_node.buffer import Buffer, buffer_from_string_encoded
 from tsonic_node.filesystem import RmOptions, remove_path, write_text_file, read_text_file
 from tsonic_node.filesystem.streams import ReadStreamOptions, create_read_stream, create_write_stream
 from tsonic_node.stream import Readable
+from tsonic_node.event_loop import run_event_loop
 from tsonic_node.stream.decoder import StreamDecoder
 from tsonic_node.stream.read_buffer import ReadBuffer
 from support.stream_values import require_text, require_buffer
@@ -109,6 +110,7 @@ def file_decoding(root: String) raises:
     source = create_read_stream(path, options)
     var output = create_write_stream(root + "/copy")
     _ = source.pipe_to(output)
+    run_event_loop()
     assert_equal(read_text_file(root + "/copy"), "😀éZ")
     options.encoding = None
     source = create_read_stream(path, options)
