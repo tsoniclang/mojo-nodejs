@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
@@ -59,7 +59,7 @@ export function main(): void {
 ` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const source = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const operation of ["buffer_from_buffer", "fill_number", "find_string", "last_buffer", "includes_number", "buffer_compare", "buffer_transcode"]) {
     assert.ok(source.includes(operation), operation);
   }

@@ -3,7 +3,7 @@ from std.testing import assert_equal, assert_false, assert_true
 from std.utils import Variant
 from tsonic_runtime import Null, Undefined
 from tsonic_js import JsValue
-from tsonic_node.buffer import Buffer, buffer_is_buffer
+from tsonic_node.buffer import Buffer, buffer_is_buffer, buffer_to_js_value
 
 
 @fieldwise_init
@@ -32,6 +32,8 @@ def main() raises:
     assert_false(buffer_is_buffer(BufferShaped(5)))
     assert_false(buffer_is_buffer(JsValue()))
     assert_false(_generic("bytes"))
+    assert_true(_generic(buffer_to_js_value(buffer)))
+    assert_false(_generic(JsValue(Float64(1))))
     var alternatives = Variant[Buffer, String](buffer)
     assert_true(buffer_is_buffer(alternatives))
     alternatives = Variant[Buffer, String](String("bytes"))

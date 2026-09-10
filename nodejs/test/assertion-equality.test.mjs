@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("Node equality assertions retain exact source-number and reference carriers", () => {
@@ -8,7 +8,7 @@ test("Node equality assertions retain exact source-number and reference carriers
 import { strictEqual as same, notStrictEqual as different } from "node:assert";
 import { Buffer } from "node:buffer";
 export function main(): void {
-  same(NaN, NaN);
+  same(Number.NaN, Number.NaN);
   different(-0, 0);
   same(1, 1);
   const bytes = Buffer.from("bytes");
@@ -21,7 +21,7 @@ export function main(): void {
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const output = artifactTexts(result).map(({ text }) => text).join("\n");
+  const output = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(output, /strict_equal(?:\[|\()/u);
   assert.match(output, /not_strict_equal(?:\[|\()/u);
   assert.doesNotMatch(output, /buffer_to_js_value\(/u);

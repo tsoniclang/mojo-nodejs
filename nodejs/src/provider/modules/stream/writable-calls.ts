@@ -22,7 +22,7 @@ interface Row {
 
 const bufferType = providerRef("node:buffer", "Buffer");
 const chunkType: ProviderTypeExpression = { kind: "union", types: [bufferType, stringType] };
-const chunkCarrier = mojoUnionTargetType([bufferCarrier, nativeString]);
+const chunkCarrier = mojoUnionTargetType([nativeString, bufferCarrier]);
 const completionError: ProviderTypeExpression = {
   kind: "union", types: [{ kind: "source-global", name: "Error" }, undefinedType],
 };

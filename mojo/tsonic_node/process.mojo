@@ -78,7 +78,7 @@ def environment_object() -> ProcessEnv:
 def environment(var name: String) -> Optional[String]:
     var value = external_call[
         "getenv", OptionalPointer[UInt8, ImmUntrackedOrigin]
-    ](name.as_c_string_slice())
+    ](name.as_c_string_slice().ptr())
     if not value:
         return None
     return String(unsafe_from_utf8_ptr=value.value())

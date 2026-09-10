@@ -45,7 +45,9 @@ def source_module_entry() raises -> Optional[String]:
     var packet = message.take()
     if packet.kind != INITIALIZE:
         raise Error("Worker channel did not begin with initialization")
-    var initialization = decode_structured_clone(packet.bytes^)
+    var bytes = List[UInt8]()
+    swap(bytes, packet.bytes)
+    var initialization = decode_structured_clone(bytes^)
     if not initialization.is_array() or initialization.array_length() != 4:
         raise Error("Worker initialization inventory is invalid")
     var entry = initialization.array_at(0)

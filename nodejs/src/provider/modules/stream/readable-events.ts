@@ -7,7 +7,7 @@ import type { NodeEventDefinition } from "../../model/events.js";
 const events: readonly NodeEventDefinition[] = [
   { suffix: "data", names: ["data"], parameters: [{ name: "chunk",
     source: { kind: "union", types: [providerRef("node:buffer", "Buffer"), stringType] },
-    target: mojoUnionTargetType([bufferCarrier, nativeString]),
+    target: mojoUnionTargetType([nativeString, bufferCarrier]),
   }] },
   { suffix: "error", names: ["error"], parameters: [{ name: "error",
     source: { kind: "source-global", name: "Error" }, target: mojoSourceErrorType(),

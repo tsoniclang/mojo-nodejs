@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
-const definition = createMojoNodejsCapability().createTargetContributions({})[0].definition;
+const definition = createMojoNodejsCapability().createTargetContributions({ selectedSurfaceIds: ["js"] })[0].definition;
 const sourceModule = (specifier) => definition.modules.find((entry) => entry.moduleSpecifier === specifier);
 const declaration = (specifier, name) => sourceModule(specifier).exports.find((entry) => entry.name === name);
 
@@ -46,7 +46,7 @@ test("filesystem timestamps and retry options have exact read and write projecti
   for (const name of ["maxRetries", "retryDelay"]) {
     const member = options.members.find((entry) => entry.name === name);
     assert.equal(member.optional, true);
-    assert.equal(member.readonly, false);
+    assert.notEqual(member.readonly, true);
     assert.equal(definition.operations.filter((entry) => entry.exportId === options.id && entry.memberId === member.id).length, 2);
   }
 });
@@ -60,12 +60,21 @@ test("default module objects reuse exact named-operation signatures without fall
       const original = module.exports.find((entry) => entry.name === member.name);
       assert.ok(original, member.id);
       assert.notEqual(member.id, original.id);
-      assert.deepEqual(member.signatures, original.signatures);
+      const signatures = member.signatures ?? [];
+      const sourceSignatures = original.signatures ?? [];
+      assert.equal(signatures.length, sourceSignatures.length);
+      for (const [index, signature] of signatures.entries()) {
+        const source = sourceSignatures[index];
+        assert.notEqual(signature.id, source.id);
+        assert.deepEqual({ ...signature, id: source.id }, source);
+      }
       const sourceRows = definition.operations.filter((entry) => entry.exportId === original.id && entry.memberId === undefined);
       const memberRows = definition.operations.filter((entry) => entry.exportId === selected.id && entry.memberId === member.id);
       assert.equal(memberRows.length, sourceRows.length);
       for (const row of memberRows) {
-        const source = sourceRows.find((entry) => entry.signatureId === row.signatureId);
+        const position = signatures.findIndex((signature) => signature.id === row.signatureId);
+        const sourceId = row.signatureId === undefined ? undefined : sourceSignatures[position].id;
+        const source = sourceRows.find((entry) => entry.signatureId === sourceId);
         assert.deepEqual(row.target, source.target);
         assert.deepEqual(row.parameterTypes, source.parameterTypes);
         assert.deepEqual(row.resultType, source.resultType);

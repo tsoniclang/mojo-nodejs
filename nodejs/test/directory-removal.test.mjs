@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
@@ -22,7 +22,7 @@ export async function deferred(path: string): Promise<void> {
 export function main(): void {}
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const output = artifactTexts(result).map(({ text }) => text).join("\n");
+  const output = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(output, /remove_directory\(/u);
   assert.doesNotMatch(output, /remove_path(?:_default)?\(/u);
 });

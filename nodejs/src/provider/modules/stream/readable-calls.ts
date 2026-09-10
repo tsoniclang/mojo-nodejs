@@ -7,7 +7,7 @@ import {
 
 const result = Object.freeze({ kind: "union" as const,
   types: Object.freeze([providerRef("node:buffer", "Buffer"), stringType, nullType]) });
-const chunk = mojoUnionTargetType([bufferCarrier, nativeString]);
+const chunk = mojoUnionTargetType([nativeString, bufferCarrier]);
 const size = Object.freeze({ kind: "union" as const, types: Object.freeze([numberType, undefinedType]) });
 
 export function readableReadMember(owner: string) {

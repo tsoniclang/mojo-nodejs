@@ -47,6 +47,7 @@ import zlib from "node:zlib";
 import net from "node:net";
 import workers from "node:worker_threads";
 import { Buffer } from "node:buffer";
+import path, { sep } from "node:path";
 export function main(): void {
   dns.lookup("127.0.0.1", (error, address, family) => {
     if (address !== undefined) { address.length; }
@@ -54,6 +55,7 @@ export function main(): void {
   zlib.gunzipSync(zlib.gzipSync(Buffer.from("module"))).toString();
   net.isIPv4("127.0.0.1");
   const mainThread = workers.isMainThread;
+  const sameSeparator = path.sep === sep;
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);

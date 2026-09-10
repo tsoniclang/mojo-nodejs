@@ -49,7 +49,7 @@ struct _Digest(ImplicitlyCopyable):
             "tsonic_node_digest_create",
             OptionalPointer[NoneType, MutUntrackedOrigin],
         ](
-            algorithm.as_c_string_slice(),
+            algorithm.as_c_string_slice().ptr(),
             bytes.unsafe_ptr(),
             c_size_t(len(bytes)),
             c_int(keyed),

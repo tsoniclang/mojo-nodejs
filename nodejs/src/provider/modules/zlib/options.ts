@@ -17,7 +17,7 @@ export type ResultMode = "buffer" | "info" | "result";
 const brotliCarrier = mojoNamedTargetType("tsonic.mojo.node.BrotliOptions", ["tsonic_node", "zlib"], "BrotliOptions");
 const brotliValue = Object.freeze({ kind: "union" as const, types: Object.freeze([booleanType, numberType]) });
 const parametersType = Object.freeze({ kind: "source-global" as const, name: "Record", typeArguments: Object.freeze([numberType, brotliValue]) });
-const parametersCarrier = mojoDictionaryTargetType(float64Carrier, mojoUnionTargetType([boolCarrier, float64Carrier]));
+const parametersCarrier = mojoDictionaryTargetType(float64Carrier, mojoUnionTargetType([float64Carrier, boolCarrier]));
 
 const commonFields = [
   ["flush", "flush"], ["finishFlush", "finish_flush"], ["chunkSize", "chunk_size"],

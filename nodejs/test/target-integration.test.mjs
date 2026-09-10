@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 function compileNode(source) {
@@ -80,7 +80,7 @@ export function main(): void {}
     },
   });
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(source, /from tsonic_node\.http import ServerResponse/u);
   assert.match(source, /response\.set_status_code\(status_code\)/u);
   assert.match(source, /from tsonic_node\.process import arguments/u);
@@ -108,7 +108,7 @@ import { basename } from "path";
 export function main(): void { basename("/one/two.txt"); }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(source, /from tsonic_node\.path import basename/u);
   assert.match(source, /\bbasename\("\/one\/two\.txt"\)/u);
 });
@@ -133,7 +133,7 @@ export async function main(): Promise<void> {
 }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   for (const operation of [
     "make_directory",
     "write_file",
@@ -163,7 +163,7 @@ export function main(): void {
 }
 `);
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map(({ text }) => text).join("\n");
+  const source = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(source, /from tsonic_runtime import \([\s\S]*erase_callable_error/u);
   assert.match(source, /RaisingCallable/u);
   assert.match(source, /from tsonic_node\.timers import set_interval/u);
@@ -265,7 +265,7 @@ export function main(): void {
   const input = Buffer.from("payload");
   const compressed = gzipSync(input, { level: 1, maxOutputLength: 4096 });
   gunzipSync(compressed);
-  gzip(input, (error, output) => { error; output.toString(); });
+  gzip(input, (error, output) => { error; if (output !== undefined) output.toString(); });
   const stream = createGzip();
   stream.write(input);
   stream.end();
@@ -291,7 +291,7 @@ export function main(): void {
 });
 
 function generatedProgram(result) {
-  const source = artifactTexts(result).find(({ text }) => text.includes("def tsonic_main"));
+  const source = projectArtifactTexts(result).find(({ text }) => text.includes("def tsonic_main"));
   assert.ok(source);
   return source.text;
 }
@@ -307,19 +307,17 @@ export function main(): void { new Worker("./worker.js"); }
   ]);
 });
 
-test("filesystem watchers cross the target boundary while unclosed dynamic utilities remain rejected", () => {
+test("filesystem watchers and closed inspection cross the target boundary", () => {
   const watcher = compileNode(`import { watch } from "node:fs"; export function main(): void { const handle = watch("."); handle.close(); }`);
   assert.deepEqual(watcher.diagnostics, []);
   assert.ok(watcher.artifacts.some(({ path }) => path.endsWith(".mojo")));
   const input = compileNode(`import process from "node:process"; export function main(): void { process.stdin; }`);
   assert.deepEqual(input.diagnostics, []);
   assert.ok(input.artifacts.some(({ path }) => path.endsWith(".mojo")));
-  const dynamic = compileNode(`
+  const inspection = compileNode(`
 import { inspect } from "node:util";
 export function main(): void { inspect({ value: 1 }); }
 `);
-  assert.deepEqual(dynamic.artifacts, []);
-  assert.deepEqual(dynamic.diagnostics.map(({ code }) => code), [
-    "MOJO_CALL_TARGET_UNSUPPORTED",
-  ]);
+  assert.deepEqual(inspection.diagnostics, []);
+  assert.match(generatedProgram(inspection), /inspect\(/u);
 });

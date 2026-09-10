@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("Buffer erasure uses the selected provider factory through assignments and closed containers", () => {
@@ -25,7 +25,7 @@ export function main(): void {
   try { (clone as Buffer).toString(); } catch { console.log("not a Buffer"); }
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.match(emitted, /buffer_to_js_value\(/u);
   assert.match(emitted, /buffer_is_buffer\(/u);
   assert.match(emitted, /buffer_from_js_value\(/u);
@@ -45,7 +45,7 @@ export function main(): void {
   recover({ type: "Buffer", data: [1] }, false);
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.match(emitted, /buffer_from_js_value\(/u);
   assert.doesNotMatch(emitted, /unsafe_bitcast\[.*Buffer/u);
 });
@@ -56,7 +56,7 @@ class Buffer { value = 3; }
 export function main(): void { const value: unknown = new Buffer(); console.log(value); }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.doesNotMatch(emitted, /buffer_to_js_value\(/u);
   assert.match(emitted, /js_value_from_source_object\(/u);
 });

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
 
 test("readable event evidence retains typed chunks and inherited stream identity", () => {
-  const result = compileMojo({ capabilities: [capability], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [capability], files: { "index.ts": `
 import { Buffer } from "node:buffer";
 import { createReadStream, createWriteStream } from "node:fs";
 import type { Readable } from "node:stream";
@@ -27,14 +27,14 @@ export function observe(path: string): () => string {
   return (): string => trace;
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const operation of ["on_data", "once_data", "off_data", "on_error", "on_empty", "once_empty", "pipe_to"]) {
     assert.ok(emitted.includes(operation), operation);
   }
 });
 
 test("readable notifications are independent of data consumption", () => {
-  const result = compileMojo({ capabilities: [capability], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [capability], files: { "index.ts": `
 import { createReadStream } from "node:fs";
 export function notifications(path: string): void {
   const input = createReadStream(path);

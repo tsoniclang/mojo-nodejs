@@ -73,8 +73,8 @@ def main() raises:
     assert_true(unzip.read().value().equals(input))
 
     var parameters = BrotliParameters()
-    parameters[brotli_param_quality()] = Variant[Bool, Float64](4.0)
-    parameters[brotli_param_lgwin()] = Variant[Bool, Float64](18.0)
+    parameters[brotli_param_quality()] = Variant[Float64, Bool](4.0)
+    parameters[brotli_param_lgwin()] = Variant[Float64, Bool](18.0)
     var brotli_options = BrotliOptions()
     brotli_options.params = parameters^
     brotli_options.max_output_length = 128.0

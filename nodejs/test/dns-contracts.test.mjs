@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("OS lookup and DNS record operations retain independent callback and promise entrypoints", () => {
@@ -20,7 +20,7 @@ export async function main(): Promise<void> {
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const text = artifactTexts(result).map(({ text }) => text).join("\n");
+  const text = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   for (const operation of ["lookup_callback", "resolve4_callback", "resolve6_callback", "reverse_callback", "lookup_async", "resolve4_async", "resolve6_async", "reverse_async"])
     assert.ok(text.includes(operation), operation);
 });

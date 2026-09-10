@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
@@ -35,7 +35,7 @@ test("path extraction and formatting retain distinct optional-input and parsed-r
     const declaration = module.exports.find((entry) => entry.name === name);
     for (const member of declaration.members) {
       assert.equal(member.optional === true, name === "FormatInputPathObject");
-      assert.equal(member.readonly, false);
+      assert.notEqual(member.readonly, true);
       const rows = definition.operations.filter((row) => row.exportId === declaration.id && row.memberId === member.id);
       assert.equal(rows.length, 2);
     }
@@ -66,7 +66,7 @@ export function main(): void {
 ` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const source = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.match(source, /format_path/u);
   assert.match(source, /set_header/u);
   assert.match(source, /write_buffer/u);

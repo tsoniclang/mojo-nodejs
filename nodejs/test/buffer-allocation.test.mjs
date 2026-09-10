@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
@@ -11,7 +11,7 @@ test("Buffer allocation controls have exact distinct static relations and effect
   const buffer = module.exports.find((entry) => entry.name === "Buffer");
   const poolSize = buffer.members.find((entry) => entry.name === "poolSize");
   assert.equal(poolSize.static, true);
-  assert.equal(poolSize.readonly, false);
+  assert.notEqual(poolSize.readonly, true);
   const relations = definition.operations.filter((entry) => entry.memberId === poolSize.id);
   assert.deepEqual(relations.map((entry) => [entry.operationKind, entry.target.kind, entry.target.name]), [
     ["property", "function-read", "buffer_pool_size"],
@@ -52,10 +52,11 @@ export function allocate(size: number): boolean {
   } finally {
     Bytes.poolSize = original;
   }
-}` },
+}
+export function main(): void { allocate(16); }` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const source = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const name of ["buffer_pool_size", "set_buffer_pool_size", "buffer_alloc_unsafe", "buffer_alloc_unsafe_slow", "buffer_from_buffer"]) {
     assert.ok(source.includes(name), name);
   }

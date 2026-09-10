@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
@@ -20,7 +20,7 @@ export function main(): void {
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const output = artifactTexts(result).map(({ text }) => text).join("\n");
+  const output = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(output, /inspect\(/u);
   assert.match(output, /js_value_from_source_object\(/u);
   assert.match(output, /buffer_to_js_value\(/u);
@@ -34,7 +34,7 @@ function inspect(value: number): number { return value + 1; }
 export function main(): void { console.log(nativeInspect(inspect(2))); }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const output = artifactTexts(result).map(({ text }) => text).join("\n");
+  const output = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(output, /def inspect\(/u);
   assert.match(output, /tsonic_node.*util/u);
 });

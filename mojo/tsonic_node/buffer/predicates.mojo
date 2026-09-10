@@ -5,11 +5,10 @@ from .projection import buffer_brand
 
 
 def _is_buffer[T: Movable](value: T) -> Bool:
-    return T == Buffer
-
-
-def _is_buffer(value: JsValue) -> Bool:
-    return value.has_native_brand(buffer_brand)
+    comptime if T == JsValue:
+        return rebind[JsValue](value).has_native_brand(buffer_brand)
+    else:
+        return T == Buffer
 
 
 def _is_buffer[*Members: Movable](value: Variant[*Members]) -> Bool:

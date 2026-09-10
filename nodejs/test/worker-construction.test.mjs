@@ -20,7 +20,7 @@ if (parentPort !== undefined) parentPort.postMessage(workerData);`,
   assert.ok(entry);
   assert.match(entry.text, /source_module_entry\(/u);
   assert.match(entry.text, /source_module_complete\(True/u);
-  assert.match(entry.text, /source_module_complete\(False/u);
+  assert.match(entry.text, /source_module_complete\(\s*False/u);
   assert.ok(entry.text.indexOf("source_module_entry(") < entry.text.indexOf("_entry()"));
   const call = files.find(({ text }) => text.includes("worker_new("));
   assert.ok(call);
@@ -57,7 +57,7 @@ test("a worker in a transitive source package becomes a direct binary artifact d
   });
   assert.deepEqual(result.diagnostics, []);
   const artifacts = artifactTexts(result);
-  const task = artifacts.find(({ path }) => path === "pixi.toml");
+  const task = result.artifacts.find(({ path }) => path === "pixi.toml");
   assert.ok(task);
   const build = task.text.match(/^build = .*depends-on = \[([^\]]+)\]/mu);
   assert.ok(build);

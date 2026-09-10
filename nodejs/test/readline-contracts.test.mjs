@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("readline retains exact selected input, options and nested callbacks", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { createReadStream, createWriteStream } from "node:fs";
 import { createInterface as linesFrom } from "node:readline";
 export function begin(path: string): () => string {
@@ -25,7 +25,7 @@ export function begin(path: string): () => string {
   return (): string => trace;
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const member of ["create_interface", "question", "historySize", "removeHistoryDuplicates"]) {
     assert.ok(emitted.includes(member), member);
   }
@@ -57,7 +57,7 @@ export function main(): void {
 });
 
 test("readline event relations retain exact payloads and alias identity", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { createReadStream } from "node:fs";
 import { createInterface as fromInput } from "node:readline";
 export function begin(path: string): () => string {
@@ -75,7 +75,7 @@ export function begin(path: string): () => string {
   return (): string => trace;
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const operation of ["on_line", "once_line", "off_line", "on_error", "once_empty", "on_empty"]) {
     assert.ok(emitted.includes(operation), operation);
   }

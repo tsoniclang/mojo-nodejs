@@ -78,7 +78,7 @@ def _stat(path: String, follow: Bool) raises -> Stats:
     var value = external_call[
         "tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]
     ](
-        native_path.as_c_string_slice(),
+        native_path.as_c_string_slice().ptr(),
         c_int(-1),
         c_int(follow),
         Pointer(to=status),

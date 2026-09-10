@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
 
 test("file and base streams select the same encoded completion contracts", () => {
   const result = compileMojo({
+    target: { id: "mojo", options: { outputType: "lib" } },
     capabilities: [capability],
     files: { "index.ts": `
 import { Buffer } from "node:buffer";
@@ -32,7 +33,7 @@ export function base(output: Writable, selected: string | Buffer | undefined, ca
 }` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const target of ["write_string_encoded", "write_buffer_encoded", "write_value_encoded",
     "write_string_callback", "write_buffer_callback", "end_empty_encoded", "end_value_encoded"]) {
     assert.ok(emitted.includes(target), target);
@@ -52,6 +53,7 @@ export function invalid(path: string): void { createWriteStream(path).${call}; }
 
 test("stream completion errors and lifecycle listeners retain their selected carriers", () => {
   const result = compileMojo({
+    target: { id: "mojo", options: { outputType: "lib" } },
     capabilities: [capability],
     files: { "index.ts": `
 import { createWriteStream } from "node:fs";
@@ -71,7 +73,7 @@ export function observe(path: string): () => string {
 }` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const target of ["write_string_callback", "end_callback", "on_error", "once_empty", "off_error", "TsError"]) {
     assert.ok(emitted.includes(target), target);
   }

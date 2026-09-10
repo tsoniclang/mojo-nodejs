@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
 
 test("file streams inherit exact independently observable stream state", () => {
   const result = compileMojo({
+    target: { id: "mojo", options: { outputType: "lib" } },
     capabilities: [capability],
     files: { "index.ts": `
 import { createReadStream, createWriteStream } from "node:fs";
@@ -25,7 +26,7 @@ export function state(path: string): boolean {
 }` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const name of ["high_water_mark", "readable_ended", "writable_ended"]) {
     assert.ok(emitted.includes(name), name);
   }

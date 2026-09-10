@@ -4,7 +4,7 @@ from ..buffer import Buffer
 from ..validation import checked_integer
 
 
-comptime BrotliParameters = Dict[Float64, Variant[Bool, Float64]]
+comptime BrotliParameters = Dict[Float64, Variant[Float64, Bool]]
 comptime MAX_OUTPUT = 268_435_456
 comptime UNSET = Int32(-2147483648)
 
