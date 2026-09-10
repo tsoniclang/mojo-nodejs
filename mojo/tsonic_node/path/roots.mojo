@@ -31,6 +31,17 @@ def reserved_device(name: String) -> Bool:
     return False
 
 
+def windows_resolve_root(path: String) -> WindowsRoot:
+    var result = windows_root(path)
+    if result.device.startswith("\\\\?\\") or result.device.startswith(
+        "\\\\.\\"
+    ):
+        var device = String(result.device[byte=:3])
+        result.device = device^
+        result.tail_start = 4
+    return result^
+
+
 def windows_root(path: String, normalization: Bool = False) -> WindowsRoot:
     var result = WindowsRoot("", 0, 0, False, False)
     var length = path.byte_length()

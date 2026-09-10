@@ -2,7 +2,7 @@ from std.collections import List
 from std.pathlib import cwd
 from ..process import environment
 from .model import PathParts, PathInput
-from .roots import windows_root, is_drive, is_separator
+from .roots import windows_root, windows_resolve_root, is_drive, is_separator
 from . import posix
 
 comptime separator = "\\"
@@ -127,7 +127,7 @@ def _resolve(
         index -= 1
         if not part:
             continue
-        var root = windows_root(part, True)
+        var root = windows_resolve_root(part)
         if root.device:
             if device and device.lower() != root.device.lower():
                 continue
@@ -261,6 +261,8 @@ def relative(from_path: String, to_path: String) raises -> String:
         and source_tail[shared].lower() == target_tail[shared].lower()
     ):
         shared += 1
+    if shared == 0 and not source_root.device and source_tail and target_tail:
+        return target^
     var result = List[String]()
     for _ in range(shared, len(source_tail)):
         result.append("..")
