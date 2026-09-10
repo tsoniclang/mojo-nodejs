@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <poll.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,7 @@
 struct TsonicStreamRead {
     atomic_uint references;
     atomic_int ready;
+    atomic_int cancelled;
     uv_fs_t operation;
     int descriptor;
     char *bytes;
@@ -68,13 +70,45 @@ static void complete_read(uv_fs_t *operation) {
 
 static void *read_waiting_descriptor(void *context) {
     TsonicStreamRead *request = context;
-    ssize_t result;
-    do {
-        result = request->positioned
+    int64_t selected;
+    int flags = fcntl(request->descriptor, F_GETFL);
+    if (flags < 0 || (flags & O_ACCMODE) == O_WRONLY) {
+        selected = flags < 0 ? uv_translate_sys_error(errno) : UV_EBADF;
+        atomic_fetch_sub_explicit(&waiting_workers, 1, memory_order_relaxed);
+        finish_read(request, selected);
+        return NULL;
+    }
+    int wait_first = !request->positioned;
+    while (1) {
+        if (atomic_load_explicit(&request->cancelled, memory_order_acquire)) {
+            selected = UV_ECANCELED;
+            break;
+        }
+        if (wait_first) {
+            struct pollfd descriptor = { request->descriptor, POLLIN, 0 };
+            int status = poll(&descriptor, 1, 50);
+            if (status == 0 || (status < 0 && errno == EINTR)) continue;
+            if (status < 0) {
+                selected = uv_translate_sys_error(errno);
+                break;
+            }
+            if (descriptor.revents & POLLNVAL) {
+                selected = UV_EBADF;
+                break;
+            }
+        }
+        if (atomic_load_explicit(&request->cancelled, memory_order_acquire)) continue;
+        ssize_t result = request->positioned
             ? pread(request->descriptor, request->bytes, request->capacity, request->offset)
             : read(request->descriptor, request->bytes, request->capacity);
-    } while (result < 0 && errno == EINTR);
-    int64_t selected = result < 0 ? uv_translate_sys_error(errno) : result;
+        if (result < 0 && errno == EINTR) continue;
+        if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            wait_first = 1;
+            continue;
+        }
+        selected = result < 0 ? uv_translate_sys_error(errno) : result;
+        break;
+    }
     atomic_fetch_sub_explicit(&waiting_workers, 1, memory_order_relaxed);
     finish_read(request, selected);
     return NULL;
@@ -135,6 +169,7 @@ TsonicStreamRead *tsonic_node_stream_read_start(int descriptor, size_t size, int
     }
     atomic_init(&request->references, 2);
     atomic_init(&request->ready, 0);
+    atomic_init(&request->cancelled, 0);
     request->capacity = size;
     request->positioned = positioned;
     request->offset = offset;
@@ -207,6 +242,7 @@ int tsonic_node_stream_read_copy(TsonicStreamRead *request, void *output, size_t
 
 void tsonic_node_stream_read_drop(TsonicStreamRead *request) {
     if (request == NULL) return;
+    atomic_store_explicit(&request->cancelled, 1, memory_order_release);
     uv_mutex_lock(&stream_mutex);
     if (!request->worker_read && !tsonic_node_stream_read_ready(request)) uv_cancel((uv_req_t *)&request->operation);
     uv_mutex_unlock(&stream_mutex);

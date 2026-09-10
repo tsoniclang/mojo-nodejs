@@ -16,7 +16,10 @@ lines.question("first? ", first => {
 ```
 
 Question registration does not read a descriptor or call its callback. The
-existing Node event loop advances the selected Readable owner. A native request
+interface registers for input when created, independently of pending questions,
+and remains active until close or input EOF. Lines consumed before a later
+question are not replayed as its answer. The existing Node event loop advances
+the selected Readable owner. A native request
 duplicates the descriptor, holds its bytes through completion, and publishes
 pending, data, EOF or error without blocking the event-loop thread. Polling
 never changes the process-wide descriptor flags. Closing an interface cancels
@@ -39,6 +42,11 @@ descriptors use a separate pool of at most 32 waiting native threads, each with
 a 256 KiB stack. Idle questions therefore cannot occupy the global libuv file
 workers and starve unrelated file IO. The descriptor's exact native metadata
 chooses this mechanism; no global worker setting or descriptor flag is changed.
+Waiting workers use descriptor readiness and retain `EAGAIN` as pending input,
+including when the borrowed descriptor was already nonblocking. Cancellation
+is checked during readiness waits; a foreign reader racing an already-started
+blocking syscall may still delay its physical completion, without freeing its
+retained storage or delivering a cancelled callback.
 
 History controls retain their independent declared meanings for terminal input.
 This contract does not assert support for undeclared terminal key editing,

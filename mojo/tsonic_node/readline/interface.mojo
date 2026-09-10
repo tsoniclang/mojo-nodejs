@@ -41,6 +41,8 @@ struct Interface(ImplicitlyCopyable):
             options.prompt.value() if options.prompt else "> ", "", LineBuffer(), StreamDecoder(), None,
             options.terminal.value() if options.terminal else False, False, False, False, False,
             List[String](), history_size, options.removeHistoryDuplicates.value() if options.removeHistoryDuplicates else False))
+        self._register()
+        _ = self._state[].input.resume()
 
     def question(mut self, query: String, callback: QuestionCallback) raises:
         if self._state[].closed:
@@ -49,7 +51,6 @@ struct Interface(ImplicitlyCopyable):
             self._output(self._state[].query)
             _ = self.resume()
             return
-        self._register()
         self._output(query)
         self._state[].query = query
         self._state[].callback = callback
@@ -148,13 +149,13 @@ struct Interface(ImplicitlyCopyable):
             self._state[].dispatching = False
 
     def _poll(mut self) raises -> Bool:
-        if self._state[].closed or self._state[].paused or self._state[].dispatching or not self._state[].callback:
+        if self._state[].closed or self._state[].paused or self._state[].dispatching:
             return False
         self._dispatch()
         if self._state[].lines.finished():
             self.close()
             return True
-        if self._state[].closed or self._state[].paused or not self._state[].callback:
+        if self._state[].closed or self._state[].paused:
             return True
         var result: Tuple[Bool, Bool]
         try:
@@ -192,7 +193,7 @@ comptime _interfaces = GlobalCell["tsonic.node.readline.interfaces", _initial_in
 def _prune_interfaces():
     var retained = List[Interface]()
     for interface in _interfaces.get()[]:
-        if not interface._state[].closed and interface._state[].callback:
+        if not interface._state[].closed:
             retained.append(interface)
         else:
             interface._state[].registered = False

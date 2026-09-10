@@ -65,8 +65,9 @@ def retained_input() raises:
     assert_false(input.is_paused())
     assert_true(poll_readline())
     assert_equal(trace.read(), "[first][][last]")
-    assert_false(has_pending_readline())
+    assert_true(has_pending_readline())
     alias.close()
+    assert_false(has_pending_readline())
     assert_true(input.readable())
 
 
@@ -175,9 +176,11 @@ def eof_and_ranges(root: String) raises:
 def callback_failure_retains_other_work() raises:
     var first_options = ReadLineOptions()
     first_options.input.append(Buffer.from_string("first\nnext\n"))
+    first_options.input._accept_read(None)
     var first = create_interface(first_options)
     var second_options = ReadLineOptions()
     second_options.input.append(Buffer.from_string("other\n"))
+    second_options.input._accept_read(None)
     var second = create_interface(second_options)
     var trace = Location(String())
     first.question("", answer(trace, first, 2, True))
@@ -195,7 +198,7 @@ def callback_failure_retains_other_work() raises:
     second.close()
 
 
-def eof_reentry_and_failure() raises:
+def eof_reentry() raises:
     var options = ReadLineOptions()
     options.input.append(Buffer.from_string("first\nsecond"))
     options.input._accept_read(None)
@@ -205,11 +208,35 @@ def eof_reentry_and_failure() raises:
     drain_questions()
     assert_equal(trace.read(), "[first][second]")
     assert_true(interface._state[].closed)
-    options.input = Readable()
+
+
+def interface_consumes_between_questions() raises:
+    var options = ReadLineOptions()
+    var input = options.input
+    var interface = create_interface(options)
+    assert_true(has_pending_readline())
+    input.append(Buffer.from_string("old\ncurrent"))
+    assert_true(poll_readline())
+    assert_equal(interface.line(), "current")
+    var trace = Location(String())
+    interface.question("", answer(trace))
+    assert_false(poll_readline())
+    assert_equal(trace.read(), "")
+    input.append(Buffer.from_string("\n"))
+    assert_true(poll_readline())
+    assert_equal(trace.read(), "[current]")
+    assert_true(has_pending_readline())
+    input._accept_read(None)
+    drain_questions()
+    assert_true(interface._state[].closed)
+
+
+def eof_callback_failure() raises:
+    var options = ReadLineOptions()
     options.input.append(Buffer.from_string("tail"))
     options.input._accept_read(None)
-    interface = create_interface(options)
-    trace = Location(String())
+    var interface = create_interface(options)
+    var trace = Location(String())
     interface.question("", answer(trace, interface, 2, True))
     var rejected = False
     var deadline = monotonic() + 10000000000
@@ -230,7 +257,9 @@ def main() raises:
     chunk_splits()
     retained_history()
     callback_failure_retains_other_work()
-    eof_reentry_and_failure()
+    eof_reentry()
+    eof_callback_failure()
+    interface_consumes_between_questions()
     var root = mkdtemp(prefix="mojo-readline-")
     try:
         simulated_input(root)

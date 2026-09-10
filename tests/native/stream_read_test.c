@@ -33,9 +33,13 @@ static TsonicStreamRead *start(int descriptor, size_t size, int64_t offset, int 
     return request;
 }
 
-static void pending_pipe(void) {
+static void pending_pipe(int nonblocking) {
     int descriptors[2];
     assert(pipe(descriptors) == 0);
+    if (nonblocking) {
+        int flags = fcntl(descriptors[0], F_GETFL);
+        assert(fcntl(descriptors[0], F_SETFL, flags | O_NONBLOCK) == 0);
+    }
     int flags = fcntl(descriptors[0], F_GETFL);
     TsonicStreamRead *request = start(descriptors[0], 32, 0, 0);
     int64_t begin = now_ns();
@@ -106,6 +110,10 @@ static void errors_and_cancellation(void) {
     tsonic_node_stream_read_drop(request);
     int descriptors[2];
     assert(pipe(descriptors) == 0);
+    request = start(descriptors[0], 16, 0, 1);
+    wait_ready(request);
+    assert(tsonic_node_stream_read_result(request) == UV_ESPIPE);
+    tsonic_node_stream_read_drop(request);
     request = start(descriptors[0], 16, 0, 0);
     tsonic_node_stream_read_drop(request);
     close(descriptors[0]);
@@ -177,7 +185,8 @@ int main(void) {
     alarm(30);
     assert(setenv("UV_THREADPOOL_SIZE", "2", 1) == 0);
     idle_pipes_do_not_starve_files();
-    pending_pipe();
+    pending_pipe(0);
+    pending_pipe(1);
     eof_and_offsets();
     retained_budgets();
     errors_and_cancellation();
