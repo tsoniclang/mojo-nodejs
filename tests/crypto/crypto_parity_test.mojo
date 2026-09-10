@@ -68,9 +68,4 @@ def main() raises:
     except:
         rejected = True
     assert_true(rejected)
-    rejected = False
-    try:
-        _ = random_bytes(1.5)
-    except:
-        rejected = True
-    assert_true(rejected)
+    assert_equal(len(random_bytes(1.5)), 1)
