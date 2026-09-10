@@ -259,33 +259,37 @@ struct Readable(ImplicitlyCopyable):
         if self._state[].polling:
             return False
         if self._state[].failed or self._state[].closed and not self._state[].ended:
-            self._prune_sinks(True)
-            return False
+            return self._prune_sinks(True)
         self._state[].polling = True
         try:
             return self._poll_ready()
         finally:
             self._state[].polling = False
 
-    def _prune_sinks(self, all_sinks: Bool = False) raises:
+    def _prune_sinks(self, all_sinks: Bool = False) -> Bool:
+        var previous = len(self._state[].pipes)
+        if previous == 0:
+            return False
+        var terminal = all_sinks or self._state[].failed or self._state[].events.state[].ended or self._state[].events.state[].closed or self._state[].closed and not self._state[].ended
         var retained = List[PipeSubscription]()
         for subscription in self._state[].pipes:
-            if not all_sinks and subscription.sink.writable():
+            if not terminal and subscription.sink.writable():
                 retained.append(subscription)
             else:
                 self._state[].events.state[].data.remove(subscription.data)
-                self._state[].events.state[].notifications["end"].remove(subscription.end)
+                var endings = self._state[].events.state[].notifications.get("end")
+                if endings:
+                    endings.value().remove(subscription.end)
         self._state[].pipes = retained^
+        if previous and not self._state[].pipes and not self._state[].events.state[].data.has_listeners():
+            self._state[].flowing = False
+        return previous != len(self._state[].pipes)
 
     def _poll_ready(mut self) raises -> Bool:
-        var previous = len(self._state[].pipes)
-        self._prune_sinks()
-        var worked = previous != len(self._state[].pipes)
+        var worked = self._prune_sinks()
         var blocked = False
         for subscription in self._state[].pipes:
             blocked = not subscription.sink.ready() or blocked
-        if previous and not self._state[].pipes and not self._state[].events.state[].data.has_listeners():
-            self._state[].flowing = False
         if self._state[].resume_pending:
             self._state[].resume_pending = False
             self._state[].events.emit("resume")
@@ -414,8 +418,11 @@ comptime _readable_sources = GlobalCell["tsonic.node.stream.readables", _initial
 def _prune_readables():
     var retained = List[ArcPointer[_ReadableState]]()
     for owner in _readable_sources.get()[]:
+        var source = Readable(owner)
+        _ = source._prune_sinks()
         var needed = owner[].native_read or owner[].resume_pending or owner[].events.has("readable") or not owner[].paused and owner[].flowing
-        if needed and not owner[].closed and not owner[].failed and not owner[].ended:
+        var pending_pipe_end = len(owner[].pipes) != 0 and owner[].ended and not owner[].events.state[].ended and not owner[].events.state[].closed and not owner[].failed
+        if pending_pipe_end or needed and not owner[].closed and not owner[].failed and not owner[].ended:
             retained.append(owner)
         else:
             owner[].registered = False

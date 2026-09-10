@@ -110,6 +110,8 @@ def ordered_pipes_share_bytes(root: String) raises:
     assert_equal(read_text_file(root + "/first"), "Xbc")
     assert_equal(read_text_file(root + "/second"), "Ybc")
     assert_equal(bytes.to_string(), "Ybc")
+    assert_equal(len(input._state[].pipes), 0)
+    assert_true(input._state[].events.state[].data.has_listeners())
     var late = create_write_stream(root + "/late")
     _ = input.pipe_to(late)
     assert_false(late.writable_ended())

@@ -1,6 +1,7 @@
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from std.time import monotonic, sleep
+from tsonic_runtime import WeakReferenceIdentity
 from support.stream_events import require_unhandled_stream_error
 from tsonic_node.buffer import Buffer
 from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
@@ -129,6 +130,57 @@ def standard_output_does_not_end() raises:
     assert_true(error_output.writable())
     assert_false(output.writable_ended())
     assert_false(error_output.writable_ended())
+    assert_equal(len(source._state[].pipes), 0)
+    assert_false(source._state[].events.state[].data.has_listeners())
+
+
+def retained_ended_source(root: String) raises -> Tuple[Readable, WeakReferenceIdentity]:
+    var source = Readable()
+    source.append(Buffer.from_string("finished"))
+    source._accept_read(None)
+    var output = create_write_stream(root + "/released-destination")
+    var identity = WeakReferenceIdentity(output._state)
+    _ = source.pipe_to(output)
+    assert_true(identity.is_alive())
+    drain_pipes()
+    assert_true(output.writable_ended())
+    assert_equal(len(source._state[].pipes), 0)
+    assert_false(source._state[].events.state[].data.has_listeners())
+    assert_equal(read_text_file(root + "/released-destination"), "finished")
+    return (source, identity)
+
+
+def retained_paused_source(root: String) raises -> Tuple[Readable, WeakReferenceIdentity]:
+    var source = Readable()
+    var output = create_write_stream(root + "/closed-destination")
+    var identity = WeakReferenceIdentity(output._state)
+    _ = source.pipe_to(output)
+    _ = source.pause()
+    output.close()
+    drain_pipes()
+    assert_false(has_active_readables())
+    assert_equal(len(source._state[].pipes), 0)
+    assert_false(source._state[].events.state[].data.has_listeners())
+    return (source, identity)
+
+
+def destination_lifetimes(root: String) raises:
+    var ended = retained_ended_source(root)
+    assert_true(ended[0].readable_ended())
+    assert_false(ended[1].is_alive())
+    var paused = retained_paused_source(root)
+    assert_true(paused[0].is_paused())
+    assert_false(paused[1].is_alive())
+    var source = Readable()
+    var output = create_write_stream(root + "/early-close")
+    _ = source.pipe_to(output)
+    source.close()
+    drain_pipes()
+    assert_true(output.writable())
+    assert_equal(len(source._state[].pipes), 0)
+    assert_false(source._state[].events.state[].data.has_listeners())
+    _ = output.end()
+    drain_pipes()
 
 
 def main() raises:
@@ -139,5 +191,6 @@ def main() raises:
         pressure_and_release(root)
         independent_errors(root)
         standard_output_does_not_end()
+        destination_lifetimes(root)
     finally:
         remove_path(root, RmOptions(recursive=True))
