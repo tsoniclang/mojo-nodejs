@@ -12,12 +12,14 @@ import {
   httpServerResponseCarrier,
   instanceCall,
   methodMember,
+  nativeString,
   nodeProviderType,
   numberType,
   propertyMember,
   propertyRead,
   providerRef,
   readableCarrier,
+  stringType,
   unitCarrier,
   writableCarrier,
 } from "../model.js";
@@ -41,6 +43,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         kind: "class",
         members: Object.freeze([
           readableReadMember(readableId),
+          methodMember(readableId, "setEncoding", [{ name: "encoding", type: stringType }], providerRef(moduleSpecifier, "Readable")),
           Object.freeze({
             id: `${readableId}.pipe`, name: "pipe", kind: "method",
             signatures: Object.freeze([
@@ -82,6 +85,7 @@ export function streamTypes(): readonly MojoProviderTypeDefinition[] {
 export function streamOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
     ...readableReadOperations(readableId, readableCarrier),
+    instanceCall(readableId, `${readableId}.setEncoding`, `${readableId}.setEncoding(encoding)`, "set_encoding", readableCarrier, [nativeString], readableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(writable)`, "pipe_to", readableCarrier, [writableCarrier], writableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(serverResponse)`, "pipe_to_response", readableCarrier, [httpServerResponseCarrier], httpServerResponseCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, false, "mut"),

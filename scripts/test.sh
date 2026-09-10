@@ -92,7 +92,7 @@ for test_file in tests/native/*.c; do
   fi
 done
 
-test_inventory="$(find tests -type f -name '*.mojo' -print)"
+test_inventory="$(find tests -type f -name '*_test.mojo' -print)"
 if [[ -z "$test_inventory" ]]; then
   printf 'No native Node proofs found\n' >&2
   exit 1
@@ -105,6 +105,7 @@ for test_file in "${test_files[@]}"; do
   if "${PIXI_BIN}" run mojo build \
     -j 2 \
     -I mojo \
+    -I tests \
     -I ../mojo-runtime/mojo \
     -I ../mojo-js/mojo \
     "${link_arguments[@]}" \

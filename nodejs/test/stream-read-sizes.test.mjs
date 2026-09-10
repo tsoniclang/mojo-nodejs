@@ -13,13 +13,13 @@ import { createReadStream } from "node:fs";
 import type { Readable } from "node:stream";
 export function base(source: Readable, size?: number): string {
   const chunk = source.read(size);
-  return chunk === null ? "" : chunk.toString();
+  return chunk === null ? "" : typeof chunk === "string" ? chunk : chunk.toString();
 }
 export function ranged(path: string): string {
   const source = createReadStream(path, { start: 2, end: 6, highWaterMark: 2 });
   const chunk = source.read(3);
   source.close();
-  return chunk === null ? "" : chunk.toString();
+  return chunk === null ? "" : typeof chunk === "string" ? chunk : chunk.toString();
 }` },
   });
   assert.deepEqual(result.diagnostics, []);

@@ -1,12 +1,13 @@
-import { mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
+import { mojoOptionalTargetType, mojoUnionTargetType } from "@tsonic/target-mojo/provider";
 import type { MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
 import {
-  bufferCarrier, instanceCall, numberType, optionalFloat64Carrier,
-  overloadedMethodMember, providerRef, undefinedType,
+  bufferCarrier, instanceCall, nativeString, numberType, optionalFloat64Carrier,
+  overloadedMethodMember, providerRef, stringType, undefinedType,
 } from "../../model.js";
 
 const result = Object.freeze({ kind: "union" as const,
-  types: Object.freeze([providerRef("node:buffer", "Buffer"), { kind: "null" as const }]) });
+  types: Object.freeze([providerRef("node:buffer", "Buffer"), stringType, { kind: "null" as const }]) });
+const chunk = mojoUnionTargetType([bufferCarrier, nativeString]);
 const size = Object.freeze({ kind: "union" as const, types: Object.freeze([numberType, undefinedType]) });
 
 export function readableReadMember(owner: string) {
@@ -18,7 +19,7 @@ export function readableReadMember(owner: string) {
 
 export function readableReadOperations(owner: string, receiver: MojoTargetTypeRef) {
   return [
-    instanceCall(owner, `${owner}.read`, `${owner}.read()`, "read", receiver, [], mojoOptionalTargetType(bufferCarrier), true, "mut"),
-    instanceCall(owner, `${owner}.read`, `${owner}.read(size)`, "read_sized", receiver, [optionalFloat64Carrier], mojoOptionalTargetType(bufferCarrier), true, "mut"),
+    instanceCall(owner, `${owner}.read`, `${owner}.read()`, "read", receiver, [], mojoOptionalTargetType(chunk), true, "mut"),
+    instanceCall(owner, `${owner}.read`, `${owner}.read(size)`, "read_sized", receiver, [optionalFloat64Carrier], mojoOptionalTargetType(chunk), true, "mut"),
   ];
 }

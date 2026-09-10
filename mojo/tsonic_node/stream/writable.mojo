@@ -1,14 +1,11 @@
 from std.collections import List
 from std.memory import ArcPointer
-from std.utils import Variant
 from ..buffer import Buffer
 from ..buffer.codec import encode_bytes
 from ..internal.callback_queue import Notification
 from .completion import StreamCompletion
 from .descriptor import StreamDescriptor
-
-
-comptime StreamChunk = Variant[Buffer, String]
+from .chunk import StreamChunk
 
 
 @fieldwise_init

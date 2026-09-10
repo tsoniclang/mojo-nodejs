@@ -1,3 +1,4 @@
+from support.stream_values import require_buffer
 from std.collections import List
 from std.math import FloatLiteral
 from std.testing import assert_equal, assert_false, assert_true
@@ -69,7 +70,7 @@ def independent_read_state(root: String) raises:
     assert_false(alias.readable_ended())
     assert_false(Bool(alias.read()))
     input = create_read_stream(path)
-    assert_equal(input.read().value().to_string(), "content")
+    assert_equal(require_buffer(input.read()).to_string(), "content")
     assert_false(input.readable_ended())
     assert_false(Bool(input.read()))
     assert_true(input.readable_ended())

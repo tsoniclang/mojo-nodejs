@@ -1,3 +1,4 @@
+from support.stream_values import require_buffer
 from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
@@ -17,8 +18,9 @@ def queued_reads() raises:
     for index in range(4096):
         var value = alias.read_sized(1.0)
         assert_true(Bool(value))
-        assert_equal(value.value().get(0), UInt8(index % 251))
-        assert_true(value.value().same_storage(retained[index]))
+        var buffer = require_buffer(value)
+        assert_equal(buffer.get(0), UInt8(index % 251))
+        assert_true(buffer.same_storage(retained[index]))
     assert_false(Bool(stream.read()))
 
 

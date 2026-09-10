@@ -1,12 +1,14 @@
 from std.ffi import c_int, external_call, get_errno
 from ..stream import Readable, Writable
 from ..stream.descriptor import StreamDescriptor
+from ..buffer.codec import encoding_name
 from .descriptors import open_file
 from .validation import checked_integer
 
 
 @fieldwise_init
 struct ReadStreamOptions(Copyable):
+    var encoding: Optional[String]
     var flags: Optional[String]
     var mode: Optional[Float64]
     var start: Optional[Float64]
@@ -14,6 +16,7 @@ struct ReadStreamOptions(Copyable):
     var high_water_mark: Optional[Float64]
 
     def __init__(out self):
+        self.encoding = None
         self.flags = None
         self.mode = None
         self.start = None
@@ -52,13 +55,17 @@ def create_read_stream(path: String) raises -> Readable:
 
 
 def create_read_stream(path: String, options: ReadStreamOptions) raises -> Readable:
+    var encoding = Optional(encoding_name(options.encoding.value())) if options.encoding else Optional[String]()
     var start = _position(options.start, "start")
     var end = _position(options.end, "end")
     if start and end and start.value() > end.value():
         raise Error("File stream start exceeds end")
     var chunk_size = Int(checked_integer(options.high_water_mark.value(), 9007199254740991.0, "highWaterMark")) if options.high_water_mark else 65536
     var descriptor = _open(path, options.flags.value() if options.flags else String("r"), options.mode)
-    return Readable(descriptor, path, chunk_size, start, end, True)
+    var result = Readable(descriptor, path, chunk_size, start, end, True)
+    if encoding:
+        _ = result.set_encoding(encoding.value())
+    return result
 
 
 def create_write_stream(path: String) raises -> Writable:

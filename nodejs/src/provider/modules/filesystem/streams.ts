@@ -36,12 +36,14 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
       id, name, kind: "interface" as const,
       members: Object.freeze([
         ...optionFields.map(([field, , type]) => propertyMember(id, field, type, { readonly: false, optional: true })),
+        ...(id === readOptionsId ? [propertyMember(id, "encoding", stringType, { readonly: false, optional: true })] : []),
         propertyMember(id, id === readOptionsId ? "end" : "flush", id === readOptionsId ? numberType : booleanType, { readonly: false, optional: true }),
       ]),
     })),
     Object.freeze({ id: readId, name: "ReadStream", kind: "class" as const,
       heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Readable") }]), members: Object.freeze([
       readableReadMember(readId),
+      methodMember(readId, "setEncoding", [{ name: "encoding", type: stringType }], readType),
       overloadedMethodMember(readId, "pipe", [
         { signatureSuffix: "writeStream", parameters: [{ name: "destination", type: writeType }], returnType: writeType },
         { signatureSuffix: "writable", parameters: [{ name: "destination", type: providerRef("node:stream", "Writable") }], returnType: providerRef("node:stream", "Writable") },
@@ -94,7 +96,8 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
     );
   }
   for (const [id, carrier] of [[readOptionsId, readOptions], [writeOptionsId, writeOptions]] as const) {
-    const fields = [...optionFields, id === readOptionsId
+    const fields = [...optionFields,
+      ...(id === readOptionsId ? [["encoding", "encoding", stringType, optionalStringCarrier] as const] : []), id === readOptionsId
       ? ["end", "end", numberType, optionalFloat64Carrier] as const
       : ["flush", "flush", booleanType, optionalBoolCarrier] as const];
     for (const [name, target, , fieldType] of fields) {
@@ -111,6 +114,7 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
       propertyRead(id, `${id}.${counter}`, targetCounter, carrier, float64Carrier, "method"));
   }
   operations.push(...readableReadOperations(readId, readableCarrier));
+  operations.push(instanceCall(readId, `${readId}.setEncoding`, `${readId}.setEncoding(encoding)`, "set_encoding", readableCarrier, [nativeString], readableCarrier, true, "mut"));
   for (const [suffix, destination, target] of [
     ["writeStream", writableCarrier, "pipe_to"], ["writable", writableCarrier, "pipe_to"],
     ["serverResponse", httpServerResponseCarrier, "pipe_to_response"],

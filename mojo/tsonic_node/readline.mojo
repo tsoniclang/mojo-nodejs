@@ -3,6 +3,7 @@ from tsonic_js import JsString
 from tsonic_runtime import RaisingCallable
 
 from .stream import Readable, Writable
+from .stream.chunk import chunk_text
 
 
 comptime QuestionCallback = RaisingCallable[Tuple[String], NoneType]
@@ -103,7 +104,7 @@ struct Interface(ImplicitlyCopyable):
             var chunk = self._state[].input.read()
             if not chunk:
                 break
-            var text = chunk.value().to_string()
+            var text = chunk_text(chunk.value())
             var newline = text.find("\n")
             if newline:
                 result += String(text[byte = : newline.value()])

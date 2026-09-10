@@ -9,15 +9,18 @@ test("file and generic readable streams publish null, not undefined", () => {
     const module = definition.modules.find((entry) => entry.moduleSpecifier === specifier);
     const owner = module.exports.find((entry) => entry.name === name);
     const member = owner.members.find((entry) => entry.name === "read");
-    assert.equal(member.signatures.length, 1);
-    const signature = member.signatures[0];
+    assert.equal(member.signatures.length, 2);
+    for (const signature of member.signatures) {
     assert.equal(signature.returnType.kind, "union");
     assert.equal(signature.returnType.types.some((type) => type.kind === "null"), true);
     assert.equal(signature.returnType.types.some((type) => type.kind === "undefined"), false);
+    assert.equal(signature.returnType.types.some((type) => type.kind === "string"), true);
     const rows = definition.operations.filter((entry) => entry.exportId === owner.id &&
       entry.memberId === member.id && entry.signatureId === signature.id);
     assert.equal(rows.length, 1);
     assert.equal(rows[0].resultType.kind, "optional");
+    assert.equal(rows[0].resultType.value.kind, "union");
+    }
   }
 });
 
@@ -27,7 +30,7 @@ import { Readable, Writable } from "node:stream";
 import { createReadStream, createWriteStream } from "node:fs";
 function present(input: Readable): string {
   const chunk = input.read();
-  return chunk === null ? "empty" : chunk.toString();
+  return chunk === null ? "empty" : typeof chunk === "string" ? chunk : chunk.toString();
 }
 function cork(output: Writable): number {
   output.cork(); output.cork(); output.uncork();
@@ -36,7 +39,7 @@ function cork(output: Writable): number {
 export function main(): void {
   const input = createReadStream("input");
   const chunk = input.read();
-  if (chunk !== null) chunk.toString();
+  if (chunk !== null && typeof chunk !== "string") chunk.toString();
   present(input);
   const output = createWriteStream("output");
   cork(output);

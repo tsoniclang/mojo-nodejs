@@ -1,3 +1,4 @@
+from support.stream_values import require_buffer
 from std.math import FloatLiteral
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
@@ -13,21 +14,21 @@ def retained_bytes() raises:
     source.append(bytes)
     var alias = source
     assert_false(Bool(alias.read_sized(0.0)))
-    var first = source.read_sized(2.0).value()
+    var first = require_buffer(source.read_sized(2.0))
     assert_equal(first.to_string(), "ab")
     assert_true(first.same_storage(bytes))
     bytes.set(2, 67)
-    assert_equal(alias.read_sized(1.0).value().to_string(), "C")
+    assert_equal(require_buffer(alias.read_sized(1.0)).to_string(), "C")
     source.append(Buffer.from_string("ghi"))
-    var crossed = alias.read_sized(5.0).value()
+    var crossed = require_buffer(alias.read_sized(5.0))
     assert_equal(crossed.to_string(), "defgh")
     assert_false(crossed.same_storage(bytes))
     assert_false(Bool(source.read_sized(3.0)))
     source.append(Buffer.from_string("jk"))
-    assert_equal(alias.read_sized(3.0).value().to_string(), "ijk")
+    assert_equal(require_buffer(alias.read_sized(3.0)).to_string(), "ijk")
     source.append(Buffer.from_string("one"))
     source.append(Buffer.from_string("two"))
-    assert_equal(alias.read().value().to_string(), "onetwo")
+    assert_equal(require_buffer(alias.read()).to_string(), "onetwo")
     assert_false(Bool(source.read()))
     assert_false(source.readable_ended())
 
@@ -44,15 +45,15 @@ def numeric_sizes() raises:
     var source = Readable()
     source.append(Buffer.from_string("abcdef"))
     assert_false(Bool(source.read_sized(-1.0e100)))
-    assert_equal(source.read_sized(1.9).value().to_string(), "a")
+    assert_equal(require_buffer(source.read_sized(1.9)).to_string(), "a")
     var rejected = False
     try:
         _ = source.read_sized(1.0e100)
     except:
         rejected = True
     assert_true(rejected)
-    assert_equal(source.read_sized(0.0000001).value().to_string(), "b")
-    assert_equal(source.read_sized(Float64(FloatLiteral.infinity)).value().to_string(), "cdef")
+    assert_equal(require_buffer(source.read_sized(0.0000001)).to_string(), "b")
+    assert_equal(require_buffer(source.read_sized(Float64(FloatLiteral.infinity))).to_string(), "cdef")
 
 
 def file_sizes(root: String) raises:
@@ -62,20 +63,19 @@ def file_sizes(root: String) raises:
     options.high_water_mark = 2
     var source = create_read_stream(path, options)
     var alias = source
-    assert_equal(source.read_sized(3.0).value().to_string(), "abc")
+    assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "abc")
     assert_equal(source.bytes_read(), 4)
-    assert_equal(alias.read_sized(3.0).value().to_string(), "def")
+    assert_equal(require_buffer(alias.read_sized(3.0)).to_string(), "def")
     assert_equal(source.bytes_read(), 8)
-    assert_equal(source.read_sized(3.0).value().to_string(), "gh")
+    assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "gh")
     assert_false(Bool(alias.read_sized(3.0)))
     assert_true(source.readable_ended())
     assert_false(source.readable())
     options.start = 2
     options.end = 6
     source = create_read_stream(path, options)
-    assert_equal(source.read_sized(3.0).value().to_string(), "cde")
-    assert_false(Bool(source.read_sized(3.0)))
-    assert_equal(source.read_sized(3.0).value().to_string(), "fg")
+    assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "cde")
+    assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "fg")
     assert_false(Bool(source.read()))
     assert_equal(source.bytes_read(), 5)
     assert_true(source.readable_ended())
@@ -85,7 +85,7 @@ def file_sizes(root: String) raises:
     assert_false(Bool(source.read_sized(0.0)))
     assert_false(source.readable_ended())
     assert_equal(source.bytes_read(), 0)
-    assert_equal(source.read_sized(1.0).value().to_string(), "a")
+    assert_equal(require_buffer(source.read_sized(1.0)).to_string(), "a")
     source.close()
 
 

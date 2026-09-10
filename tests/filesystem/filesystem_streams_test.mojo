@@ -1,3 +1,4 @@
+from support.stream_values import require_buffer
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node import Buffer, RmOptions, read_text_file, remove_path, write_text_file
@@ -30,7 +31,7 @@ def main() raises:
         options.start = 5.0
         options.end = 5.0
         input = create_read_stream(source, options)
-        assert_equal(input.read().value().to_string(), "b")
+        assert_equal(require_buffer(input.read()).to_string(), "b")
         assert_false(Bool(input.read()))
         assert_equal(input.bytes_read(), 1.0)
 
