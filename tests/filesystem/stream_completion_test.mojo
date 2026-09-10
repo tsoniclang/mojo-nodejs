@@ -173,7 +173,7 @@ def pressure_notification_order(root: String) raises:
     var path = root + "/drain"
     var trace = Location(String())
     var options = WriteStreamOptions()
-    options.high_water_mark = 1
+    options.high_water_mark = Float64(1)
     var output = create_write_stream(path, options)
     var listener = notification(trace, "d")
     _ = output.once_empty("drain", listener)

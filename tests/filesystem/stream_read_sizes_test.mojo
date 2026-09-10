@@ -61,7 +61,7 @@ def file_sizes(root: String) raises:
     var path = root + "/sized"
     write_text_file(path, "abcdefgh")
     var options = ReadStreamOptions()
-    options.high_water_mark = 2
+    options.high_water_mark = Float64(2)
     var source = create_read_stream(path, options)
     var retained_alias = source
     assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "abc")
@@ -84,7 +84,7 @@ def file_sizes(root: String) raises:
     _ = poll_streams()
     assert_true(source.readable_ended())
     options = ReadStreamOptions()
-    options.high_water_mark = 0
+    options.high_water_mark = Float64(0)
     source = create_read_stream(path, options)
     assert_false(Bool(source.read_sized(0.0)))
     assert_false(source.readable_ended())

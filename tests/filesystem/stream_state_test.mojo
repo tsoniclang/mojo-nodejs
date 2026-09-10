@@ -13,9 +13,9 @@ from tsonic_node.stream import Readable
 def write_pressure(root: String) raises:
     var path = root + "/pressure"
     var options = WriteStreamOptions()
-    options.high_water_mark = 3
+    options.high_water_mark = Float64(3)
     var output = create_write_stream(path, options)
-    options.high_water_mark = 9999
+    options.high_water_mark = Float64(9999)
     var retained_alias = output
     assert_true(output.writable())
     assert_false(output.writable_ended())
@@ -45,7 +45,7 @@ def write_pressure(root: String) raises:
     require_unhandled_stream_error("Cannot write to an ended")
     assert_equal(read_text_file(path), "éa12345c")
 
-    options.high_water_mark = 0
+    options.high_water_mark = Float64(0)
     output = create_write_stream(path, options)
     assert_true(output.write_string(""))
     output.cork()
@@ -102,7 +102,7 @@ def validation_and_failure(root: String) raises:
             rejected = True
         assert_true(rejected)
         assert_equal(read_text_file(path), "unchanged")
-    options.high_water_mark = 3
+    options.high_water_mark = Float64(3)
     options.flags = String("r")
     var output = create_write_stream(path, options)
     assert_false(output.write_string("cannot-write"))

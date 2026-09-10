@@ -97,7 +97,7 @@ def file_decoding(root: String) raises:
     var path = root + "/text"
     write_text_file(path, "😀éZ")
     var options = ReadStreamOptions()
-    options.high_water_mark = 1
+    options.high_water_mark = Float64(1)
     options.encoding = "utf8"
     var source = create_read_stream(path, options)
     var retained_alias = source

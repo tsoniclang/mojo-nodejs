@@ -62,8 +62,8 @@ def _publish(pending: PendingRequest) raises:
         var family = Optional[Float64]()
         if not pending.request.failed():
             var result = pending.request.lookup_address()
-            family = Float64(result.family)
-            address = result.address^
+            family = result.family_value()
+            address = result.address_value()
         _callbacks.get()[].defer(pending.callback.unsafe_get[LookupCallback](), (failure, address^, family))
     else:
         var values = Optional[List[String]]()

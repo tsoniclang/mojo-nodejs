@@ -29,7 +29,7 @@ def main() raises:
             var value = Buffer.allocate(12, 45)
             var retained_alias = value
             assert_equal(read_into(descriptor, value, 2, 7, 0), 7)
-            assert_equal(retained_alias.subarray(2, 9).to_string(), "abc😀")
+            assert_equal(retained_alias.subarray(2, Float64(9)).to_string(), "abc😀")
             assert_equal(retained_alias.get(0), 45)
             assert_equal(write_from(descriptor, Buffer.from_string("xyz"), 0, 3, 0), 3)
             var selected = fstat(descriptor)

@@ -18,7 +18,7 @@ def _generic[Value: Movable](value: Value) -> Bool:
 def main() raises:
     var buffer = Buffer.from_string("bytes")
     assert_true(buffer_is_buffer(buffer))
-    assert_true(buffer_is_buffer(buffer.subarray(1, 3)))
+    assert_true(buffer_is_buffer(buffer.subarray(1, Float64(3))))
     assert_true(_generic(buffer))
     assert_false(buffer_is_buffer("bytes"))
     assert_false(buffer_is_buffer(0))

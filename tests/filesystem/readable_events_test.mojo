@@ -198,10 +198,15 @@ def readline_and_pipe_share_input(root: String) raises:
     drain()
 
 
+def register_temporary_source(path: String, trace: Location[String]) raises:
+    var source = create_read_stream(path)
+    _ = source.on_data("data", data(trace))
+
+
 def temporary_source_is_retained(root: String) raises:
     write_text_file(root + "/temporary", "retained")
     var trace = Location(String())
-    _ = create_read_stream(root + "/temporary").on_data("data", data(trace))
+    register_temporary_source(root + "/temporary", trace)
     drain()
     assert_equal(trace.read(), "retained")
 

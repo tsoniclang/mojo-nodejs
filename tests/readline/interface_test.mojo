@@ -152,7 +152,7 @@ def retained_history() raises:
 def eof_and_ranges(root: String) raises:
     write_text_file(root + "/lines", "xxfirst\r\n😀\nlast\nyy")
     var read_options = ReadStreamOptions()
-    read_options.high_water_mark = 1
+    read_options.high_water_mark = Float64(1)
     read_options.start = 2
     read_options.end = 18
     var options = ReadLineOptions()

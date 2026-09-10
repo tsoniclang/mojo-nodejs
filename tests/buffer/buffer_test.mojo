@@ -9,7 +9,7 @@ def main() raises:
     assert_equal(buffer.get(1), UInt8(101))
     assert_equal(buffer.to_string(), "hello")
 
-    var view = buffer.subarray(1, 4)
+    var view = buffer.subarray(1, Float64(4))
     assert_equal(view.to_string(), "ell")
     assert_true(buffer.same_storage(view))
     view.set(0, UInt8(65))

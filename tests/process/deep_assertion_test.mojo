@@ -65,7 +65,7 @@ def main() raises:
     deep_strict_equal(js_value_from_array_values(shared^), parsed('[{"value":1},{"value":1}]'))
     deep_strict_equal(deeply_nested(4096), deeply_nested(4096))
     var bytes = Buffer.from_string("xabcx")
-    var view = bytes.subarray(1, 4)
+    var view = bytes.subarray(1, Float64(4))
     var expected = Buffer.from_string("abc")
     deep_strict_equal(buffer_to_js_value(view), buffer_to_js_value(expected))
     bytes.set(1, UInt8(100))

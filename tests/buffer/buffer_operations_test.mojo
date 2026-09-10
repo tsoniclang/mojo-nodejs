@@ -6,7 +6,7 @@ from tsonic_node.buffer import Buffer, buffer_alloc, buffer_alloc_number, buffer
 
 def main() raises:
     var original = Buffer.from_string("abcdef")
-    var retained_alias = original.subarray(1, 5)
+    var retained_alias = original.subarray(1, Float64(5))
     assert_equal(original.copy(original, 2, 0, 4), 4)
     assert_equal(original.to_string(), "ababcd")
     assert_equal(retained_alias.to_string(), "babc")
@@ -45,7 +45,7 @@ def main() raises:
     assert_equal(buffer.to_string("hex"), "0000000000000000")
     _ = buffer.fill_number(257, 1, 3)
     assert_equal(buffer.to_string("hex"), "0001010000000000")
-    _ = buffer.fill_buffer(buffer.subarray(0, 3), 2, 8)
+    _ = buffer.fill_buffer(buffer.subarray(0, Float64(3)), 2, 8)
     assert_equal(buffer.to_string("hex"), "0001000101000101")
 
     var sequence = Buffer.from_string("ababababa")

@@ -23,7 +23,7 @@ def drain_pipes() raises:
 def deferred_and_shared(root: String) raises:
     write_text_file(root + "/input", "a😀b")
     var options = ReadStreamOptions()
-    options.high_water_mark = 1
+    options.high_water_mark = Float64(1)
     options.encoding = "utf8"
     var source = create_read_stream(root + "/input", options)
     var retained_alias = source
@@ -74,10 +74,10 @@ def pending_is_not_eof(root: String) raises:
 def pressure_and_release(root: String) raises:
     write_text_file(root + "/pressure-input", "abcdefgh")
     var options = ReadStreamOptions()
-    options.high_water_mark = 2
+    options.high_water_mark = Float64(2)
     var source = create_read_stream(root + "/pressure-input", options)
     var write_options = WriteStreamOptions()
-    write_options.high_water_mark = 1
+    write_options.high_water_mark = Float64(1)
     var output = create_write_stream(root + "/pressure-output", write_options)
     output.cork()
     _ = source.pipe_to(output)

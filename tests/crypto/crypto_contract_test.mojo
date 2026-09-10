@@ -19,11 +19,11 @@ def main() raises:
         create_hmac("sha256", "").digest("hex"),
         "b613679a0814d9ec772f95d778c35fc5ff1697c493715653c6c712144292c5ad",
     )
-    var key = Buffer.from_string("xJefey").subarray(1, 5)
+    var key = Buffer.from_string("xJefey").subarray(1, Float64(5))
     var mac = create_hmac("sha256", key)
     var shared = mac
     _ = mac.update_buffer(
-        Buffer.from_string("xwhat do ya want for nothing?y").subarray(1, 29)
+        Buffer.from_string("xwhat do ya want for nothing?y").subarray(1, Float64(29))
     )
     assert_equal(
         shared.digest().to_string("hex"),
