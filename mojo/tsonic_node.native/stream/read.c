@@ -36,12 +36,18 @@ static atomic_uint waiting_workers;
 static uv_once_t stream_once = UV_ONCE_INIT;
 static uv_mutex_t stream_mutex;
 static uv_loop_t stream_loop;
+static uv_async_t stream_wakeup;
 static int stream_status;
 static atomic_size_t completed_reads;
+
+static void accept_wakeup(uv_async_t *handle) {
+    (void)handle;
+}
 
 static void initialize_stream_loop(void) {
     stream_status = uv_mutex_init(&stream_mutex);
     if (stream_status == 0) stream_status = uv_loop_init(&stream_loop);
+    if (stream_status == 0) stream_status = uv_async_init(&stream_loop, &stream_wakeup, accept_wakeup);
 }
 
 static void release_read(TsonicStreamRead *request) {
@@ -56,8 +62,9 @@ static void finish_read(TsonicStreamRead *request, int64_t result) {
     request->result = result;
     close(request->descriptor);
     request->descriptor = -1;
-    atomic_fetch_add_explicit(&completed_reads, 1, memory_order_relaxed);
     atomic_store_explicit(&request->ready, 1, memory_order_release);
+    atomic_fetch_add_explicit(&completed_reads, 1, memory_order_release);
+    uv_async_send(&stream_wakeup);
     release_read(request);
 }
 
@@ -218,6 +225,34 @@ int tsonic_node_stream_read_poll(void) {
     int progressed = previous != atomic_load_explicit(&completed_reads, memory_order_relaxed);
     uv_mutex_unlock(&stream_mutex);
     return progressed;
+}
+
+uint64_t tsonic_node_stream_read_epoch(void) {
+    return atomic_load_explicit(&completed_reads, memory_order_acquire);
+}
+
+int tsonic_node_stream_read_wait(uint64_t epoch, uint64_t timeout_ns) {
+    if (timeout_ns > 1000000000) return UV_EINVAL;
+    uv_once(&stream_once, initialize_stream_loop);
+    if (stream_status != 0) return stream_status;
+    uv_mutex_lock(&stream_mutex);
+    uv_run(&stream_loop, UV_RUN_NOWAIT);
+    int descriptor = uv_backend_fd(&stream_loop);
+    int completed = tsonic_node_stream_read_epoch() != epoch;
+    uv_mutex_unlock(&stream_mutex);
+    if (completed) return 1;
+    if (descriptor < 0) return UV_ENOTSUP;
+    struct pollfd pending = { descriptor, POLLIN, 0 };
+    int timeout_ms = (int)((timeout_ns + 999999) / 1000000);
+    int status = poll(&pending, 1, timeout_ms);
+    if (status < 0) return errno == EINTR ? 0 : uv_translate_sys_error(errno);
+    if (pending.revents & POLLNVAL) return UV_EBADF;
+    if (status == 0) return tsonic_node_stream_read_epoch() != epoch;
+    uv_mutex_lock(&stream_mutex);
+    uv_run(&stream_loop, UV_RUN_NOWAIT);
+    completed = tsonic_node_stream_read_epoch() != epoch;
+    uv_mutex_unlock(&stream_mutex);
+    return completed;
 }
 
 int tsonic_node_stream_read_ready(TsonicStreamRead *request) {

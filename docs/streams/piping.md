@@ -21,6 +21,11 @@ ServerResponse carriers. It does not select methods by name or reflect over
 objects. Source aliases share IO progress, queued chunks and pipe membership.
 Each polling turn advances at most one chunk per source. A failed owner is
 detached and reports its error without discarding unrelated pending owners.
+When no owner progresses, the loop waits for a native read completion or its
+next timer deadline rather than sleeping unconditionally between file chunks.
+The completion generation is captured before polling, so a completion just
+before the wait cannot become a lost wakeup. Native waiting invokes no source
+callback. Throughput and timer fairness remain final-verification gates.
 
 This replaces the synchronous pipe loop completely. Tests inspect byte counts
 and output after event-loop completion, not immediately after registering a

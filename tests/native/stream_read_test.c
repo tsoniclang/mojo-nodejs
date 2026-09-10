@@ -150,6 +150,26 @@ static void retained_budgets(void) {
     close(descriptor);
 }
 
+static void completion_waiting(void) {
+    FILE *file = tmpfile();
+    assert(file != NULL);
+    assert(write(fileno(file), "data", 4) == 4);
+    uint64_t epoch = tsonic_node_stream_read_epoch();
+    TsonicStreamRead *request = start(fileno(file), 4, 0, 1);
+    int64_t deadline = now_ns() + 10000000000;
+    while (!tsonic_node_stream_read_ready(request)) {
+        assert(now_ns() < deadline);
+        assert(tsonic_node_stream_read_wait(epoch, 1000000000) >= 0);
+    }
+    assert(tsonic_node_stream_read_wait(epoch, 1000000000) == 1);
+    assert(tsonic_node_stream_read_result(request) == 4);
+    tsonic_node_stream_read_drop(request);
+    fclose(file);
+    epoch = tsonic_node_stream_read_epoch();
+    assert(tsonic_node_stream_read_wait(epoch, 0) == 0);
+    assert(tsonic_node_stream_read_wait(epoch, 1000000001) == UV_EINVAL);
+}
+
 static void idle_pipes_do_not_starve_files(void) {
     int descriptors[33][2];
     TsonicStreamRead *requests[32];
@@ -185,6 +205,7 @@ int main(void) {
     alarm(30);
     assert(setenv("UV_THREADPOOL_SIZE", "2", 1) == 0);
     idle_pipes_do_not_starve_files();
+    completion_waiting();
     pending_pipe(0);
     pending_pipe(1);
     eof_and_offsets();

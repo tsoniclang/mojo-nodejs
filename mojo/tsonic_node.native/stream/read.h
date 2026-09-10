@@ -7,6 +7,8 @@
 typedef struct TsonicStreamRead TsonicStreamRead;
 TsonicStreamRead *tsonic_node_stream_read_start(int descriptor, size_t size, int64_t offset, int positioned, int *error);
 int tsonic_node_stream_read_poll(void);
+uint64_t tsonic_node_stream_read_epoch(void);
+int tsonic_node_stream_read_wait(uint64_t epoch, uint64_t timeout_ns);
 int tsonic_node_stream_read_ready(TsonicStreamRead *request);
 int64_t tsonic_node_stream_read_result(TsonicStreamRead *request);
 const char *tsonic_node_stream_read_error(TsonicStreamRead *request);

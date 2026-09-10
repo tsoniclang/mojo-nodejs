@@ -1,4 +1,4 @@
-from std.time import sleep
+from std.ffi import c_int, external_call
 
 from .http import has_active_servers, poll_servers
 from .http.client import has_pending_requests, poll_requests
@@ -29,6 +29,7 @@ def run_event_loop() raises:
         or has_active_pipes()
         or has_pending_readline()
     ):
+        var read_epoch = external_call["tsonic_node_stream_read_epoch", UInt64]()
         var timer_work = poll_timers()
         var server_work = poll_servers()
         var request_work = poll_requests()
@@ -58,4 +59,6 @@ def run_event_loop() raises:
             continue
         var delay = next_timer_delay_ns()
         var sleep_ns = min(delay.value(), 10_000_000) if delay else 10_000_000
-        sleep(Float64(sleep_ns) / 1_000_000_000.0)
+        var waited = external_call["tsonic_node_stream_read_wait", c_int](read_epoch, UInt64(sleep_ns))
+        if waited < 0:
+            raise Error("Native event-loop completion wait failed: ", waited)
