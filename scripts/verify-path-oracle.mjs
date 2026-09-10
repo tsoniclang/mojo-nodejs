@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { globOracleCases } from "./glob-oracle-cases.mjs";
 
 const executable = process.argv[2];
 assert.ok(executable, "Expected the compiled path oracle");
@@ -34,6 +35,9 @@ function compare(dialect, operation, arguments_, expected) {
 }
 for (const name of ["posix", "win32"]) {
   const dialect = path[name];
+  for (const [input, pattern] of globOracleCases) {
+    compare(name, "matchesGlob", [input, pattern], `${dialect.matchesGlob(input, pattern)}\n`);
+  }
   for (const sample of samples) {
     for (const operation of ["normalize", "dirname", "basename", "extname", "isAbsolute", "toNamespacedPath"]) {
       compare(name, operation, [sample], `${dialect[operation](sample)}\n`);

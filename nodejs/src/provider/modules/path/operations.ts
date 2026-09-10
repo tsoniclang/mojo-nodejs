@@ -32,6 +32,7 @@ const operations: readonly Operation[] = [
   { name: "resolve", target: "resolve", parameters: [paths], sourceResult: stringType, result: nativeString, raises: true },
   { name: "normalize", target: "normalize", parameters: [path], sourceResult: stringType, result: nativeString },
   { name: "isAbsolute", target: "is_absolute", parameters: [path], sourceResult: booleanType, result: boolCarrier },
+  { name: "matchesGlob", target: "matches_glob", parameters: [path, { ...path, name: "pattern" }], sourceResult: booleanType, result: boolCarrier, raises: true },
   { name: "dirname", target: "dirname", parameters: [path], sourceResult: stringType, result: nativeString },
   { name: "extname", target: "extname", parameters: [path], sourceResult: stringType, result: nativeString },
   { name: "basename", target: "basename", parameters: [path], sourceResult: stringType, result: nativeString },

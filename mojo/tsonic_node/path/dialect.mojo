@@ -1,6 +1,7 @@
 from std.collections import List
 from .model import PathParts, PathInput
 from . import posix, win32
+from .glob import matches_glob
 
 
 @fieldwise_init
@@ -18,6 +19,9 @@ struct PathDialect(ImplicitlyCopyable):
 
     def is_absolute(self, path: String) -> Bool:
         return win32.is_absolute(path) if self.windows else posix.is_absolute(path)
+
+    def matches_glob(self, path: String, pattern: String) raises -> Bool:
+        return matches_glob(path, pattern, self.windows)
 
     def join(self, parts: List[String]) -> String:
         return win32.join(parts) if self.windows else posix.join(parts)

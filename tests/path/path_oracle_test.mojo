@@ -16,6 +16,10 @@ def main() raises:
         print(dialect.normalize(path))
     elif operation == "isAbsolute":
         print("true" if dialect.is_absolute(path) else "false")
+    elif operation == "matchesGlob":
+        if len(arguments) != 5:
+            raise Error("Path glob oracle requires path and pattern")
+        print("true" if dialect.matches_glob(path, String(arguments[4])) else "false")
     elif operation == "dirname":
         print(dialect.dirname(path))
     elif operation == "basename":

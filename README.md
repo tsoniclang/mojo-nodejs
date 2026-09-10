@@ -72,6 +72,28 @@ input consumed by the codec, including decompression's treatment of unused tails
 Flush/reset/parameter changes operate on retained native state. Outputs and
 pending data have explicit finite limits; exceeding them raises an error.
 
+## Path patterns
+
+`path.matchesGlob(path, pattern)` and the explicit `posix`/`win32` dialects
+share one lexical matcher. They do not read the filesystem. Input remains
+native `String`; braces, character classes, extended patterns and whole-segment
+`**` have separate grammar handling rather than wildcard text replacement.
+
+```typescript
+import path from "node:path";
+
+path.matchesGlob("posts/2026/entry.md", "posts/**/*.{md,html}");
+path.win32.matchesGlob("C:\\posts\\entry.md", "c:/posts/*.md");
+```
+
+Literal components compare directly. Pattern components use the existing
+ECMAScript regex primitive, while globstars match component positions with
+bounded state storage. A pattern exceeding 65,536 UTF-16 units, 65,536 brace
+alternatives, 128 nesting levels or the 16 MiB generated-source budget rejects
+explicitly. These are resource errors, not false match results. The new native,
+source, differential and Pudding proofs are authored but remain unexecuted in
+the coding-only phase.
+
 DNS and compression callbacks receive `null` on success. Failed operations have
 absent results, reflected in their source declarations. For example:
 
