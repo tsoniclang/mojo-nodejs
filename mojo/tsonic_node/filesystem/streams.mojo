@@ -67,7 +67,6 @@ def create_write_stream(path: String) raises -> Writable:
 
 def create_write_stream(path: String, options: WriteStreamOptions) raises -> Writable:
     var start = _position(options.start, "start")
-    if options.high_water_mark:
-        _ = checked_integer(options.high_water_mark.value(), 9007199254740991.0, "highWaterMark")
+    var high_water_mark = checked_integer(options.high_water_mark.value(), 9007199254740991.0, "highWaterMark") if options.high_water_mark else Int64(65536)
     var descriptor = _open(path, options.flags.value() if options.flags else String("w"), options.mode)
-    return Writable(descriptor, path, start, True, options.flush.value() if options.flush else False)
+    return Writable(descriptor, path, start, True, options.flush.value() if options.flush else False, high_water_mark)

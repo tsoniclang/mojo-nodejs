@@ -54,6 +54,8 @@ export function streamModule(): MojoProviderModuleDefinition {
           methodMember(readableId, "pause", [], providerRef(moduleSpecifier, "Readable")),
           methodMember(readableId, "resume", [], providerRef(moduleSpecifier, "Readable")),
           methodMember(readableId, "isPaused", [], booleanType),
+          propertyMember(readableId, "readable", booleanType),
+          propertyMember(readableId, "readableEnded", booleanType),
         ]),
       }),
       Object.freeze({
@@ -79,6 +81,8 @@ export function streamModule(): MojoProviderModuleDefinition {
           methodMember(writableId, "cork", [], Object.freeze({ kind: "void" })),
           methodMember(writableId, "uncork", [], Object.freeze({ kind: "void" })),
           propertyMember(writableId, "writableCorked", numberType),
+          propertyMember(writableId, "writable", booleanType),
+          propertyMember(writableId, "writableEnded", booleanType),
         ]),
       }),
     ]),
@@ -108,5 +112,12 @@ export function streamOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(writableId, `${writableId}.cork`, `${writableId}.cork()`, "cork", writableCarrier, [], unitCarrier, false, "mut"),
     instanceCall(writableId, `${writableId}.uncork`, `${writableId}.uncork()`, "uncork", writableCarrier, [], unitCarrier, true, "mut"),
     propertyRead(writableId, `${writableId}.writableCorked`, "writable_corked", writableCarrier, float64Carrier, "method"),
+    ...([
+      [readableId, readableCarrier, "readable", "readable"],
+      [readableId, readableCarrier, "readableEnded", "readable_ended"],
+      [writableId, writableCarrier, "writable", "writable"],
+      [writableId, writableCarrier, "writableEnded", "writable_ended"],
+    ] as const).map(([id, carrier, name, target]) =>
+      propertyRead(id, `${id}.${name}`, target, carrier, boolCarrier, "method")),
   ]);
 }

@@ -109,11 +109,11 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
         propertyWrite(id, `${id}.${name}`, target, carrier, fieldType));
     }
   }
-  for (const [id, carrier, counter, targetCounter] of [
-    [readId, readableCarrier, "bytesRead", "bytes_read"],
-    [writeId, writableCarrier, "bytesWritten", "bytes_written"],
+  for (const [id, carrier, counter, targetCounter, receiver] of [
+    [readId, readableCarrier, "bytesRead", "bytes_read", "imm"],
+    [writeId, writableCarrier, "bytesWritten", "bytes_written", "mut"],
   ] as const) {
-    operations.push(instanceCall(id, `${id}.close`, `${id}.close()`, "close", carrier, [], unitCarrier, true),
+    operations.push(instanceCall(id, `${id}.close`, `${id}.close()`, "close", carrier, [], unitCarrier, true, receiver),
       propertyRead(id, `${id}.path`, "path", carrier, nativeString, "method"),
       propertyRead(id, `${id}.${counter}`, targetCounter, carrier, float64Carrier, "method"));
   }

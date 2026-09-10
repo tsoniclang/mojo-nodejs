@@ -12,6 +12,8 @@ struct _ReadableState:
     var chunks: Deque[Buffer]
     var paused: Bool
     var ended: Bool
+    var closed: Bool
+    var failed: Bool
     var path: String
     var chunk_size: Int
     var position: Optional[Int64]
@@ -24,7 +26,7 @@ struct Readable(ImplicitlyCopyable):
     var _state: ArcPointer[_ReadableState]
 
     def __init__(out self):
-        self._state = ArcPointer(_ReadableState(None, Deque[Buffer](), False, False, "", 4096, None, None, 0, False))
+        self._state = ArcPointer(_ReadableState(None, Deque[Buffer](), False, False, False, False, "", 4096, None, None, 0, False))
 
     def __init__(out self, descriptor: Int32):
         self = Self()
@@ -32,13 +34,15 @@ struct Readable(ImplicitlyCopyable):
 
     def __init__(out self, descriptor: StreamDescriptor, path: String, chunk_size: Int,
                  start: Optional[Int64], end: Optional[Int64], auto_close: Bool):
-        self._state = ArcPointer(_ReadableState(Optional(descriptor), Deque[Buffer](), False, False,
+        self._state = ArcPointer(_ReadableState(Optional(descriptor), Deque[Buffer](), False, False, False, False,
                                                path, chunk_size, start, end, 0, auto_close))
 
     def append(mut self, value: Buffer):
         self._state[].chunks.append(value)
 
     def read(mut self) raises -> Optional[Buffer]:
+        if self._state[].closed or self._state[].failed:
+            return None
         if len(self._state[].chunks) != 0:
             return self._state[].chunks.popleft()
         if self._state[].ended or not self._state[].descriptor:
@@ -52,7 +56,7 @@ struct Readable(ImplicitlyCopyable):
             try:
                 result = self._state[].descriptor.value().read(size, self._state[].position)
             except error:
-                self._state[].ended = True
+                self._state[].failed = True
                 if self._state[].auto_close:
                     self._state[].descriptor = None
                 raise error^
@@ -68,9 +72,16 @@ struct Readable(ImplicitlyCopyable):
         return result
 
     def close(self) raises:
-        self._state[].ended = True
+        self._state[].closed = True
+        self._state[].chunks = Deque[Buffer]()
         if self._state[].descriptor:
             self._state[].descriptor.value().close()
+
+    def readable(self) -> Bool:
+        return not self._state[].ended and not self._state[].closed and not self._state[].failed
+
+    def readable_ended(self) -> Bool:
+        return self._state[].ended
 
     def path(self) -> String:
         return self._state[].path
