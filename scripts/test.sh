@@ -3,6 +3,8 @@ set -euo pipefail
 
 PIXI_BIN="${PIXI_BIN:-pixi}"
 NATIVE_BUILD=".temp/native-tests"
+BUILD_TIMEOUT="${MOJO_TEST_BUILD_TIMEOUT:-180s}"
+RUN_TIMEOUT="${MOJO_TEST_RUN_TIMEOUT:-60s}"
 
 "${PIXI_BIN}" run mojo format --quiet mojo tests
 git diff --exit-code -- mojo tests
@@ -78,7 +80,7 @@ link_arguments=(
 failed=0
 for test_file in tests/native/*.c; do
   test_name="$(basename "${test_file}" .c)"
-  if "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- \
+  if timeout "$BUILD_TIMEOUT" "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- \
     -O2 -std=c11 -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
     "$test_file" "${NATIVE_BUILD}/tls_bio.o" "${NATIVE_BUILD}/socket_io_bridge.o" "${NATIVE_BUILD}/net_endpoint.o" \
     "${NATIVE_BUILD}/tls_context.o" "${NATIVE_BUILD}/tls_handshake.o" "${NATIVE_BUILD}/tls_connection.o" \
@@ -87,7 +89,7 @@ for test_file in tests/native/*.c; do
     "${NATIVE_BUILD}/stream_read.o" \
     "${NATIVE_BUILD}/dns_request.o" "${NATIVE_BUILD}/dns_lookup.o" "${NATIVE_BUILD}/dns_resolver.o" "${NATIVE_BUILD}/dns_records.o" \
     -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv -lcares -lpthread \
-    -o "${NATIVE_BUILD}/${test_name}" && "${NATIVE_BUILD}/${test_name}"; then
+    -o "${NATIVE_BUILD}/${test_name}" && timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/${test_name}"; then
     printf 'PASS %s\n' "$test_file"
   else
     printf 'FAIL %s\n' "$test_file"
@@ -105,7 +107,7 @@ for test_file in "${test_files[@]}"; do
   test_name="${test_file#tests/}"
   test_name="${test_name%.mojo}"
   mkdir -p "$(dirname "${NATIVE_BUILD}/${test_name}")"
-  if "${PIXI_BIN}" run mojo build \
+  if timeout "$BUILD_TIMEOUT" "${PIXI_BIN}" run mojo build \
     -j 2 \
     -I mojo \
     -I tests \
@@ -114,7 +116,7 @@ for test_file in "${test_files[@]}"; do
     "${link_arguments[@]}" \
     "${test_file}" \
     -o "${NATIVE_BUILD}/${test_name}" && \
-    SSL_CERT_FILE="${PWD}/tests/fixtures/localhost-cert.pem" "${NATIVE_BUILD}/${test_name}"; then
+    SSL_CERT_FILE="${PWD}/tests/fixtures/localhost-cert.pem" timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/${test_name}"; then
     printf 'PASS %s\n' "$test_file"
   else
     printf 'FAIL %s\n' "$test_file"
@@ -122,6 +124,6 @@ for test_file in "${test_files[@]}"; do
   fi
 done
 
-if ! "${NATIVE_BUILD}/process/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
-if ! node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/path/path_oracle_test"; then failed=1; fi
+if ! timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/process/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
+if ! timeout "$RUN_TIMEOUT" node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/path/path_oracle_test"; then failed=1; fi
 exit "$failed"
