@@ -296,7 +296,7 @@ struct Readable(ImplicitlyCopyable):
     def bytes_read(self) -> Float64:
         return Float64(self._state[].bytes_read)
 
-    def pipe_to(mut self, mut destination: Writable) raises -> Writable:
+    def pipe_to(mut self, destination: Writable) raises -> Writable:
         self._add_pipe(PipeSink(destination))
         return destination
 

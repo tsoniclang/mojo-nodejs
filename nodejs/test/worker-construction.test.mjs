@@ -7,6 +7,27 @@ function compile(files, options = {}) {
   return compileMojo({ files, capabilities: [createMojoNodejsCapability()], target: { id: "mojo", options } });
 }
 
+test("worker payload guards recover exact primitive values at their use boundaries", () => {
+  const result = compileMojo({ surfaces: ["js"], capabilities: [createMojoNodejsCapability()], files: {
+    "index.ts": `import { Worker } from "node:worker_threads";
+export function main(): void { new Worker("./child.js", { workerData: 3 }); }`,
+    "child.ts": `import { parentPort, workerData } from "node:worker_threads";
+if (parentPort === undefined) throw new Error("No parent");
+if (typeof workerData !== "number") throw new Error("Not numeric");
+const offset = workerData;
+const port = parentPort;
+port.on("message", (value) => {
+  if (typeof value !== "number") throw new Error("Not numeric");
+  port.postMessage(value + offset);
+});`,
+  } });
+  assert.deepEqual(result.diagnostics, []);
+  const child = artifactTexts(result).find(({ text }) => text.includes("worker_data("));
+  assert.ok(child);
+  assert.match(child.text, /js_value_number\(worker_data\(\)\)/u);
+  assert.match(child.text, /js_value_number\(value\)/u);
+});
+
 test("selected Worker module identities produce closed pre-source entry dispatch", () => {
   const result = compile({
     "index.ts": `import { Worker as Background } from "node:worker_threads";
