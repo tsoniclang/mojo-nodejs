@@ -56,3 +56,12 @@ def buffer_to_js_value(source: Buffer) -> JsValue:
         Callable[Tuple[], JsString](environment, _BufferProjection.to_string),
         Callable[Tuple[Int], String](environment, _BufferProjection.inspect),
     )
+
+
+def buffer_from_js_value(value: JsValue) raises -> Buffer:
+    if not value.has_native_brand(buffer_brand):
+        raise Error("The source value is not a Buffer")
+    var view = value.byte_view()
+    var result = Buffer(view.storage, view.offset, view.length)
+    result._identity = view.identity
+    return result

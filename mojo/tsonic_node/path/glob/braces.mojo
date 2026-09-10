@@ -3,16 +3,23 @@ from std.collections.string import Codepoint
 from .limits import require_depth, require_expansion_size, require_source_size
 
 
-def _integer(text: String) raises -> Optional[Int]:
+def _is_integer(text: String) -> Bool:
     var bytes = text.as_bytes()
     var start = 1 if text.startswith("-") else 0
     if start == len(bytes):
-        return None
+        return False
+    for index in range(start, len(bytes)):
+        if bytes[index] < 48 or bytes[index] > 57:
+            return False
+    return True
+
+
+def _integer(text: String) raises -> Int:
+    var bytes = text.as_bytes()
+    var start = 1 if text.startswith("-") else 0
     var value = 0
     for index in range(start, len(bytes)):
         var digit = Int(bytes[index]) - 48
-        if digit < 0 or digit > 9:
-            return None
         if value > (9007199254740991 - digit) // 10:
             raise Error("Path glob range exceeds exact integer bounds")
         value = value * 10 + digit
@@ -31,9 +38,11 @@ def _range(body: String) raises -> Optional[List[String]]:
         parts.append(String(item))
     if len(parts) != 2 and len(parts) != 3:
         return None
-    var first = _integer(parts[0])
-    var last = _integer(parts[1])
-    var numeric = Bool(first) and Bool(last)
+    var numeric = _is_integer(parts[0]) and _is_integer(parts[1])
+    if len(parts) == 3 and not _is_integer(parts[2]):
+        return None
+    var start = 0
+    var stop = 0
     if not numeric:
         if parts[0].byte_length() != 1 or parts[1].byte_length() != 1:
             return None
@@ -42,16 +51,14 @@ def _range(body: String) raises -> Optional[List[String]]:
         if not ((65 <= start_code <= 90 or 97 <= start_code <= 122) and
                 (65 <= end_code <= 90 or 97 <= end_code <= 122)):
             return None
-        first = start_code
-        last = end_code
+        start = start_code
+        stop = end_code
+    else:
+        start = _integer(parts[0])
+        stop = _integer(parts[1])
     var stride = 1
     if len(parts) == 3:
-        var supplied = _integer(parts[2])
-        if not supplied:
-            return None
-        stride = max(1, abs(supplied.value()))
-    var start = first.value()
-    var stop = last.value()
+        stride = max(1, abs(_integer(parts[2])))
     var count = abs(stop - start) // stride + 1
     require_expansion_size(count)
     var width = 0

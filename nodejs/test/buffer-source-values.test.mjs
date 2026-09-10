@@ -19,12 +19,35 @@ export function main(): void {
   JSON.stringify(saved); JSON.stringify(values);
   const clone = structuredClone(saved);
   console.log(Buffer.isBuffer(clone), Object.is(saved, repeated));
+  const recovered = saved as Buffer;
+  recovered[1] = 7;
+  console.log(recovered.toString(), Object.is(recovered, buffer));
+  try { (clone as Buffer).toString(); } catch { console.log("not a Buffer"); }
 }` } });
   assert.deepEqual(result.diagnostics, []);
   const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
   assert.match(emitted, /buffer_to_js_value\(/u);
   assert.match(emitted, /buffer_is_buffer\(/u);
+  assert.match(emitted, /buffer_from_js_value\(/u);
   assert.doesNotMatch(emitted, /js_value_from_object_entries\(/u);
+});
+
+test("selected Buffer extraction is retained through a nullable union and conditional region", () => {
+  const result = compileMojo({ surfaces: ["js"], capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+import { Buffer as Bytes } from "node:buffer";
+function recover(value: unknown, use: boolean): Bytes | undefined {
+  return use ? value as Bytes : undefined;
+}
+export function main(): void {
+  const bytes = Bytes.from("ok");
+  const found = recover(bytes, true);
+  if (found !== undefined) console.log(found.toString());
+  recover({ type: "Buffer", data: [1] }, false);
+}` } });
+  assert.deepEqual(result.diagnostics, []);
+  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  assert.match(emitted, /buffer_from_js_value\(/u);
+  assert.doesNotMatch(emitted, /unsafe_bitcast\[.*Buffer/u);
 });
 
 test("same-spelled source classes cannot acquire the provider Buffer factory", () => {

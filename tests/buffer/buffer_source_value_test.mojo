@@ -2,7 +2,7 @@ from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from tsonic_js import JsString, JsValue, json_parse, json_stringify, js_value_from_array_values, js_value_structured_clone, object_keys, inspect_value, js_value_to_string
 from tsonic_js.value import encode_structured_clone, decode_structured_clone
-from tsonic_node.buffer import Buffer, buffer_to_js_value, buffer_is_buffer
+from tsonic_node.buffer import Buffer, buffer_to_js_value, buffer_from_js_value, buffer_is_buffer
 
 
 def main() raises:
@@ -45,3 +45,25 @@ def main() raises:
     source.set(0, 255)
     assert_equal(js_value_to_string(saved).to_native_strict(), "�Zc")
     assert_equal(buffer_is_buffer(saved), True)
+    var recovered = buffer_from_js_value(saved)
+    assert_true(recovered == source)
+    recovered.set(1, 84)
+    assert_equal(source.get(1), 84)
+    var recovered_slice = buffer_from_js_value(slice)
+    assert_false(recovered_slice == source)
+    assert_equal(len(recovered_slice), 2)
+    recovered_slice.set(0, 80)
+    assert_equal(source.get(1), 80)
+    assert_true(buffer_to_js_value(recovered_slice).same_identity(slice))
+    var invalid = List[JsValue]()
+    invalid.append(fake)
+    invalid.append(clone.array_at(0))
+    invalid.append(transported.array_at(0))
+    invalid.append(JsValue(Float64(3)))
+    for value in invalid:
+        var rejected = False
+        try:
+            _ = buffer_from_js_value(value)
+        except:
+            rejected = True
+        assert_true(rejected)
