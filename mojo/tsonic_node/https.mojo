@@ -22,6 +22,7 @@ from .tls import (
 comptime RequestArguments = Tuple[IncomingMessage, ServerResponse]
 comptime RequestHandler = RaisingCallable[RequestArguments, NoneType]
 
+
 @fieldwise_init
 struct _HttpsServerAdapter:
     var handler: RequestHandler
@@ -84,17 +85,25 @@ def create_server(
     return Server(create_tls_server(options, callback))
 
 
-def request(url: String, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def request(
+    url: String, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request_for_scheme(url, "https:", callback)
 
 
-def request(options: RequestOptions, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def request(
+    options: RequestOptions, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request_for_scheme(options, "https:", callback)
 
 
-def get(url: String, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def get(
+    url: String, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request(url, callback).end()
 
 
-def get(options: RequestOptions, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def get(
+    options: RequestOptions, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request(options, callback).end()

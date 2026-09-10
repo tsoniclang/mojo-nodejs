@@ -4,7 +4,12 @@ from std.memory import ArcPointer, bitcast
 from tsonic_runtime import WeakReferenceIdentity
 from tsonic_runtime.numeric import source_number_to_uint32
 from ..validation import checked_integer
-from .codec import decode_bytes, encode_bytes, encoding_name, writable_byte_count
+from .codec import (
+    decode_bytes,
+    encode_bytes,
+    encoding_name,
+    writable_byte_count,
+)
 from .search import search_bytes, search_number
 from .ranges import copy_offset, clamp_offset, slice_offset
 
@@ -74,7 +79,9 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         self._validate_index(index)
         self._bytes[][self._offset + index] = Byte(value)
 
-    def subarray(self, start: Float64 = 0, end: Optional[Float64] = None) -> Self:
+    def subarray(
+        self, start: Float64 = 0, end: Optional[Float64] = None
+    ) -> Self:
         var bounded_start = slice_offset(start, self._length)
         var bounded_end = slice_offset(
             end.value(), self._length
@@ -98,9 +105,16 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         source_end: Optional[Float64] = None,
     ) raises -> Float64:
         var source_first = copy_offset(source_start)
-        var source_last = copy_offset(source_end.value()) if source_end else self._length
+        var source_last = copy_offset(
+            source_end.value()
+        ) if source_end else self._length
         var target_first = copy_offset(target_start)
-        if source_first < 0 or source_first > self._length or source_last < 0 or target_first < 0:
+        if (
+            source_first < 0
+            or source_first > self._length
+            or source_last < 0
+            or target_first < 0
+        ):
             raise Error("Buffer copy offset is outside the valid range")
         if target_first >= target._length or source_first >= source_last:
             return 0
@@ -110,12 +124,20 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         )
         var source_position = self._offset + source_first
         var target_position = target._offset + target_first
-        if self.same_storage(target) and target_position > source_position and target_position < source_position + count:
+        if (
+            self.same_storage(target)
+            and target_position > source_position
+            and target_position < source_position + count
+        ):
             for index in range(count - 1, -1, -1):
-                target._bytes[][target_position + index] = self._bytes[][source_position + index]
+                target._bytes[][target_position + index] = self._bytes[][
+                    source_position + index
+                ]
         else:
             for index in range(count):
-                target._bytes[][target_position + index] = self._bytes[][source_position + index]
+                target._bytes[][target_position + index] = self._bytes[][
+                    source_position + index
+                ]
         return Float64(count)
 
     def equals(self, other: Self) -> Bool:
@@ -191,43 +213,63 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
     def read_double_be(self, offset: Float64 = 0) raises -> Float64:
         return bitcast[.float64](self._read_uint(offset, 8, False))
 
-    def write_uint8(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_uint8(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 1, True, False)
         return offset + 1
 
-    def write_int8(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_int8(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 1, True, True)
         return offset + 1
 
-    def write_uint16_le(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_uint16_le(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 2, True, False)
         return offset + 2
 
-    def write_uint16_be(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_uint16_be(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 2, False, False)
         return offset + 2
 
-    def write_int16_le(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_int16_le(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 2, True, True)
         return offset + 2
 
-    def write_int16_be(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_int16_be(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 2, False, True)
         return offset + 2
 
-    def write_uint32_le(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_uint32_le(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 4, True, False)
         return offset + 4
 
-    def write_uint32_be(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_uint32_be(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 4, False, False)
         return offset + 4
 
-    def write_int32_le(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_int32_le(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 4, True, True)
         return offset + 4
 
-    def write_int32_be(mut self, value: Float64, offset: Float64 = 0) raises -> Float64:
+    def write_int32_be(
+        mut self, value: Float64, offset: Float64 = 0
+    ) raises -> Float64:
         self._write_number(value, offset, 4, False, True)
         return offset + 4
 
@@ -268,18 +310,40 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
             result.append(self._bytes[][self._offset + index])
         return result^
 
-    def to_string(self, encoding: String = "utf8", start: Float64 = 0, end: Optional[Float64] = None) raises -> String:
+    def to_string(
+        self,
+        encoding: String = "utf8",
+        start: Float64 = 0,
+        end: Optional[Float64] = None,
+    ) raises -> String:
         var first = clamp_offset(start, self._length)
-        var last = clamp_offset(end.value(), self._length) if end else self._length
+        var last = clamp_offset(
+            end.value(), self._length
+        ) if end else self._length
         if last <= first:
             return ""
         return decode_bytes(self._range_bytes(first, last), encoding)
 
-    def write(self, value: String, offset: Float64 = 0, length: Optional[Float64] = None, encoding: String = "utf8") raises -> Float64:
-        var first = Int(checked_integer(offset, Float64(self._length), "offset"))
+    def write(
+        self,
+        value: String,
+        offset: Float64 = 0,
+        length: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) raises -> Float64:
+        var first = Int(
+            checked_integer(offset, Float64(self._length), "offset")
+        )
         var maximum = self._length - first
         if length:
-            maximum = min(maximum, Int(checked_integer(length.value(), Float64(self._length), "length")))
+            maximum = min(
+                maximum,
+                Int(
+                    checked_integer(
+                        length.value(), Float64(self._length), "length"
+                    )
+                ),
+            )
         var name = encoding_name(encoding if encoding else "utf8")
         var bytes = encode_bytes(value, name)
         var count = writable_byte_count(bytes, maximum, name)
@@ -290,30 +354,48 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
     def write_encoded(self, value: String, encoding: String) raises -> Float64:
         return self.write(value, 0, None, encoding)
 
-    def write_offset_encoded(self, value: String, offset: Float64, encoding: String) raises -> Float64:
+    def write_offset_encoded(
+        self, value: String, offset: Float64, encoding: String
+    ) raises -> Float64:
         return self.write(value, offset, None, encoding)
 
-    def fill_number(self, value: Float64, offset: Float64 = 0, end: Optional[Float64] = None) raises -> Self:
+    def fill_number(
+        self, value: Float64, offset: Float64 = 0, end: Optional[Float64] = None
+    ) raises -> Self:
         var first = Int(checked_integer(offset, 9007199254740991, "offset"))
-        var last = Int(checked_integer(end.value(), Float64(self._length), "end")) if end else self._length
+        var last = Int(
+            checked_integer(end.value(), Float64(self._length), "end")
+        ) if end else self._length
         var byte = Byte(source_number_to_uint32(value) & 255)
         for index in range(first, last):
             self._bytes[][self._offset + index] = byte
         return self
 
-    def fill_buffer(self, value: Self, offset: Float64 = 0, end: Optional[Float64] = None) raises -> Self:
+    def fill_buffer(
+        self, value: Self, offset: Float64 = 0, end: Optional[Float64] = None
+    ) raises -> Self:
         var first = Int(checked_integer(offset, 9007199254740991, "offset"))
-        var last = Int(checked_integer(end.value(), Float64(self._length), "end")) if end else self._length
+        var last = Int(
+            checked_integer(end.value(), Float64(self._length), "end")
+        ) if end else self._length
         if first >= last:
             return self
         if len(value) == 0:
             raise Error("Buffer fill pattern cannot be empty")
         var pattern = value.copy_bytes()
         for index in range(first, last):
-            self._bytes[][self._offset + index] = pattern[(index - first) % len(pattern)]
+            self._bytes[][self._offset + index] = pattern[
+                (index - first) % len(pattern)
+            ]
         return self
 
-    def fill_string(self, value: String, offset: Float64 = 0, end: Optional[Float64] = None, encoding: String = "utf8") raises -> Self:
+    def fill_string(
+        self,
+        value: String,
+        offset: Float64 = 0,
+        end: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) raises -> Self:
         var name = encoding_name(encoding)
         if not value:
             return self.fill_number(0, offset, end)
@@ -322,37 +404,105 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
     def fill_encoded(self, value: String, encoding: String) raises -> Self:
         return self.fill_string(value, 0, None, encoding)
 
-    def fill_offset_encoded(self, value: String, offset: Float64, encoding: String) raises -> Self:
+    def fill_offset_encoded(
+        self, value: String, offset: Float64, encoding: String
+    ) raises -> Self:
         return self.fill_string(value, offset, None, encoding)
 
-    def find_buffer(self, value: Self, offset: Optional[Float64] = None, encoding: String = "utf8", reverse: Bool = False) -> Float64:
+    def find_buffer(
+        self,
+        value: Self,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+        reverse: Bool = False,
+    ) -> Float64:
         var name = encoding.lower()
-        var wide = name == "ucs2" or name == "ucs-2" or name == "utf16le" or name == "utf-16le"
-        return search_bytes(Span(self._bytes[])[self._offset:self._offset + self._length], Span(value._bytes[])[value._offset:value._offset + value._length], offset, reverse, wide)
+        var wide = (
+            name == "ucs2"
+            or name == "ucs-2"
+            or name == "utf16le"
+            or name == "utf-16le"
+        )
+        return search_bytes(
+            Span(self._bytes[])[self._offset : self._offset + self._length],
+            Span(value._bytes[])[value._offset : value._offset + value._length],
+            offset,
+            reverse,
+            wide,
+        )
 
-    def find_string(self, value: String, offset: Optional[Float64] = None, encoding: String = "utf8", reverse: Bool = False) raises -> Float64:
+    def find_string(
+        self,
+        value: String,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+        reverse: Bool = False,
+    ) raises -> Float64:
         var name = encoding_name(encoding)
-        return self.find_buffer(Self(encode_bytes(value, name)), offset, name, reverse)
+        return self.find_buffer(
+            Self(encode_bytes(value, name)), offset, name, reverse
+        )
 
-    def find_number(self, value: Float64, offset: Optional[Float64] = None, encoding: String = "utf8", reverse: Bool = False) -> Float64:
-        return search_number(Span(self._bytes[])[self._offset:self._offset + self._length], value, offset, reverse)
+    def find_number(
+        self,
+        value: Float64,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+        reverse: Bool = False,
+    ) -> Float64:
+        return search_number(
+            Span(self._bytes[])[self._offset : self._offset + self._length],
+            value,
+            offset,
+            reverse,
+        )
 
-    def last_buffer(self, value: Self, offset: Optional[Float64] = None, encoding: String = "utf8") -> Float64:
+    def last_buffer(
+        self,
+        value: Self,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) -> Float64:
         return self.find_buffer(value, offset, encoding, True)
 
-    def last_string(self, value: String, offset: Optional[Float64] = None, encoding: String = "utf8") raises -> Float64:
+    def last_string(
+        self,
+        value: String,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) raises -> Float64:
         return self.find_string(value, offset, encoding, True)
 
-    def last_number(self, value: Float64, offset: Optional[Float64] = None, encoding: String = "utf8") -> Float64:
+    def last_number(
+        self,
+        value: Float64,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) -> Float64:
         return self.find_number(value, offset, encoding, True)
 
-    def includes_buffer(self, value: Self, offset: Optional[Float64] = None, encoding: String = "utf8") -> Bool:
+    def includes_buffer(
+        self,
+        value: Self,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) -> Bool:
         return self.find_buffer(value, offset, encoding) >= 0
 
-    def includes_string(self, value: String, offset: Optional[Float64] = None, encoding: String = "utf8") raises -> Bool:
+    def includes_string(
+        self,
+        value: String,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) raises -> Bool:
         return self.find_string(value, offset, encoding) >= 0
 
-    def includes_number(self, value: Float64, offset: Optional[Float64] = None, encoding: String = "utf8") -> Bool:
+    def includes_number(
+        self,
+        value: Float64,
+        offset: Optional[Float64] = None,
+        encoding: String = "utf8",
+    ) -> Bool:
         return self.find_number(value, offset, encoding) >= 0
 
     def find_encoded(self, value: String, encoding: String) raises -> Float64:
@@ -372,7 +522,11 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
 
     def is_utf8(self) -> Bool:
         try:
-            _ = StringSpan(from_utf8=Span(self._bytes[])[self._offset:self._offset + self._length])
+            _ = StringSpan(
+                from_utf8=Span(self._bytes[])[
+                    self._offset : self._offset + self._length
+                ]
+            )
             return True
         except:
             return False
@@ -385,13 +539,20 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
             raise Error("Buffer index is outside the valid range")
 
     def _validate_range(self, offset: Int, width: Int) raises:
-        if offset < 0 or width < 0 or offset > self._length or width > self._length - offset:
+        if (
+            offset < 0
+            or width < 0
+            or offset > self._length
+            or width > self._length - offset
+        ):
             raise Error("Buffer range is outside the valid range")
 
     def _read_uint(
         self, offset: Float64, width: Int, little_endian: Bool
     ) raises -> UInt64:
-        var first = Int(checked_integer(offset, Float64(self._length - width), "offset"))
+        var first = Int(
+            checked_integer(offset, Float64(self._length - width), "offset")
+        )
         var result = UInt64(0)
         for index in range(width):
             var shift = 8 * (index if little_endian else width - index - 1)
@@ -416,20 +577,31 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         width: Int,
         little_endian: Bool,
     ) raises:
-        var first = Int(checked_integer(offset, Float64(self._length - width), "offset"))
+        var first = Int(
+            checked_integer(offset, Float64(self._length - width), "offset")
+        )
         for index in range(width):
             var shift = 8 * (index if little_endian else width - index - 1)
             self._bytes[][self._offset + first + index] = Byte(
                 UInt8((value >> UInt64(shift)) & 0xFF)
             )
 
-    def _write_number(self, value: Float64, offset: Float64, width: Int, little_endian: Bool, signed: Bool) raises:
+    def _write_number(
+        self,
+        value: Float64,
+        offset: Float64,
+        width: Int,
+        little_endian: Bool,
+        signed: Bool,
+    ) raises:
         var bits = width * 8 - (1 if signed else 0)
         var limit = Int64(1) << bits
         var minimum = -limit if signed else Int64(0)
         if value < Float64(minimum) or value > Float64(limit - 1):
             raise Error("Buffer numeric value is outside the valid range")
-        self._write_uint(UInt64(source_number_to_uint32(value)), offset, width, little_endian)
+        self._write_uint(
+            UInt64(source_number_to_uint32(value)), offset, width, little_endian
+        )
 
     def _swap(mut self, width: Int) raises -> Self:
         if self._length % width != 0:

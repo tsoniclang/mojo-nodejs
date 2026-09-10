@@ -46,7 +46,32 @@ struct Readable(ImplicitlyCopyable):
     var _state: ArcPointer[_ReadableState]
 
     def __init__(out self):
-        self._state = ArcPointer(_ReadableState(None, ReadBuffer(), False, False, False, False, False, "", 4096, None, None, 0, False, False, None, List[PipeSubscription](), ReadEvents(), False, False, False, False, False))
+        self._state = ArcPointer(
+            _ReadableState(
+                None,
+                ReadBuffer(),
+                False,
+                False,
+                False,
+                False,
+                False,
+                "",
+                4096,
+                None,
+                None,
+                0,
+                False,
+                False,
+                None,
+                List[PipeSubscription](),
+                ReadEvents(),
+                False,
+                False,
+                False,
+                False,
+                False,
+            )
+        )
 
     def __init__(out self, descriptor: Int32):
         self = Self()
@@ -55,10 +80,41 @@ struct Readable(ImplicitlyCopyable):
     def __init__(out self, state: ArcPointer[_ReadableState]):
         self._state = state
 
-    def __init__(out self, descriptor: StreamDescriptor, path: String, chunk_size: Int,
-                 start: Optional[Int64], end: Optional[Int64], auto_close: Bool):
-        self._state = ArcPointer(_ReadableState(Optional(descriptor), ReadBuffer(), False, False, False, False, False,
-                                               path, chunk_size, start, end, 0, auto_close, False, None, List[PipeSubscription](), ReadEvents(), False, False, False, False, False))
+    def __init__(
+        out self,
+        descriptor: StreamDescriptor,
+        path: String,
+        chunk_size: Int,
+        start: Optional[Int64],
+        end: Optional[Int64],
+        auto_close: Bool,
+    ):
+        self._state = ArcPointer(
+            _ReadableState(
+                Optional(descriptor),
+                ReadBuffer(),
+                False,
+                False,
+                False,
+                False,
+                False,
+                path,
+                chunk_size,
+                start,
+                end,
+                0,
+                auto_close,
+                False,
+                None,
+                List[PipeSubscription](),
+                ReadEvents(),
+                False,
+                False,
+                False,
+                False,
+                False,
+            )
+        )
 
     def append(mut self, value: Buffer) raises:
         if self._state[].closed or self._state[].failed or self._state[].eof:
@@ -73,16 +129,22 @@ struct Readable(ImplicitlyCopyable):
     def read(mut self) raises -> Optional[StreamChunk]:
         return self.read_sized(None)
 
-    def read_sized(mut self, requested: Optional[Float64]) raises -> Optional[StreamChunk]:
+    def read_sized(
+        mut self, requested: Optional[Float64]
+    ) raises -> Optional[StreamChunk]:
         var value = self._read_sized(requested)
         if value:
             _ = self._state[].events.state[].data.emit((value.value().copy(),))
         return value^
 
-    def _read_sized(mut self, requested: Optional[Float64]) raises -> Optional[StreamChunk]:
+    def _read_sized(
+        mut self, requested: Optional[Float64]
+    ) raises -> Optional[StreamChunk]:
         var selected = requested_read_size(requested)
         if selected:
-            self._state[].chunk_size = increased_read_threshold(selected.value(), self._state[].chunk_size)
+            self._state[].chunk_size = increased_read_threshold(
+                selected.value(), self._state[].chunk_size
+            )
         if self._state[].closed or self._state[].failed:
             return None
         self._state[].events.prepare()
@@ -90,10 +152,17 @@ struct Readable(ImplicitlyCopyable):
         var desired = self._state[].chunk_size
         if selected:
             desired = Int(selected.value()) if selected.value() > 0 else 0
-        if len(self._state[].chunks) < desired or len(self._state[].chunks) == 0:
+        if (
+            len(self._state[].chunks) < desired
+            or len(self._state[].chunks) == 0
+        ):
             var minimum = desired if selected else 1
             self._fill(1 if minimum > 0 else 0)
-            while self._state[].descriptor and not self._state[].eof and len(self._state[].chunks) < minimum:
+            while (
+                self._state[].descriptor
+                and not self._state[].eof
+                and len(self._state[].chunks) < minimum
+            ):
                 var previous_bytes = self._state[].bytes_read
                 self._fill(1)
                 if previous_bytes == self._state[].bytes_read:
@@ -111,7 +180,9 @@ struct Readable(ImplicitlyCopyable):
                 return None
             if len(self._state[].chunks) < desired and not self._state[].eof:
                 return None
-            return self._state[].chunks.take(min(desired, len(self._state[].chunks)))
+            return self._state[].chunks.take(
+                min(desired, len(self._state[].chunks))
+            )
         return self._state[].chunks.take(len(self._state[].chunks))
 
     def set_encoding(mut self, name: String) raises -> Self:
@@ -151,7 +222,11 @@ struct Readable(ImplicitlyCopyable):
         var pending = Bool(self._state[].native_read)
         if len(self._state[].chunks) == 0 or pending:
             self._fill(1)
-        return before != self._state[].bytes_read or eof != self._state[].eof or pending != Bool(self._state[].native_read)
+        return (
+            before != self._state[].bytes_read
+            or eof != self._state[].eof
+            or pending != Bool(self._state[].native_read)
+        )
 
     def input_ended(self) -> Bool:
         return self._state[].eof or self._state[].closed or self._state[].failed
@@ -166,15 +241,29 @@ struct Readable(ImplicitlyCopyable):
             return
         var size = min(1048576, self._request_size(minimum))
         if size > 0:
-            self._state[].native_read = self._state[].descriptor.value().begin_read(size, self._state[].position)
+            self._state[].native_read = (
+                self._state[]
+                .descriptor.value()
+                .begin_read(size, self._state[].position)
+            )
 
     def _request_size(mut self, minimum: Int) raises -> Int:
         if self._state[].eof or not self._state[].descriptor:
             return 0
         var size = max(minimum, self._state[].chunk_size)
         if self._state[].end:
-            var position = self._state[].position.value() if self._state[].position else self._state[].bytes_read
-            size = Int(min(Int64(size), max(Int64(0), self._state[].end.value() - position + 1)))
+            var position = (
+                self._state[]
+                .position.value() if self._state[]
+                .position else self._state[]
+                .bytes_read
+            )
+            size = Int(
+                min(
+                    Int64(size),
+                    max(Int64(0), self._state[].end.value() - position + 1),
+                )
+            )
             if position > self._state[].end.value():
                 self._state[].eof = True
                 self._state[].chunks.finish()
@@ -184,7 +273,9 @@ struct Readable(ImplicitlyCopyable):
         var size = self._request_size(minimum)
         if size == 0:
             return
-        var result = self._state[].descriptor.value().read(size, self._state[].position)
+        var result = (
+            self._state[].descriptor.value().read(size, self._state[].position)
+        )
         self._accept_read(result)
 
     def _accept_read(mut self, result: Optional[Buffer]) raises:
@@ -216,7 +307,11 @@ struct Readable(ImplicitlyCopyable):
             self._state[].events.close()
 
     def readable(self) -> Bool:
-        return not self._state[].ended and not self._state[].closed and not self._state[].failed
+        return (
+            not self._state[].ended
+            and not self._state[].closed
+            and not self._state[].failed
+        )
 
     def readable_ended(self) -> Bool:
         return self._state[].events.state[].ended
@@ -231,7 +326,9 @@ struct Readable(ImplicitlyCopyable):
         self._add_pipe(PipeSink(destination))
         return destination
 
-    def pipe_to_response(mut self, destination: ServerResponse) raises -> ServerResponse:
+    def pipe_to_response(
+        mut self, destination: ServerResponse
+    ) raises -> ServerResponse:
         self._add_pipe(PipeSink(destination))
         return destination
 
@@ -243,12 +340,16 @@ struct Readable(ImplicitlyCopyable):
         if self._state[].closed or self._state[].failed:
             return
         if len(self._state[].pipes) >= 1024:
-            raise Error("Readable pipe destinations exceed the finite runtime limit")
+            raise Error(
+                "Readable pipe destinations exceed the finite runtime limit"
+            )
         self._activate()
         var subscription = PipeSubscription(sink)
         self._state[].events.state[].data.add(subscription.data)
         try:
-            self._state[].events.notifications("end").add(subscription.end, True)
+            self._state[].events.notifications("end").add(
+                subscription.end, True
+            )
         except error:
             self._state[].events.state[].data.remove(subscription.data)
             raise error^
@@ -258,7 +359,11 @@ struct Readable(ImplicitlyCopyable):
     def _poll(mut self) raises -> Bool:
         if self._state[].polling:
             return False
-        if self._state[].failed or self._state[].closed and not self._state[].ended:
+        if (
+            self._state[].failed
+            or self._state[].closed
+            and not self._state[].ended
+        ):
             return self._prune_sinks(True)
         self._state[].polling = True
         try:
@@ -270,18 +375,31 @@ struct Readable(ImplicitlyCopyable):
         var previous = len(self._state[].pipes)
         if previous == 0:
             return False
-        var terminal = all_sinks or self._state[].failed or self._state[].events.state[].ended or self._state[].events.state[].closed or self._state[].closed and not self._state[].ended
+        var terminal = (
+            all_sinks
+            or self._state[].failed
+            or self._state[].events.state[].ended
+            or self._state[].events.state[].closed
+            or self._state[].closed
+            and not self._state[].ended
+        )
         var retained = List[PipeSubscription]()
         for subscription in self._state[].pipes:
             if not terminal and subscription.sink.writable():
                 retained.append(subscription)
             else:
                 self._state[].events.state[].data.remove(subscription.data)
-                var endings = self._state[].events.state[].notifications.get("end")
+                var endings = (
+                    self._state[].events.state[].notifications.get("end")
+                )
                 if endings:
                     endings.value().remove(subscription.end)
         self._state[].pipes = retained^
-        if previous and not self._state[].pipes and not self._state[].events.state[].data.has_listeners():
+        if (
+            previous
+            and not self._state[].pipes
+            and not self._state[].events.state[].data.has_listeners()
+        ):
             self._state[].flowing = False
         return previous != len(self._state[].pipes)
 
@@ -294,7 +412,12 @@ struct Readable(ImplicitlyCopyable):
             self._state[].resume_pending = False
             self._state[].events.emit("resume")
             worked = True
-        if blocked or self._state[].ended or self._state[].closed or self._state[].failed:
+        if (
+            blocked
+            or self._state[].ended
+            or self._state[].closed
+            or self._state[].failed
+        ):
             return worked
         var readable_listener = self._state[].events.has("readable")
         if not self._state[].flowing and not readable_listener:
@@ -312,7 +435,11 @@ struct Readable(ImplicitlyCopyable):
             self._state[].readable_pending = False
             self._state[].events.emit("readable")
             worked = True
-        if not self._state[].paused and self._state[].flowing and not readable_listener:
+        if (
+            not self._state[].paused
+            and self._state[].flowing
+            and not readable_listener
+        ):
             var value = self.read()
             worked = Bool(value) or self._state[].ended or worked
         return worked
@@ -341,7 +468,9 @@ struct Readable(ImplicitlyCopyable):
         if not self._state[].registered:
             _prune_readables()
             if len(_readable_sources.get()[]) >= 16384:
-                raise Error("Active readable streams exceed the finite runtime limit")
+                raise Error(
+                    "Active readable streams exceed the finite runtime limit"
+                )
             _readable_sources.get()[].append(self._state)
             self._state[].registered = True
         self._state[].asynchronous = True
@@ -349,10 +478,14 @@ struct Readable(ImplicitlyCopyable):
     def on_data(mut self, event: String, callback: DataCallback) raises -> Self:
         return self._add_data(event, callback, False)
 
-    def once_data(mut self, event: String, callback: DataCallback) raises -> Self:
+    def once_data(
+        mut self, event: String, callback: DataCallback
+    ) raises -> Self:
         return self._add_data(event, callback, True)
 
-    def _add_data(mut self, event: String, callback: DataCallback, once: Bool) raises -> Self:
+    def _add_data(
+        mut self, event: String, callback: DataCallback, once: Bool
+    ) raises -> Self:
         if event != "data":
             raise Error("Unsupported readable data event: ", event)
         self._activate()
@@ -361,47 +494,72 @@ struct Readable(ImplicitlyCopyable):
             _ = self.resume()
         return self
 
-    def off_data(mut self, event: String, callback: DataCallback) raises -> Self:
+    def off_data(
+        mut self, event: String, callback: DataCallback
+    ) raises -> Self:
         if event != "data":
             raise Error("Unsupported readable data event: ", event)
         self._state[].events.state[].data.remove(callback)
         return self
 
-    def on_empty(mut self, event: String, callback: Notification) raises -> Self:
+    def on_empty(
+        mut self, event: String, callback: Notification
+    ) raises -> Self:
         return self._add_empty(event, callback, False)
 
-    def once_empty(mut self, event: String, callback: Notification) raises -> Self:
+    def once_empty(
+        mut self, event: String, callback: Notification
+    ) raises -> Self:
         return self._add_empty(event, callback, True)
 
-    def _add_empty(mut self, event: String, callback: Notification, once: Bool) raises -> Self:
+    def _add_empty(
+        mut self, event: String, callback: Notification, once: Bool
+    ) raises -> Self:
         var listeners = self._state[].events.notifications(event)
         if event == "readable":
             self._activate()
         listeners.add(callback, once)
         if event == "readable":
             self._state[].flowing = False
-            self._state[].readable_pending = len(self._state[].chunks) != 0 or self._state[].eof
+            self._state[].readable_pending = (
+                len(self._state[].chunks) != 0 or self._state[].eof
+            )
         return self
 
-    def off_empty(mut self, event: String, callback: Notification) raises -> Self:
+    def off_empty(
+        mut self, event: String, callback: Notification
+    ) raises -> Self:
         self._state[].events.notifications(event).remove(callback)
-        if event == "readable" and not self._state[].events.has("readable") and self._state[].events.state[].data.has_listeners() and not self._state[].paused:
+        if (
+            event == "readable"
+            and not self._state[].events.has("readable")
+            and self._state[].events.state[].data.has_listeners()
+            and not self._state[].paused
+        ):
             _ = self.resume()
         return self
 
-    def on_error(mut self, event: String, callback: ReadErrorCallback) raises -> Self:
+    def on_error(
+        mut self, event: String, callback: ReadErrorCallback
+    ) raises -> Self:
         return self._add_error(event, callback, False)
 
-    def once_error(mut self, event: String, callback: ReadErrorCallback) raises -> Self:
+    def once_error(
+        mut self, event: String, callback: ReadErrorCallback
+    ) raises -> Self:
         return self._add_error(event, callback, True)
 
-    def _add_error(mut self, event: String, callback: ReadErrorCallback, once: Bool) raises -> Self:
+    def _add_error(
+        mut self, event: String, callback: ReadErrorCallback, once: Bool
+    ) raises -> Self:
         if event != "error":
             raise Error("Unsupported readable error event: ", event)
         self._state[].events.state[].errors.add(callback, once)
         return self
 
-    def off_error(mut self, event: String, callback: ReadErrorCallback) raises -> Self:
+    def off_error(
+        mut self, event: String, callback: ReadErrorCallback
+    ) raises -> Self:
         if event != "error":
             raise Error("Unsupported readable error event: ", event)
         self._state[].events.state[].errors.remove(callback)
@@ -412,7 +570,9 @@ def _initial_readables() -> List[ArcPointer[_ReadableState]]:
     return List[ArcPointer[_ReadableState]]()
 
 
-comptime _readable_sources = GlobalCell["tsonic.node.stream.readables", _initial_readables]()
+comptime _readable_sources = GlobalCell[
+    "tsonic.node.stream.readables", _initial_readables
+]()
 
 
 def _prune_readables():
@@ -420,9 +580,27 @@ def _prune_readables():
     for owner in _readable_sources.get()[]:
         var source = Readable(owner)
         _ = source._prune_sinks()
-        var needed = owner[].native_read or owner[].resume_pending or owner[].events.has("readable") or not owner[].paused and owner[].flowing
-        var pending_pipe_end = len(owner[].pipes) != 0 and owner[].ended and not owner[].events.state[].ended and not owner[].events.state[].closed and not owner[].failed
-        if pending_pipe_end or needed and not owner[].closed and not owner[].failed and not owner[].ended:
+        var needed = (
+            owner[].native_read
+            or owner[].resume_pending
+            or owner[].events.has("readable")
+            or not owner[].paused
+            and owner[].flowing
+        )
+        var pending_pipe_end = (
+            len(owner[].pipes) != 0
+            and owner[].ended
+            and not owner[].events.state[].ended
+            and not owner[].events.state[].closed
+            and not owner[].failed
+        )
+        if (
+            pending_pipe_end
+            or needed
+            and not owner[].closed
+            and not owner[].failed
+            and not owner[].ended
+        ):
             retained.append(owner)
         else:
             owner[].registered = False

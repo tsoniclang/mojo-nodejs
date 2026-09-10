@@ -25,7 +25,9 @@ def _initial_context() -> WorkerContext:
     return WorkerContext()
 
 
-comptime _context = GlobalCell["tsonic.node.worker-threads.context", _initial_context]()
+comptime _context = GlobalCell[
+    "tsonic.node.worker-threads.context", _initial_context
+]()
 
 
 def source_module_entry() raises -> Optional[String]:
@@ -49,12 +51,16 @@ def source_module_entry() raises -> Optional[String]:
     var entry = initialization.array_at(0)
     var name = initialization.array_at(3)
     if not entry.is_string() or not name.is_string():
-        raise Error("Worker initialization has no exact module identity or name")
+        raise Error(
+            "Worker initialization has no exact module identity or name"
+        )
     var native_name = name.string_value().to_native_strict()
     if native_name.find("\0") >= 0:
         raise Error("Worker name contains a null byte")
     if native_name.byte_length() != 0:
-        var status = external_call["tsonic_node_worker_name", c_int](native_name.as_c_string_slice().ptr().as_unsafe_any_origin())
+        var status = external_call["tsonic_node_worker_name", c_int](
+            native_name.as_c_string_slice().ptr().as_unsafe_any_origin()
+        )
         if status != 0:
             raise Error("Unable to assign worker process name")
     restore_environment(initialization.array_at(2))

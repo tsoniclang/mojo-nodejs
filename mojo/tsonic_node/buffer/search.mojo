@@ -41,7 +41,9 @@ def search_bytes(
     if not reverse and offset + len(needle) > len(haystack):
         return -1
     var first = 0 if reverse else offset // width
-    var last_start = min(offset // width, length - count) if reverse else length - count
+    var last_start = (
+        min(offset // width, length - count) if reverse else length - count
+    )
     var end = last_start + count
     var prefixes = List[Int](capacity=count)
     prefixes.append(0)

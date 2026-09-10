@@ -29,7 +29,9 @@ def run_event_loop() raises:
         or has_active_readables()
         or has_pending_readline()
     ):
-        var read_epoch = external_call["tsonic_node_stream_read_epoch", UInt64]()
+        var read_epoch = external_call[
+            "tsonic_node_stream_read_epoch", UInt64
+        ]()
         var timer_work = poll_timers()
         var server_work = poll_servers()
         var request_work = poll_requests()
@@ -59,6 +61,8 @@ def run_event_loop() raises:
             continue
         var delay = next_timer_delay_ns()
         var sleep_ns = min(delay.value(), 10_000_000) if delay else 10_000_000
-        var waited = external_call["tsonic_node_stream_read_wait", c_int](read_epoch, UInt64(sleep_ns))
+        var waited = external_call["tsonic_node_stream_read_wait", c_int](
+            read_epoch, UInt64(sleep_ns)
+        )
         if waited < 0:
             raise Error("Native event-loop completion wait failed: ", waited)

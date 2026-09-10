@@ -1,8 +1,17 @@
 from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
-from tsonic_js import JsString, JsValue, json_parse, js_value_from_array_values, js_value_from_byte_view
+from tsonic_js import (
+    JsString,
+    JsValue,
+    json_parse,
+    js_value_from_array_values,
+    js_value_from_byte_view,
+)
 from tsonic_js.value.builder import _JsValueBuilder
-from tsonic_node.assertions import deep_strict_equal, deep_strict_equal_with_message
+from tsonic_node.assertions import (
+    deep_strict_equal,
+    deep_strict_equal_with_message,
+)
 from tsonic_node.assertions.deep import deep_value_equal
 from tsonic_node.buffer import Buffer, buffer_to_js_value
 
@@ -45,16 +54,27 @@ def deeply_nested(depth: Int) raises -> JsValue:
 
 
 def main() raises:
-    deep_strict_equal(parsed('{"name":"item","values":[1,2]}'), parsed('{"values":[1,2],"name":"item"}'))
+    deep_strict_equal(
+        parsed('{"name":"item","values":[1,2]}'),
+        parsed('{"values":[1,2],"name":"item"}'),
+    )
     assert_false(deep_value_equal(parsed('{"left":1}'), parsed('{"right":1}')))
-    assert_false(deep_value_equal(parsed('{"value":{"inner":1}}'), parsed('{"value":{"inner":2}}')))
-    assert_false(deep_value_equal(parsed('1'), parsed('"1"')))
-    assert_false(deep_value_equal(parsed('null'), JsValue()))
-    deep_strict_equal(JsValue(Float64(FloatLiteral.nan)), JsValue(Float64(FloatLiteral.nan)))
-    assert_false(deep_value_equal(JsValue(Float64(-0.0)), JsValue(Float64(0.0))))
+    assert_false(
+        deep_value_equal(
+            parsed('{"value":{"inner":1}}'), parsed('{"value":{"inner":2}}')
+        )
+    )
+    assert_false(deep_value_equal(parsed("1"), parsed('"1"')))
+    assert_false(deep_value_equal(parsed("null"), JsValue()))
+    deep_strict_equal(
+        JsValue(Float64(FloatLiteral.nan)), JsValue(Float64(FloatLiteral.nan))
+    )
+    assert_false(
+        deep_value_equal(JsValue(Float64(-0.0)), JsValue(Float64(0.0)))
+    )
     deep_strict_equal(sparse(False), sparse(False))
     assert_false(deep_value_equal(sparse(False), sparse(True)))
-    assert_false(deep_value_equal(sparse(False), parsed('[]')))
+    assert_false(deep_value_equal(sparse(False), parsed("[]")))
     deep_strict_equal(cycle(1), cycle(1))
     assert_false(deep_value_equal(cycle(1), cycle(2)))
     assert_false(deep_value_equal(cycle(1), cycle(1, True)))
@@ -62,18 +82,29 @@ def main() raises:
     var shared = List[JsValue]()
     shared.append(child)
     shared.append(child)
-    deep_strict_equal(js_value_from_array_values(shared^), parsed('[{"value":1},{"value":1}]'))
+    deep_strict_equal(
+        js_value_from_array_values(shared^), parsed('[{"value":1},{"value":1}]')
+    )
     deep_strict_equal(deeply_nested(4096), deeply_nested(4096))
     var bytes = Buffer.from_string("xabcx")
     var view = bytes.subarray(1, Float64(4))
     var expected = Buffer.from_string("abc")
     deep_strict_equal(buffer_to_js_value(view), buffer_to_js_value(expected))
     bytes.set(1, UInt8(100))
-    assert_false(deep_value_equal(buffer_to_js_value(view), buffer_to_js_value(expected)))
-    assert_false(deep_value_equal(buffer_to_js_value(view), js_value_from_byte_view(buffer_to_js_value(view).byte_view())))
+    assert_false(
+        deep_value_equal(buffer_to_js_value(view), buffer_to_js_value(expected))
+    )
+    assert_false(
+        deep_value_equal(
+            buffer_to_js_value(view),
+            js_value_from_byte_view(buffer_to_js_value(view).byte_view()),
+        )
+    )
     var rejected = False
     try:
-        deep_strict_equal_with_message(parsed('[1]'), parsed('[2]'), "nested mismatch")
+        deep_strict_equal_with_message(
+            parsed("[1]"), parsed("[2]"), "nested mismatch"
+        )
     except error:
         rejected = True
         assert_equal(String(error), "nested mismatch")

@@ -1,7 +1,14 @@
 from std.collections import List
 from std.memory import ArcPointer
 from std.memory.arc_pointer import WeakPointer
-from tsonic_runtime import GlobalCell, RaisingCallable, TsError, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    GlobalCell,
+    RaisingCallable,
+    TsError,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from ..internal.callback_queue import Notification
 from ..buffer import Buffer
 from ..stream import Readable, Writable
@@ -45,12 +52,33 @@ struct Interface(ImplicitlyCopyable):
     var _state: ArcPointer[_InterfaceState]
 
     def __init__(out self, options: ReadLineOptions) raises:
-        var history_size = Int(checked_integer(options.historySize.value(), 1048576, "historySize")) if options.historySize else 30
-        self._state = ArcPointer(_InterfaceState(options.input, options.output,
-            options.prompt.value() if options.prompt else "> ", "", LineBuffer(), StreamDecoder(), None,
-            options.terminal.value() if options.terminal else False, False, False, False, False,
-            List[String](), history_size, options.removeHistoryDuplicates.value() if options.removeHistoryDuplicates else False,
-            None, None, None, None, InterfaceEvents()))
+        var history_size = Int(
+            checked_integer(options.historySize.value(), 1048576, "historySize")
+        ) if options.historySize else 30
+        self._state = ArcPointer(
+            _InterfaceState(
+                options.input,
+                options.output,
+                options.prompt.value() if options.prompt else "> ",
+                "",
+                LineBuffer(),
+                StreamDecoder(),
+                None,
+                options.terminal.value() if options.terminal else False,
+                False,
+                False,
+                False,
+                False,
+                List[String](),
+                history_size,
+                options.removeHistoryDuplicates.value() if options.removeHistoryDuplicates else False,
+                None,
+                None,
+                None,
+                None,
+                InterfaceEvents(),
+            )
+        )
         self._register()
         try:
             self._subscribe()
@@ -65,7 +93,10 @@ struct Interface(ImplicitlyCopyable):
 
     def _subscribe(self) raises:
         var environment = allocate_callable_environment(
-            _InterfaceInput(WeakPointer[_InterfaceState](downgrade=self._state)), destroy_callable_environment[_InterfaceInput],
+            _InterfaceInput(
+                WeakPointer[_InterfaceState](downgrade=self._state)
+            ),
+            destroy_callable_environment[_InterfaceInput],
         )
         var data = DataCallback(environment, _InterfaceInput.data)
         var end = Notification(environment, _InterfaceInput.end)
@@ -137,16 +168,24 @@ struct Interface(ImplicitlyCopyable):
 
     def _unsubscribe(self) raises:
         if self._state[].input_data:
-            _ = self._state[].input.off_data("data", self._state[].input_data.value())
+            _ = self._state[].input.off_data(
+                "data", self._state[].input_data.value()
+            )
             self._state[].input_data = None
         if self._state[].input_end:
-            _ = self._state[].input.off_empty("end", self._state[].input_end.value())
+            _ = self._state[].input.off_empty(
+                "end", self._state[].input_end.value()
+            )
             self._state[].input_end = None
         if self._state[].input_close:
-            _ = self._state[].input.off_empty("close", self._state[].input_close.value())
+            _ = self._state[].input.off_empty(
+                "close", self._state[].input_close.value()
+            )
             self._state[].input_close = None
         if self._state[].input_error:
-            _ = self._state[].input.off_error("error", self._state[].input_error.value())
+            _ = self._state[].input.off_error(
+                "error", self._state[].input_error.value()
+            )
             self._state[].input_error = None
 
     def on_line(mut self, event: String, callback: LineCallback) raises -> Self:
@@ -154,40 +193,56 @@ struct Interface(ImplicitlyCopyable):
         self._state[].events.lines.add(callback)
         return self
 
-    def once_line(mut self, event: String, callback: LineCallback) raises -> Self:
+    def once_line(
+        mut self, event: String, callback: LineCallback
+    ) raises -> Self:
         self._state[].events.require_line(event)
         self._state[].events.lines.add(callback, True)
         return self
 
-    def off_line(mut self, event: String, callback: LineCallback) raises -> Self:
+    def off_line(
+        mut self, event: String, callback: LineCallback
+    ) raises -> Self:
         self._state[].events.require_line(event)
         self._state[].events.lines.remove(callback)
         return self
 
-    def on_error(mut self, event: String, callback: ErrorCallback) raises -> Self:
+    def on_error(
+        mut self, event: String, callback: ErrorCallback
+    ) raises -> Self:
         self._state[].events.require_error(event)
         self._state[].events.errors.add(callback)
         return self
 
-    def once_error(mut self, event: String, callback: ErrorCallback) raises -> Self:
+    def once_error(
+        mut self, event: String, callback: ErrorCallback
+    ) raises -> Self:
         self._state[].events.require_error(event)
         self._state[].events.errors.add(callback, True)
         return self
 
-    def off_error(mut self, event: String, callback: ErrorCallback) raises -> Self:
+    def off_error(
+        mut self, event: String, callback: ErrorCallback
+    ) raises -> Self:
         self._state[].events.require_error(event)
         self._state[].events.errors.remove(callback)
         return self
 
-    def on_empty(mut self, event: String, callback: Notification) raises -> Self:
+    def on_empty(
+        mut self, event: String, callback: Notification
+    ) raises -> Self:
         self._state[].events.notifications(event).add(callback)
         return self
 
-    def once_empty(mut self, event: String, callback: Notification) raises -> Self:
+    def once_empty(
+        mut self, event: String, callback: Notification
+    ) raises -> Self:
         self._state[].events.notifications(event).add(callback, True)
         return self
 
-    def off_empty(mut self, event: String, callback: Notification) raises -> Self:
+    def off_empty(
+        mut self, event: String, callback: Notification
+    ) raises -> Self:
         self._state[].events.notifications(event).remove(callback)
         return self
 
@@ -217,16 +272,26 @@ struct Interface(ImplicitlyCopyable):
             return
         _prune_interfaces()
         if len(_interfaces.get()[]) >= 16384:
-            raise Error("Pending readline interfaces exceed the finite runtime limit")
+            raise Error(
+                "Pending readline interfaces exceed the finite runtime limit"
+            )
         self._state[].registered = True
         _interfaces.get()[].append(self)
 
     def _history(self, text: String):
-        if not self._state[].terminal or self._state[].history_size == 0 or text.byte_length() == 0:
+        if (
+            not self._state[].terminal
+            or self._state[].history_size == 0
+            or text.byte_length() == 0
+        ):
             return
         if len(self._state[].history) and self._state[].history[0] == text:
             return
-        var retained = List[String](capacity=min(self._state[].history_size, len(self._state[].history) + 1))
+        var retained = List[String](
+            capacity=min(
+                self._state[].history_size, len(self._state[].history) + 1
+            )
+        )
         retained.append(text)
         for previous in self._state[].history:
             if len(retained) == self._state[].history_size:
@@ -236,7 +301,11 @@ struct Interface(ImplicitlyCopyable):
         self._state[].history = retained^
 
     def _dispatch(mut self) raises:
-        if self._state[].dispatching or self._state[].paused or self._state[].closed:
+        if (
+            self._state[].dispatching
+            or self._state[].paused
+            or self._state[].closed
+        ):
             return
         self._state[].dispatching = True
         try:
@@ -255,7 +324,11 @@ struct Interface(ImplicitlyCopyable):
             self._state[].dispatching = False
 
     def _poll(mut self) raises -> Bool:
-        if self._state[].closed or self._state[].paused or self._state[].dispatching:
+        if (
+            self._state[].closed
+            or self._state[].paused
+            or self._state[].dispatching
+        ):
             return False
         var worked = self._state[].lines.has_lines()
         self._dispatch()
@@ -270,14 +343,18 @@ struct _InterfaceInput:
     var owner: WeakPointer[_InterfaceState]
 
     @staticmethod
-    def data(context: ErasedCallableContext, var arguments: Tuple[StreamChunk]) raises:
+    def data(
+        context: ErasedCallableContext, var arguments: Tuple[StreamChunk]
+    ) raises:
         var input = context.unsafe_bitcast[Self]()
         var state = input[].owner.try_upgrade()
         if not state or state.value()[].closed:
             return
         var interface = Interface(state.value())
         var value = arguments[0].copy()
-        var text = value.unsafe_get[String]() if value.isa[String]() else interface._state[].decoder.write(value.unsafe_get[Buffer]())
+        var text = value.unsafe_get[String]() if value.isa[
+            String
+        ]() else interface._state[].decoder.write(value.unsafe_get[Buffer]())
         interface._state[].lines.feed(text)
         interface._dispatch()
 
@@ -302,7 +379,9 @@ struct _InterfaceInput:
                 interface.close()
 
     @staticmethod
-    def error(context: ErasedCallableContext, var arguments: Tuple[TsError]) raises:
+    def error(
+        context: ErasedCallableContext, var arguments: Tuple[TsError]
+    ) raises:
         var input = context.unsafe_bitcast[Self]()
         var state = input[].owner.try_upgrade()
         if state and not state.value()[].closed:
@@ -313,7 +392,9 @@ def _initial_interfaces() -> List[Interface]:
     return List[Interface]()
 
 
-comptime _interfaces = GlobalCell["tsonic.node.readline.interfaces", _initial_interfaces]()
+comptime _interfaces = GlobalCell[
+    "tsonic.node.readline.interfaces", _initial_interfaces
+]()
 
 
 def _prune_interfaces():

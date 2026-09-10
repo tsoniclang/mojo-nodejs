@@ -2,9 +2,17 @@ from std.collections import List
 from std.testing import assert_equal, assert_true, assert_false
 from tsonic_node.buffer import Buffer, buffer_concat
 from tsonic_node.zlib import (
-    create_gzip, create_gunzip, create_brotli_compress, create_brotli_decompress,
-    gzip_sync, gzip_sync_info_options, gunzip_sync_info_options,
-    gzip_sync_result_options, ZlibOptions, ZlibInfo, brotli_operation_flush,
+    create_gzip,
+    create_gunzip,
+    create_brotli_compress,
+    create_brotli_decompress,
+    gzip_sync,
+    gzip_sync_info_options,
+    gunzip_sync_info_options,
+    gzip_sync_result_options,
+    ZlibOptions,
+    ZlibInfo,
+    brotli_operation_flush,
 )
 
 

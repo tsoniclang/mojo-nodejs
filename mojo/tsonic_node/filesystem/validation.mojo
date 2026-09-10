@@ -9,5 +9,10 @@ def checked_path(value: String) raises:
 
 def check_status(status: Int32, operation: String) raises:
     if status < 0:
-        raise Error(operation, ": ", get_system_error_name(Float64(status)), ": ",
-                    get_system_error_message(Float64(status)))
+        raise Error(
+            operation,
+            ": ",
+            get_system_error_name(Float64(status)),
+            ": ",
+            get_system_error_message(Float64(status)),
+        )

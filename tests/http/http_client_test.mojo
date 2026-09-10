@@ -1,14 +1,33 @@
 from std.collections import List
 from std.testing import assert_equal, assert_true
 from std.time import sleep
-from tsonic_runtime import ErasedCallableContext, Location, RaisingCallable, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    ErasedCallableContext,
+    Location,
+    RaisingCallable,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.buffer import Buffer
 from tsonic_node.filesystem import read_text_file
-from tsonic_node.http import IncomingMessage, ServerResponse, create_server, poll_servers
-from tsonic_node.http.client import get, request, has_pending_requests, poll_requests
+from tsonic_node.http import (
+    IncomingMessage,
+    ServerResponse,
+    create_server,
+    poll_servers,
+)
+from tsonic_node.http.client import (
+    get,
+    request,
+    has_pending_requests,
+    poll_requests,
+)
 from tsonic_node.http.client_options import RequestOptions
 from tsonic_node.http.connections import has_pending_connections
-from tsonic_node.https import create_server as create_https_server, request as https_request
+from tsonic_node.https import (
+    create_server as create_https_server,
+    request as https_request,
+)
 from tsonic_node.tls import TlsOptions, poll_tls
 
 
@@ -28,7 +47,10 @@ struct Handler:
     var calls: Location[Int]
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[IncomingMessage, ServerResponse]) raises:
+    def invoke(
+        context: ErasedCallableContext,
+        var arguments: Tuple[IncomingMessage, ServerResponse],
+    ) raises:
         var owner = context.unsafe_bitcast[Handler]()
         var incoming = arguments[0]
         var response = arguments[1]
@@ -59,7 +81,9 @@ struct Completion:
     var fail: Bool
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[IncomingMessage]) raises:
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[IncomingMessage]
+    ) raises:
         var owner = context.unsafe_bitcast[Completion]()
         owner[].calls.write(owner[].calls.read() + 1)
         if owner[].fail:
@@ -78,14 +102,27 @@ def listen_callback() -> RaisingCallable[Tuple[], NoneType]:
     return RaisingCallable[Tuple[], NoneType](owner, Listen.invoke)
 
 
-def handler(calls: Location[Int]) -> RaisingCallable[Tuple[IncomingMessage, ServerResponse], NoneType]:
+def handler(
+    calls: Location[Int],
+) -> RaisingCallable[Tuple[IncomingMessage, ServerResponse], NoneType]:
     var owner = allocate_callable_environment(Handler(calls), Handler.destroy)
-    return RaisingCallable[Tuple[IncomingMessage, ServerResponse], NoneType](owner, Handler.invoke)
+    return RaisingCallable[Tuple[IncomingMessage, ServerResponse], NoneType](
+        owner, Handler.invoke
+    )
 
 
-def completion(calls: Location[Int], body: Location[Buffer], status: Location[Int32], fail: Bool = False) -> RaisingCallable[Tuple[IncomingMessage], NoneType]:
-    var owner = allocate_callable_environment(Completion(calls, body, status, fail), Completion.destroy)
-    return RaisingCallable[Tuple[IncomingMessage], NoneType](owner, Completion.invoke)
+def completion(
+    calls: Location[Int],
+    body: Location[Buffer],
+    status: Location[Int32],
+    fail: Bool = False,
+) -> RaisingCallable[Tuple[IncomingMessage], NoneType]:
+    var owner = allocate_callable_environment(
+        Completion(calls, body, status, fail), Completion.destroy
+    )
+    return RaisingCallable[Tuple[IncomingMessage], NoneType](
+        owner, Completion.invoke
+    )
 
 
 def pump() raises:
@@ -96,7 +133,9 @@ def pump() raises:
         if not has_pending_requests() and not has_pending_connections():
             return
         sleep(0.001)
-    raise Error("Same-process HTTP/TLS requests failed to make bounded progress")
+    raise Error(
+        "Same-process HTTP/TLS requests failed to make bounded progress"
+    )
 
 
 def large_body() -> Buffer:
@@ -149,14 +188,21 @@ def main() raises:
     assert_equal(completed.read(), 2)
     assert_equal(len(received.read()), 0)
     var discarded = Location(0)
-    var cancelled = get("http://127.0.0.1:18101/cancel", completion(discarded, received, status))
+    var cancelled = get(
+        "http://127.0.0.1:18101/cancel", completion(discarded, received, status)
+    )
     _ = cancelled.destroy()
     pump()
     assert_equal(discarded.read(), 0)
     var failures = Location(0)
     var survivors = Location(0)
-    _ = get("http://127.0.0.1:18101/first", completion(failures, received, status, True))
-    _ = get("http://127.0.0.1:18101/second", completion(survivors, received, status))
+    _ = get(
+        "http://127.0.0.1:18101/first",
+        completion(failures, received, status, True),
+    )
+    _ = get(
+        "http://127.0.0.1:18101/second", completion(survivors, received, status)
+    )
     var propagated = False
     try:
         pump()
@@ -170,13 +216,19 @@ def main() raises:
     assert_equal(received.read().to_string(), "alive")
     server.close()
     var secure_options = TlsOptions()
-    secure_options.cert = Optional(read_text_file("tests/fixtures/localhost-cert.pem"))
-    secure_options.key = Optional(read_text_file("tests/fixtures/localhost-key.pem"))
+    secure_options.cert = Optional(
+        read_text_file("tests/fixtures/localhost-cert.pem")
+    )
+    secure_options.key = Optional(
+        read_text_file("tests/fixtures/localhost-key.pem")
+    )
     var secure = create_https_server(secure_options, handler(calls))
     _ = secure.listen(Float64(18102), "127.0.0.1", listen_callback())
     options.hostname = Optional("localhost")
     options.port = Optional(Float64(18102))
-    _ = https_request(options, completion(completed, received, status)).end_buffer(expected)
+    _ = https_request(
+        options, completion(completed, received, status)
+    ).end_buffer(expected)
     pump()
     assert_equal(completed.read(), 3)
     assert_equal(status.read(), 201)

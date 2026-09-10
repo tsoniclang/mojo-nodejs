@@ -35,7 +35,11 @@ struct LineBuffer(Movable):
                 continue
             self._append(String(text[byte=start:index]))
             start = index + 1
-            if byte == 10 and self._carriage_return and now - self._carriage_return.value() <= 100000000:
+            if (
+                byte == 10
+                and self._carriage_return
+                and now - self._carriage_return.value() <= 100000000
+            ):
                 self._carriage_return = None
                 continue
             self._emit()
@@ -46,7 +50,10 @@ struct LineBuffer(Movable):
         self._append(String(text[byte=start:]))
 
     def _append(mut self, text: String) raises:
-        if text.byte_length() > 16777216 - self.current.byte_length() or text.byte_length() > 67108864 - self._bytes:
+        if (
+            text.byte_length() > 16777216 - self.current.byte_length()
+            or text.byte_length() > 67108864 - self._bytes
+        ):
             raise Error("Readline input exceeds its retained text budget")
         self.current += text
         self._bytes += text.byte_length()
@@ -82,7 +89,9 @@ struct LineBuffer(Movable):
         return self._finished
 
     def has_lines(self) -> Bool:
-        return len(self._complete) != 0 or (self._finished and self.current.byte_length() != 0)
+        return len(self._complete) != 0 or (
+            self._finished and self.current.byte_length() != 0
+        )
 
     def cursor(self) -> Int:
         var result = 0

@@ -45,17 +45,24 @@ def request_url(options: RequestOptions, scheme: String) raises -> URL:
     var protocol = options.protocol.value() if options.protocol else scheme
     if protocol != scheme:
         raise Error("Request protocol does not match the selected Node module")
-    var host = options.hostname.value() if options.hostname else String("localhost")
+    var host = options.hostname.value() if options.hostname else String(
+        "localhost"
+    )
     if host.find(":") >= 0 and not host.startswith("["):
         host = "[" + host + "]"
     var address = URL(protocol + "//" + host)
     if options.port:
-        address.set_port(String(checked_integer(options.port.value(), 65535, "request port")))
+        address.set_port(
+            String(checked_integer(options.port.value(), 65535, "request port"))
+        )
     if options.path:
         var path = options.path.value()
         for byte in path.as_bytes():
             if byte <= 32 or byte == 127:
-                raise Error("Request path contains an unescaped control character or space")
+                raise Error(
+                    "Request path contains an unescaped control character or"
+                    " space"
+                )
         var query = path.find("?")
         if query >= 0:
             address.set_pathname(String(path[byte=:query]))
@@ -107,8 +114,28 @@ def check_token(value: String, role: String) raises:
     if not value:
         raise Error("HTTP ", role, " cannot be empty")
     for byte in value.as_bytes():
-        if (byte >= 65 and byte <= 90) or (byte >= 97 and byte <= 122) or (byte >= 48 and byte <= 57):
+        if (
+            (byte >= 65 and byte <= 90)
+            or (byte >= 97 and byte <= 122)
+            or (byte >= 48 and byte <= 57)
+        ):
             continue
-        if byte == 33 or byte == 35 or byte == 36 or byte == 37 or byte == 38 or byte == 39 or byte == 42 or byte == 43 or byte == 45 or byte == 46 or byte == 94 or byte == 95 or byte == 96 or byte == 124 or byte == 126:
+        if (
+            byte == 33
+            or byte == 35
+            or byte == 36
+            or byte == 37
+            or byte == 38
+            or byte == 39
+            or byte == 42
+            or byte == 43
+            or byte == 45
+            or byte == 46
+            or byte == 94
+            or byte == 95
+            or byte == 96
+            or byte == 124
+            or byte == 126
+        ):
             continue
         raise Error("HTTP ", role, " contains an invalid token character")

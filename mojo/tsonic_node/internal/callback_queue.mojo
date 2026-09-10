@@ -1,6 +1,11 @@
 from std.collections import List
 from std.memory import ArcPointer
-from tsonic_runtime import RaisingCallable, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    RaisingCallable,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 
 
 comptime Notification = RaisingCallable[Tuple[], NoneType]
@@ -44,11 +49,16 @@ struct CallbackReservation(ImplicitlyCopyable):
         queue[].committed += 1
         queue[].pending.append(callback)
 
-    def defer[Arguments: Copyable & Deinitable](
-        self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
+    def defer[
+        Arguments: Copyable & Deinitable
+    ](
+        self,
+        callback: RaisingCallable[Arguments, NoneType],
+        var arguments: Arguments,
     ) raises:
         var environment = allocate_callable_environment(
-            _Invocation[Arguments](callback, arguments^), _Invocation[Arguments].destroy,
+            _Invocation[Arguments](callback, arguments^),
+            _Invocation[Arguments].destroy,
         )
         self.commit(Notification(environment, _Invocation[Arguments].invoke))
 
@@ -72,10 +82,15 @@ struct CallbackQueue(ImplicitlyCopyable):
     var _state: ArcPointer[_QueueState]
 
     def __init__(out self, limit: Int):
-        self._state = ArcPointer(_QueueState(List[Notification](), limit, 0, 0, False))
+        self._state = ArcPointer(
+            _QueueState(List[Notification](), limit, 0, 0, False)
+        )
 
     def require_capacity(self) raises:
-        if self._state[].committed + self._state[].reserved >= self._state[].limit:
+        if (
+            self._state[].committed + self._state[].reserved
+            >= self._state[].limit
+        ):
             raise Error("Pending callbacks exceed the finite runtime limit")
 
     def reserve(self) raises -> CallbackReservation:
@@ -91,8 +106,12 @@ struct CallbackQueue(ImplicitlyCopyable):
     def push(self, notification: Notification) raises:
         self.reserve().commit(notification)
 
-    def defer[Arguments: Copyable & Deinitable](
-        self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
+    def defer[
+        Arguments: Copyable & Deinitable
+    ](
+        self,
+        callback: RaisingCallable[Arguments, NoneType],
+        var arguments: Arguments,
     ) raises:
         self.reserve().defer(callback, arguments^)
 

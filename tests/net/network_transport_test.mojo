@@ -1,10 +1,28 @@
 from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from std.time import sleep
-from tsonic_runtime import ErasedCallableContext, Location, RaisingCallable, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    ErasedCallableContext,
+    Location,
+    RaisingCallable,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.buffer import Buffer
 from tsonic_node.internal.network_endpoint import monotonic_milliseconds
-from tsonic_node.net import ConnectionOptions, ServerOptions, Socket, create_connection_options, create_server_callback, create_server_options_callback, is_ip, is_ipv4, is_ipv6, poll_net, has_active_net
+from tsonic_node.net import (
+    ConnectionOptions,
+    ServerOptions,
+    Socket,
+    create_connection_options,
+    create_server_callback,
+    create_server_options_callback,
+    is_ip,
+    is_ipv4,
+    is_ipv6,
+    poll_net,
+    has_active_net,
+)
 
 
 @fieldwise_init
@@ -13,7 +31,9 @@ struct Accepted:
     var throw_first: Location[Bool]
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[Socket]) raises:
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[Socket]
+    ) raises:
         var environment = context.unsafe_bitcast[Accepted]()
         var sockets = environment[].sockets.read()
         sockets.append(arguments[0])
@@ -27,14 +47,22 @@ struct Accepted:
         destroy_callable_environment[Accepted](context)
 
 
-def on_connection(sockets: Location[List[Socket]], fail: Bool = False) -> RaisingCallable[Tuple[Socket], NoneType]:
-    var environment = allocate_callable_environment(Accepted(sockets, Location(fail)), Accepted.destroy)
-    return RaisingCallable[Tuple[Socket], NoneType](environment, Accepted.invoke)
+def on_connection(
+    sockets: Location[List[Socket]], fail: Bool = False
+) -> RaisingCallable[Tuple[Socket], NoneType]:
+    var environment = allocate_callable_environment(
+        Accepted(sockets, Location(fail)), Accepted.destroy
+    )
+    return RaisingCallable[Tuple[Socket], NoneType](
+        environment, Accepted.invoke
+    )
 
 
 def poll_until_count(sockets: Location[List[Socket]], expected: Int) raises:
     var deadline = monotonic_milliseconds() + 5000
-    while len(sockets.read()) < expected and monotonic_milliseconds() < deadline:
+    while (
+        len(sockets.read()) < expected and monotonic_milliseconds() < deadline
+    ):
         _ = poll_net()
         sleep(0.001)
     assert_equal(len(sockets.read()), expected)
@@ -42,13 +70,17 @@ def poll_until_count(sockets: Location[List[Socket]], expected: Int) raises:
 
 def exchange() raises:
     var accepted = Location(List[Socket]())
-    var server = create_server_options_callback(ServerOptions(True, True), on_connection(accepted))
+    var server = create_server_options_callback(
+        ServerOptions(True, True), on_connection(accepted)
+    )
     _ = server.listen_port_host(0, "127.0.0.1")
     assert_true(server.listening())
     var address = server.address().value()
     assert_true(address.port > 0)
     assert_equal(address.family, "IPv4")
-    var client = create_connection_options(ConnectionOptions(address.port, "127.0.0.1", True))
+    var client = create_connection_options(
+        ConnectionOptions(address.port, "127.0.0.1", True)
+    )
     assert_true(client.pending())
     assert_false(Bool(client.read()))
     var payload = Buffer.allocate(3 * 1024 * 1024, 179)
@@ -77,7 +109,10 @@ def exchange() raises:
     _ = peer.end_string("reply after half close")
     var reply = String()
     deadline = monotonic_milliseconds() + 5000
-    while reply != "reply after half close" and monotonic_milliseconds() < deadline:
+    while (
+        reply != "reply after half close"
+        and monotonic_milliseconds() < deadline
+    ):
         _ = poll_net()
         var chunk = client.read()
         if chunk:
@@ -110,7 +145,10 @@ def retained_connections() raises:
         try:
             _ = poll_net()
         except error:
-            assert_true(String(error).find("deliberate connection callback failure") >= 0)
+            assert_true(
+                String(error).find("deliberate connection callback failure")
+                >= 0
+            )
             rejected = True
         sleep(0.001)
     assert_true(rejected)
@@ -135,7 +173,9 @@ def invalid_construction() raises:
     for timeout in timeouts:
         var rejected = False
         try:
-            _ = create_connection_options(ConnectionOptions(80, "localhost", timeout=timeout))
+            _ = create_connection_options(
+                ConnectionOptions(80, "localhost", timeout=timeout)
+            )
         except:
             rejected = True
         assert_true(rejected)

@@ -9,7 +9,9 @@ def main() raises:
         return
     if len(arguments) < 4:
         raise Error("Path oracle requires dialect, operation and input")
-    var dialect = win32_value() if String(arguments[1]) == "win32" else posix_value()
+    var dialect = (
+        win32_value() if String(arguments[1]) == "win32" else posix_value()
+    )
     var operation = String(arguments[2])
     var path = String(arguments[3])
     if operation == "normalize":
@@ -19,11 +21,19 @@ def main() raises:
     elif operation == "matchesGlob":
         if len(arguments) != 5:
             raise Error("Path glob oracle requires path and pattern")
-        print("true" if dialect.matches_glob(path, String(arguments[4])) else "false")
+        print(
+            "true" if dialect.matches_glob(
+                path, String(arguments[4])
+            ) else "false"
+        )
     elif operation == "dirname":
         print(dialect.dirname(path))
     elif operation == "basename":
-        print(dialect.basename(path, String(arguments[4]) if len(arguments) > 4 else String()))
+        print(
+            dialect.basename(
+                path, String(arguments[4]) if len(arguments) > 4 else String()
+            )
+        )
     elif operation == "extname":
         print(dialect.extname(path))
     elif operation == "toNamespacedPath":
@@ -51,6 +61,9 @@ def main() raises:
         var parts = List[String]()
         for index in range(3, len(arguments)):
             parts.append(String(arguments[index]))
-        print(dialect.join(parts) if operation == "join" else dialect.resolve(parts))
+        print(
+            dialect.join(parts) if operation
+            == "join" else dialect.resolve(parts)
+        )
     else:
         raise Error("Unknown path oracle operation")

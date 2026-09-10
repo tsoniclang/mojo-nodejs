@@ -13,7 +13,10 @@ from tsonic_runtime import (
 from tsonic_node.filesystem import read_text_file
 from tsonic_node.buffer import Buffer
 from tsonic_node.http import IncomingMessage, ServerResponse
-from tsonic_node.http.connections import has_pending_connections, poll_connections
+from tsonic_node.http.connections import (
+    has_pending_connections,
+    poll_connections,
+)
 from tsonic_node.http.client import has_pending_requests, poll_requests
 from tsonic_node.https import (
     create_server as create_https_server,
@@ -151,17 +154,25 @@ def main() raises:
 
 
 def _prove_throwing_accept(certificate: String, private_key: String) raises:
-    var server_options = TlsOptions(cert=Optional(certificate), key=Optional(private_key))
+    var server_options = TlsOptions(
+        cert=Optional(certificate), key=Optional(private_key)
+    )
     var accepted = Location[Optional[TLSSocket]](None)
     var listening = Location(0)
-    var server = create_tls_server(server_options, socket_callback(accepted, True))
+    var server = create_tls_server(
+        server_options, socket_callback(accepted, True)
+    )
     _ = server.listen(18093, "127.0.0.1", empty_callback(listening))
     var certificates = List[String]()
     certificates.append(certificate)
-    var client = connect(ConnectionOptions(
-        host=Optional("127.0.0.1"), servername=Optional("localhost"),
-        port=Optional(Float64(18093)), ca=Optional(certificates^),
-    ))
+    var client = connect(
+        ConnectionOptions(
+            host=Optional("127.0.0.1"),
+            servername=Optional("localhost"),
+            port=Optional(Float64(18093)),
+            ca=Optional(certificates^),
+        )
+    )
     var callback_failures = 0
     for _ in range(2000):
         try:

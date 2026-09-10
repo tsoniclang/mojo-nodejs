@@ -3,7 +3,12 @@ from std.memory import ArcPointer
 from tsonic_runtime import GlobalCell, RaisingCallable, TsError
 from ..internal.network_endpoint import AddressInfo, NetworkEndpoint
 from ..internal.typed_listeners import TypedListeners
-from .socket import EmptyCallback, SocketCallback, TLSSocket, ClientErrorListeners
+from .socket import (
+    EmptyCallback,
+    SocketCallback,
+    TLSSocket,
+    ClientErrorListeners,
+)
 from .events import require_event
 from .state import _TlsServerNativeState
 
@@ -65,7 +70,10 @@ struct Server(ImplicitlyCopyable):
         return self.listen(port, "", callback)
 
     def listen(
-        self, port: Float64, host: String, callback: Optional[EmptyCallback] = None
+        self,
+        port: Float64,
+        host: String,
+        callback: Optional[EmptyCallback] = None,
     ) raises -> Self:
         if self._state[].active:
             raise Error("TLS server is already listening")
@@ -111,52 +119,84 @@ struct Server(ImplicitlyCopyable):
         return self
 
     def listening(self) -> Bool:
-        return self._state[].active and self._state[].endpoint.value().progress() == 1
+        return (
+            self._state[].active
+            and self._state[].endpoint.value().progress() == 1
+        )
 
     def address(self) raises -> Optional[AddressInfo]:
-        return self._state[].endpoint.value().address() if self._state[].endpoint else Optional[AddressInfo]()
+        return (
+            self._state[]
+            .endpoint.value()
+            .address() if self._state[]
+            .endpoint else Optional[AddressInfo]()
+        )
 
-    def on_tls_client_error(self, event: String, callback: RaisingCallable[Tuple[TsError, TLSSocket], NoneType]) raises -> Self:
+    def on_tls_client_error(
+        self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError, TLSSocket], NoneType],
+    ) raises -> Self:
         require_event(event, "tlsClientError")
         self._state[].tls_client_errors.add(callback)
         return self
 
-    def once_tls_client_error(self, event: String, callback: RaisingCallable[Tuple[TsError, TLSSocket], NoneType]) raises -> Self:
+    def once_tls_client_error(
+        self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError, TLSSocket], NoneType],
+    ) raises -> Self:
         require_event(event, "tlsClientError")
         self._state[].tls_client_errors.add(callback, True)
         return self
 
-    def off_tls_client_error(self, event: String, callback: RaisingCallable[Tuple[TsError, TLSSocket], NoneType]) raises -> Self:
+    def off_tls_client_error(
+        self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError, TLSSocket], NoneType],
+    ) raises -> Self:
         require_event(event, "tlsClientError")
         self._state[].tls_client_errors.remove(callback)
         return self
 
-    def on_connection(self, event: String, callback: SocketCallback) raises -> Self:
+    def on_connection(
+        self, event: String, callback: SocketCallback
+    ) raises -> Self:
         require_event(event, "secureConnection")
         self._state[].secure_connections.add(callback)
         return self
 
-    def once_connection(self, event: String, callback: SocketCallback) raises -> Self:
+    def once_connection(
+        self, event: String, callback: SocketCallback
+    ) raises -> Self:
         require_event(event, "secureConnection")
         self._state[].secure_connections.add(callback, True)
         return self
 
-    def off_connection(self, event: String, callback: SocketCallback) raises -> Self:
+    def off_connection(
+        self, event: String, callback: SocketCallback
+    ) raises -> Self:
         require_event(event, "secureConnection")
         self._state[].secure_connections.remove(callback)
         return self
 
-    def on_error(self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def on_error(
+        self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]
+    ) raises -> Self:
         require_event(event, "error")
         self._state[].errors.add(callback)
         return self
 
-    def once_error(self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def once_error(
+        self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]
+    ) raises -> Self:
         require_event(event, "error")
         self._state[].errors.add(callback, True)
         return self
 
-    def off_error(self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def off_error(
+        self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]
+    ) raises -> Self:
         require_event(event, "error")
         self._state[].errors.remove(callback)
         return self
@@ -184,13 +224,18 @@ struct Server(ImplicitlyCopyable):
 def _initial_servers() -> List[Server]:
     return List[Server]()
 
+
 comptime _servers = GlobalCell["tsonic.node.tls.servers", _initial_servers]()
 
 
 def prune_servers():
     var retained = List[Server]()
     for server in _servers.get()[]:
-        if server._state[].active or server._state[].close_pending or len(server._state[].clients) != 0:
+        if (
+            server._state[].active
+            or server._state[].close_pending
+            or len(server._state[].clients) != 0
+        ):
             retained.append(server)
         else:
             server._state[].registered = False

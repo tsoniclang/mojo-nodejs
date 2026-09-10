@@ -2,13 +2,20 @@ from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from std.time import sleep
 from tsonic_runtime import (
-    ErasedCallableContext, Location, RaisingCallable,
-    allocate_callable_environment, destroy_callable_environment,
+    ErasedCallableContext,
+    Location,
+    RaisingCallable,
+    allocate_callable_environment,
+    destroy_callable_environment,
 )
 from tsonic_node import RmOptions, remove_path, write_text_file
 from tsonic_node.filesystem import Stats
 from tsonic_node.filesystem.watch import (
-    WatchOptions, poll_watchers, unwatch_file, watch, watch_file,
+    WatchOptions,
+    poll_watchers,
+    unwatch_file,
+    watch,
+    watch_file,
 )
 
 
@@ -17,7 +24,10 @@ struct ChangeEnvironment:
     var calls: Location[Int]
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[String, Optional[String]]) raises:
+    def invoke(
+        context: ErasedCallableContext,
+        var arguments: Tuple[String, Optional[String]],
+    ) raises:
         assert_true(arguments[0] == "change" or arguments[0] == "rename")
         var environment = context.unsafe_bitcast[ChangeEnvironment]()
         environment[].calls.write(environment[].calls.read() + 1)
@@ -33,7 +43,9 @@ struct StatEnvironment:
     var size: Location[Int]
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[Stats, Stats]):
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[Stats, Stats]
+    ):
         var environment = context.unsafe_bitcast[StatEnvironment]()
         environment[].calls.write(environment[].calls.read() + 1)
         environment[].size.write(arguments[0].size)
@@ -58,8 +70,12 @@ def main() raises:
         var path = root + "/😀.txt"
         write_text_file(path, "one")
         var calls = Location(0)
-        var owner = allocate_callable_environment(ChangeEnvironment(calls), ChangeEnvironment.destroy)
-        var change = RaisingCallable[Tuple[String, Optional[String]], NoneType](owner, ChangeEnvironment.invoke)
+        var owner = allocate_callable_environment(
+            ChangeEnvironment(calls), ChangeEnvironment.destroy
+        )
+        var change = RaisingCallable[Tuple[String, Optional[String]], NoneType](
+            owner, ChangeEnvironment.invoke
+        )
         var watcher = watch(path, change)
         var retained_alias = watcher
         assert_true(watcher.has_ref())
@@ -80,8 +96,12 @@ def main() raises:
 
         var stat_calls = Location(0)
         var size = Location(-1)
-        var stat_owner = allocate_callable_environment(StatEnvironment(stat_calls, size), StatEnvironment.destroy)
-        var listener = RaisingCallable[Tuple[Stats, Stats], NoneType](stat_owner, StatEnvironment.invoke)
+        var stat_owner = allocate_callable_environment(
+            StatEnvironment(stat_calls, size), StatEnvironment.destroy
+        )
+        var listener = RaisingCallable[Tuple[Stats, Stats], NoneType](
+            stat_owner, StatEnvironment.invoke
+        )
         var options = WatchOptions()
         options.interval = 1.0
         var missing = root + "/created-later"

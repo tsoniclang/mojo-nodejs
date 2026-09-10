@@ -1,6 +1,12 @@
 from std.collections import Dict
 from std.memory import ArcPointer
-from tsonic_runtime import RaisingCallable, TsError, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    RaisingCallable,
+    TsError,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from ..internal.callback_queue import Notification, CallbackReservation
 from ..internal.typed_listeners import TypedListeners
 from .chunk import StreamChunk
@@ -28,14 +34,28 @@ struct ReadEvents(ImplicitlyCopyable):
     var state: ArcPointer[_ReadEventState]
 
     def __init__(out self):
-        self.state = ArcPointer(_ReadEventState(
-            TypedListeners[Tuple[StreamChunk]](), TypedListeners[Tuple[TsError]](),
-            Dict[String, TypedListeners[Tuple[]]](), Dict[String, CallbackReservation](),
-            None, False, False, False, False,
-        ))
+        self.state = ArcPointer(
+            _ReadEventState(
+                TypedListeners[Tuple[StreamChunk]](),
+                TypedListeners[Tuple[TsError]](),
+                Dict[String, TypedListeners[Tuple[]]](),
+                Dict[String, CallbackReservation](),
+                None,
+                False,
+                False,
+                False,
+                False,
+            )
+        )
 
     def notifications(self, event: String) raises -> TypedListeners[Tuple[]]:
-        if event != "end" and event != "close" and event != "readable" and event != "pause" and event != "resume":
+        if (
+            event != "end"
+            and event != "close"
+            and event != "readable"
+            and event != "pause"
+            and event != "resume"
+        ):
             raise Error("Unsupported readable notification: ", event)
         if event not in self.state[].notifications:
             self.state[].notifications[event] = TypedListeners[Tuple[]]()
@@ -59,19 +79,32 @@ struct ReadEvents(ImplicitlyCopyable):
         for event in pending:
             self.state[].reservations[event] = pending[event]
 
-    def prepare_event(self, event: String, committed: Bool, mut pending: Dict[String, CallbackReservation]) raises:
+    def prepare_event(
+        self,
+        event: String,
+        committed: Bool,
+        mut pending: Dict[String, CallbackReservation],
+    ) raises:
         if not committed and event not in self.state[].reservations:
             pending[event] = stream_completions.get()[].reserve()
 
     def queue(self, event: String) raises:
         if event not in self.state[].reservations:
-            raise Error("Readable lifecycle delivery has no reserved queue capacity")
+            raise Error(
+                "Readable lifecycle delivery has no reserved queue capacity"
+            )
         var reservation = self.state[].reservations.pop(event)
-        var environment = allocate_callable_environment(_ReadEvent(self, event), destroy_callable_environment[_ReadEvent])
+        var environment = allocate_callable_environment(
+            _ReadEvent(self, event), destroy_callable_environment[_ReadEvent]
+        )
         reservation.commit(Notification(environment, _ReadEvent.invoke))
 
     def end(self) raises:
-        if not self.state[].end_queued and not self.state[].close_queued and not self.state[].error:
+        if (
+            not self.state[].end_queued
+            and not self.state[].close_queued
+            and not self.state[].error
+        ):
             self.queue("end")
             self.state[].end_queued = True
 

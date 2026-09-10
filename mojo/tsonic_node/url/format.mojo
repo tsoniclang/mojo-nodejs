@@ -9,13 +9,18 @@ def format_url(value: LegacyUrl) raises -> String:
         protocol += ":"
     var auth = String()
     if value.auth and value.auth.value():
-        auth = encode_uri_component_native(value.auth.value()).replace("%3A", ":") + "@"
+        auth = (
+            encode_uri_component_native(value.auth.value()).replace("%3A", ":")
+            + "@"
+        )
     var host = String()
     if value.host and value.host.value():
         host = auth + value.host.value()
     elif value.hostname and value.hostname.value():
         var hostname = value.hostname.value()
-        if hostname.find(":") >= 0 and not (hostname.startswith("[") and hostname.endswith("]")):
+        if hostname.find(":") >= 0 and not (
+            hostname.startswith("[") and hostname.endswith("]")
+        ):
             hostname = "[" + hostname + "]"
         host = auth + hostname
         if value.port and value.port.value():
@@ -30,7 +35,15 @@ def format_url(value: LegacyUrl) raises -> String:
     if hash and not hash.startswith("#"):
         hash = "#" + hash
     var slashes = value.slashes.value() if value.slashes else False
-    var slashed_protocol = protocol == "http:" or protocol == "https:" or protocol == "ftp:" or protocol == "gopher:" or protocol == "file:" or protocol == "ws:" or protocol == "wss:"
+    var slashed_protocol = (
+        protocol == "http:"
+        or protocol == "https:"
+        or protocol == "ftp:"
+        or protocol == "gopher:"
+        or protocol == "file:"
+        or protocol == "ws:"
+        or protocol == "wss:"
+    )
     if slashes or slashed_protocol:
         if slashes or host:
             if pathname and not pathname.startswith("/"):

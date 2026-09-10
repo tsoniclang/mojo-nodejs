@@ -23,7 +23,11 @@ def rejects(value: String) raises:
 
 def main() raises:
     var parser = RequestParser()
-    var input = bytes("POST /chunked HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\n4;name=value\r\na\x00bc\r\n3\r\ndef\r\n0\r\nX-Trailer: yes\r\n\r\n")
+    var input = bytes(
+        "POST /chunked HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding:"
+        " chunked\r\n\r\n4;name=value\r\na\x00bc\r\n3\r\ndef\r\n0\r\nX-Trailer:"
+        " yes\r\n\r\n"
+    )
     var complete = False
     for index in range(len(input)):
         var fragment = List[Byte]()
@@ -38,11 +42,19 @@ def main() raises:
     assert_equal(body[1], 0)
     assert_equal(body[6], Byte(102))
     assert_equal(len(message.read_all_buffer()), 0)
-    rejects("POST / HTTP/1.1\r\nContent-Length: 2\r\nContent-Length: 3\r\n\r\nabc")
-    rejects("POST / HTTP/1.1\r\nContent-Length: 2\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n")
+    rejects(
+        "POST / HTTP/1.1\r\nContent-Length: 2\r\nContent-Length: 3\r\n\r\nabc"
+    )
+    rejects(
+        "POST / HTTP/1.1\r\nContent-Length: 2\r\nTransfer-Encoding:"
+        " chunked\r\n\r\n0\r\n\r\n"
+    )
     rejects("POST / HTTP/1.1\r\nTransfer-Encoding: \r\n\r\n")
     rejects("GET / HTTP/1.1\r\nBad Header: value\r\n\r\n")
-    rejects("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\nZ\r\nx\r\n0\r\n\r\n")
+    rejects(
+        "POST / HTTP/1.1\r\nTransfer-Encoding:"
+        " chunked\r\n\r\nZ\r\nx\r\n0\r\n\r\n"
+    )
     var oversized = String("GET /")
     for _ in range(65536):
         oversized += "a"

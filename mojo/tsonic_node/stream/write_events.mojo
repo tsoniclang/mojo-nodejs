@@ -1,6 +1,12 @@
 from std.collections import Dict, List
 from std.memory import ArcPointer
-from tsonic_runtime import TsError, error_new, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    TsError,
+    error_new,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from ..internal.callback_queue import Notification, CallbackReservation
 from ..internal.typed_listeners import TypedListeners
 from .completion import StreamCompletion, WriteCallback, stream_completions
@@ -26,11 +32,22 @@ struct WriteEvents(ImplicitlyCopyable):
     var state: ArcPointer[_WriteEventState]
 
     def __init__(out self):
-        self.state = ArcPointer(_WriteEventState(
-            Dict[String, TypedListeners[Tuple[]]](), TypedListeners[Tuple[TsError]](),
-            None, False, False, False, False, False, False, False, Dict[String, CallbackReservation](),
-            List[StreamCompletion](),
-        ))
+        self.state = ArcPointer(
+            _WriteEventState(
+                Dict[String, TypedListeners[Tuple[]]](),
+                TypedListeners[Tuple[TsError]](),
+                None,
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+                Dict[String, CallbackReservation](),
+                List[StreamCompletion](),
+            )
+        )
 
     def notifications(self, event: String) raises -> TypedListeners[Tuple[]]:
         if event != "drain" and event != "finish" and event != "close":
@@ -55,7 +72,9 @@ struct WriteEvents(ImplicitlyCopyable):
         for event in pending:
             self.state[].reservations[event] = pending[event]
 
-    def _prepare(self, event: String, mut pending: Dict[String, CallbackReservation]) raises:
+    def _prepare(
+        self, event: String, mut pending: Dict[String, CallbackReservation]
+    ) raises:
         if event not in self.state[].reservations:
             pending[event] = stream_completions.get()[].reserve()
 
@@ -65,12 +84,15 @@ struct WriteEvents(ImplicitlyCopyable):
 
     def reserve(self, event: String) raises -> CallbackReservation:
         if event not in self.state[].reservations:
-            raise Error("Stream lifecycle delivery has no reserved queue capacity")
+            raise Error(
+                "Stream lifecycle delivery has no reserved queue capacity"
+            )
         return self.state[].reservations.pop(event)
 
     def queue(self, event: String, reservation: CallbackReservation) raises:
         var environment = allocate_callable_environment(
-            _WriteEvent(self, event), destroy_callable_environment[_WriteEvent],
+            _WriteEvent(self, event),
+            destroy_callable_environment[_WriteEvent],
         )
         reservation.commit(Notification(environment, _WriteEvent.invoke))
 
@@ -79,7 +101,9 @@ struct WriteEvents(ImplicitlyCopyable):
         if self.state[].error:
             completion.complete(self.state[].error.value().copy())
         elif self.state[].finished:
-            completion.complete(error_new("Cannot call end after the stream finished"))
+            completion.complete(
+                error_new("Cannot call end after the stream finished")
+            )
         else:
             self.state[].end_completions.append(completion)
 
@@ -110,7 +134,11 @@ struct WriteEvents(ImplicitlyCopyable):
 
     def close(self) raises:
         self.state[].close_scheduled = True
-        if not self.state[].finish_scheduled or self.state[].finished or self.state[].error:
+        if (
+            not self.state[].finish_scheduled
+            or self.state[].finished
+            or self.state[].error
+        ):
             self.queue_close()
 
     def queue_close(self) raises:
@@ -121,7 +149,11 @@ struct WriteEvents(ImplicitlyCopyable):
         self.queue("close", reservation)
 
     def drain(self) raises:
-        if self.state[].drain_scheduled or self.state[].finish_scheduled or self.state[].error:
+        if (
+            self.state[].drain_scheduled
+            or self.state[].finish_scheduled
+            or self.state[].error
+        ):
             return
         var reservation = self.reserve("drain")
         self.state[].drain_scheduled = True

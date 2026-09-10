@@ -1,7 +1,11 @@
 from std.collections import List
 from std.memory import ArcPointer
 from tsonic_runtime import GlobalCell, RaisingCallable, TsError, error_new
-from ..internal.network_endpoint import AddressInfo, NetworkEndpoint, network_error
+from ..internal.network_endpoint import (
+    AddressInfo,
+    NetworkEndpoint,
+    network_error,
+)
 from ..internal.typed_listeners import TypedListeners
 from .options import ServerOptions
 from .socket import Socket
@@ -50,10 +54,14 @@ struct Server(ImplicitlyCopyable):
     def listen_port_host(mut self, port: Float64, host: String) raises -> Self:
         return self._listen(port, host, None)
 
-    def listen_port_callback(mut self, port: Float64, callback: EmptyCallback) raises -> Self:
+    def listen_port_callback(
+        mut self, port: Float64, callback: EmptyCallback
+    ) raises -> Self:
         return self._listen(port, "", callback)
 
-    def listen_port_host_callback(mut self, port: Float64, host: String, callback: EmptyCallback) raises -> Self:
+    def listen_port_host_callback(
+        mut self, port: Float64, host: String, callback: EmptyCallback
+    ) raises -> Self:
         return self._listen(port, host, callback)
 
     def close(mut self) raises -> Self:
@@ -78,52 +86,79 @@ struct Server(ImplicitlyCopyable):
         return self
 
     def listening(self) -> Bool:
-        return self._state[].active and self._state[].endpoint.value().progress() == 1
+        return (
+            self._state[].active
+            and self._state[].endpoint.value().progress() == 1
+        )
 
     def address(self) raises -> Optional[AddressInfo]:
         if not self._state[].endpoint or not self._state[].active:
             return None
         return self._state[].endpoint.value().address()
 
-    def on_connection(mut self, event: String, callback: ConnectionCallback) raises -> Self:
+    def on_connection(
+        mut self, event: String, callback: ConnectionCallback
+    ) raises -> Self:
         self._require_event(event, "connection")
         self._state[].callbacks.add(callback)
         return self
 
-    def once_connection(mut self, event: String, callback: ConnectionCallback) raises -> Self:
+    def once_connection(
+        mut self, event: String, callback: ConnectionCallback
+    ) raises -> Self:
         self._require_event(event, "connection")
         self._state[].callbacks.add(callback, True)
         return self
 
-    def off_connection(mut self, event: String, callback: ConnectionCallback) raises -> Self:
+    def off_connection(
+        mut self, event: String, callback: ConnectionCallback
+    ) raises -> Self:
         self._require_event(event, "connection")
         self._state[].callbacks.remove(callback)
         return self
 
-    def on_error(mut self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def on_error(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError], NoneType],
+    ) raises -> Self:
         self._require_event(event, "error")
         self._state[].errors.add(callback)
         return self
 
-    def once_error(mut self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def once_error(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError], NoneType],
+    ) raises -> Self:
         self._require_event(event, "error")
         self._state[].errors.add(callback, True)
         return self
 
-    def off_error(mut self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def off_error(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError], NoneType],
+    ) raises -> Self:
         self._require_event(event, "error")
         self._state[].errors.remove(callback)
         return self
 
-    def on_empty(mut self, event: String, callback: EmptyCallback) raises -> Self:
+    def on_empty(
+        mut self, event: String, callback: EmptyCallback
+    ) raises -> Self:
         self._empty_event(event).add(callback)
         return self
 
-    def once_empty(mut self, event: String, callback: EmptyCallback) raises -> Self:
+    def once_empty(
+        mut self, event: String, callback: EmptyCallback
+    ) raises -> Self:
         self._empty_event(event).add(callback, True)
         return self
 
-    def off_empty(mut self, event: String, callback: EmptyCallback) raises -> Self:
+    def off_empty(
+        mut self, event: String, callback: EmptyCallback
+    ) raises -> Self:
         self._empty_event(event).remove(callback)
         return self
 
@@ -136,9 +171,13 @@ struct Server(ImplicitlyCopyable):
 
     def _require_event(self, event: String, expected: String) raises:
         if event != expected:
-            raise Error("Server event does not match its selected listener: " + event)
+            raise Error(
+                "Server event does not match its selected listener: " + event
+            )
 
-    def _listen(mut self, port: Float64, host: String, callback: Optional[EmptyCallback]) raises -> Self:
+    def _listen(
+        mut self, port: Float64, host: String, callback: Optional[EmptyCallback]
+    ) raises -> Self:
         if self._state[].active or self._state[].closing:
             raise Error("Network server is already active")
         _prune_servers()
@@ -170,7 +209,9 @@ def _prune_servers():
 
 def has_active_servers() -> Bool:
     for server in _servers.get()[]:
-        if server._state[].referenced and (server._state[].active or server._state[].closing):
+        if server._state[].referenced and (
+            server._state[].active or server._state[].closing
+        ):
             return True
     return False
 
@@ -201,8 +242,15 @@ def poll_servers() raises -> Bool:
                     if not endpoint:
                         break
                     ref options = server._state[].options
-                    var socket = Socket(endpoint.value(), True, options.allow_half_open.value() if options.allow_half_open else False)
-                    if options.pause_on_connect and options.pause_on_connect.value():
+                    var socket = Socket(
+                        endpoint.value(),
+                        True,
+                        options.allow_half_open.value() if options.allow_half_open else False,
+                    )
+                    if (
+                        options.pause_on_connect
+                        and options.pause_on_connect.value()
+                    ):
                         _ = socket.pause()
                     server._state[].connections.append(socket)
                     _ = server._state[].callbacks.emit((socket,))

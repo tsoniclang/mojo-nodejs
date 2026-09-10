@@ -1,5 +1,10 @@
 from std.testing import assert_equal, assert_false, assert_true
-from tsonic_runtime import Location, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Location,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.internal.callback_queue import CallbackQueue, Notification
 
 
@@ -16,10 +21,14 @@ struct Action:
         var action = context.unsafe_bitcast[Self]()
         action[].trace.write(action[].trace.read() + action[].name)
         if action[].enqueue:
-            action[].queue.push(notification(action[].queue, action[].trace, "C"))
+            action[].queue.push(
+                notification(action[].queue, action[].trace, "C")
+            )
             var rejected = False
             try:
-                action[].queue.push(notification(action[].queue, action[].trace, "overflow"))
+                action[].queue.push(
+                    notification(action[].queue, action[].trace, "overflow")
+                )
             except:
                 rejected = True
             assert_true(rejected)
@@ -32,9 +41,16 @@ struct Action:
         destroy_callable_environment[Self](context)
 
 
-def notification(queue: CallbackQueue, trace: Location[String], name: String,
-                 enqueue: Bool = False, fail: Bool = False) -> Notification:
-    var context = allocate_callable_environment(Action(queue, trace, name, enqueue, fail), Action.destroy)
+def notification(
+    queue: CallbackQueue,
+    trace: Location[String],
+    name: String,
+    enqueue: Bool = False,
+    fail: Bool = False,
+) -> Notification:
+    var context = allocate_callable_environment(
+        Action(queue, trace, name, enqueue, fail), Action.destroy
+    )
     return Notification(context, Action.invoke)
 
 

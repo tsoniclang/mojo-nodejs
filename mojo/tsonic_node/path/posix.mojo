@@ -78,7 +78,7 @@ def resolve(parts: List[String]) raises -> String:
         index -= 1
     var normalized = normalize(resolved^)
     while normalized.byte_length() > 1 and normalized.endswith(separator):
-        normalized = String(normalized[byte=:normalized.byte_length() - 1])
+        normalized = String(normalized[byte = : normalized.byte_length() - 1])
     if not normalized.startswith(separator):
         normalized = separator + normalized
     return normalized^
@@ -117,9 +117,14 @@ def basename(path: String, suffix: String = "") -> String:
         return ""
     var end = _base_end(path)
     var index = String(path[byte=:end]).rfind(separator)
-    var result = String(path[byte=index + 1:end])
-    if suffix and suffix.byte_length() <= path.byte_length() and suffix.endswith(result) and suffix != result:
-        return String(path[byte=index + 1:])
+    var result = String(path[byte = index + 1 : end])
+    if (
+        suffix
+        and suffix.byte_length() <= path.byte_length()
+        and suffix.endswith(result)
+        and suffix != result
+    ):
+        return String(path[byte = index + 1 :])
     if suffix and result.endswith(suffix) and result != suffix:
         return String(
             result[byte = 0 : result.byte_length() - suffix.byte_length()]
@@ -139,7 +144,9 @@ def parse(path: String) -> PathParts:
     var root = String(separator) if is_absolute(path) else String()
     var end = _base_end(path)
     var start = String(path[byte=:end]).rfind(separator) + 1
-    var directory = String(path[byte=:start - 1]) if start > 1 else root.copy()
+    var directory = (
+        String(path[byte = : start - 1]) if start > 1 else root.copy()
+    )
     var base = basename(path)
     var extension = extname(base)
     var name = String(
@@ -156,17 +163,22 @@ def format_path(parts: PathParts) -> String:
     var directory = parts.directory if parts.directory else parts.root
     if not directory:
         return base
-    return directory + base if directory == parts.root else directory + separator + base
+    return (
+        directory + base if directory
+        == parts.root else directory + separator + base
+    )
 
 
 def format_path(parts: PathInput) -> String:
-    return format_path(PathParts(
-        parts.root.value() if parts.root else String(),
-        parts.directory.value() if parts.directory else String(),
-        parts.base.value() if parts.base else String(),
-        parts.name.value() if parts.name else String(),
-        parts.extension.value() if parts.extension else String(),
-    ))
+    return format_path(
+        PathParts(
+            parts.root.value() if parts.root else String(),
+            parts.directory.value() if parts.directory else String(),
+            parts.base.value() if parts.base else String(),
+            parts.name.value() if parts.name else String(),
+            parts.extension.value() if parts.extension else String(),
+        )
+    )
 
 
 def relative(from_path: String, to_path: String) raises -> String:

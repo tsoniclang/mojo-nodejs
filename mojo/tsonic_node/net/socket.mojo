@@ -13,8 +13,15 @@ from .options import timeout_duration
 struct Socket(ImplicitlyCopyable):
     var _state: ArcPointer[SocketState]
 
-    def __init__(out self, endpoint: NetworkEndpoint, connected: Bool = False, allow_half_open: Bool = False) raises:
-        self._state = ArcPointer(SocketState(endpoint, connected, allow_half_open))
+    def __init__(
+        out self,
+        endpoint: NetworkEndpoint,
+        connected: Bool = False,
+        allow_half_open: Bool = False,
+    ) raises:
+        self._state = ArcPointer(
+            SocketState(endpoint, connected, allow_half_open)
+        )
         if len(_sockets.get()[]) >= 1048576:
             _prune_sockets()
         if len(_sockets.get()[]) >= 1048576:
@@ -79,7 +86,9 @@ struct Socket(ImplicitlyCopyable):
         activity(self._state)
         return self
 
-    def set_timeout_callback(mut self, timeout: Float64, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+    def set_timeout_callback(
+        mut self, timeout: Float64, callback: RaisingCallable[Tuple[], NoneType]
+    ) raises -> Self:
         if self._state[].destroyed:
             return self
         _ = self.set_timeout(timeout)
@@ -104,64 +113,106 @@ struct Socket(ImplicitlyCopyable):
     def address(self) raises -> Optional[AddressInfo]:
         return self._state[].endpoint.address()
 
-    def on_data(mut self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]) raises -> Self:
+    def on_data(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[Buffer], NoneType],
+    ) raises -> Self:
         self._require_event(event, "data")
         self._state[].data.add(callback)
         if not self._state[].paused:
             self._state[].flowing = True
         return self
 
-    def once_data(mut self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]) raises -> Self:
+    def once_data(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[Buffer], NoneType],
+    ) raises -> Self:
         self._require_event(event, "data")
         self._state[].data.add(callback, True)
         if not self._state[].paused:
             self._state[].flowing = True
         return self
 
-    def off_data(mut self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]) raises -> Self:
+    def off_data(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[Buffer], NoneType],
+    ) raises -> Self:
         self._require_event(event, "data")
         self._state[].data.remove(callback)
         return self
 
-    def on_error(mut self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def on_error(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError], NoneType],
+    ) raises -> Self:
         self._require_event(event, "error")
         self._state[].errors.add(callback)
         return self
 
-    def once_error(mut self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def once_error(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError], NoneType],
+    ) raises -> Self:
         self._require_event(event, "error")
         self._state[].errors.add(callback, True)
         return self
 
-    def off_error(mut self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def off_error(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[TsError], NoneType],
+    ) raises -> Self:
         self._require_event(event, "error")
         self._state[].errors.remove(callback)
         return self
 
-    def on_close(mut self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]) raises -> Self:
+    def on_close(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[Bool], NoneType],
+    ) raises -> Self:
         self._require_event(event, "close")
         self._state[].closes.add(callback)
         return self
 
-    def once_close(mut self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]) raises -> Self:
+    def once_close(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[Bool], NoneType],
+    ) raises -> Self:
         self._require_event(event, "close")
         self._state[].closes.add(callback, True)
         return self
 
-    def off_close(mut self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]) raises -> Self:
+    def off_close(
+        mut self,
+        event: String,
+        callback: RaisingCallable[Tuple[Bool], NoneType],
+    ) raises -> Self:
         self._require_event(event, "close")
         self._state[].closes.remove(callback)
         return self
 
-    def on_empty(mut self, event: String, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+    def on_empty(
+        mut self, event: String, callback: RaisingCallable[Tuple[], NoneType]
+    ) raises -> Self:
         self._empty_event(event).add(callback)
         return self
 
-    def once_empty(mut self, event: String, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+    def once_empty(
+        mut self, event: String, callback: RaisingCallable[Tuple[], NoneType]
+    ) raises -> Self:
         self._empty_event(event).add(callback, True)
         return self
 
-    def off_empty(mut self, event: String, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+    def off_empty(
+        mut self, event: String, callback: RaisingCallable[Tuple[], NoneType]
+    ) raises -> Self:
         self._empty_event(event).remove(callback)
         return self
 
@@ -182,7 +233,9 @@ struct Socket(ImplicitlyCopyable):
 
     def _require_event(self, event: String, expected: String) raises:
         if event != expected:
-            raise Error("Socket event does not match its selected listener: " + event)
+            raise Error(
+                "Socket event does not match its selected listener: " + event
+            )
 
 
 def _initial_sockets() -> List[Socket]:

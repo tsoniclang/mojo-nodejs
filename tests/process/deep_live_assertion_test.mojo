@@ -1,6 +1,13 @@
 from std.memory import ArcPointer
 from std.testing import assert_equal, assert_false, assert_true
-from tsonic_runtime import Callable, RaisingCallable, WeakReferenceIdentity, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Callable,
+    RaisingCallable,
+    WeakReferenceIdentity,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_js import JsString, JsValue, js_value_from_source_object
 from tsonic_node.assertions.deep import deep_value_equal
 
@@ -21,17 +28,23 @@ struct View:
         return 1
 
     @staticmethod
-    def key(_context: ErasedCallableContext, var _arguments: Tuple[Int]) -> JsString:
+    def key(
+        _context: ErasedCallableContext, var _arguments: Tuple[Int]
+    ) -> JsString:
         return JsString("value")
 
     @staticmethod
-    def value(context: ErasedCallableContext, var _arguments: Tuple[Int]) -> JsValue:
+    def value(
+        context: ErasedCallableContext, var _arguments: Tuple[Int]
+    ) -> JsValue:
         var source = context.unsafe_bitcast[Self]()[].source
         source[].reads += 1
         return JsValue(source[].value)
 
     @staticmethod
-    def to_json(context: ErasedCallableContext, var _arguments: Tuple[String]) raises -> JsValue:
+    def to_json(
+        context: ErasedCallableContext, var _arguments: Tuple[String]
+    ) raises -> JsValue:
         var source = context.unsafe_bitcast[Self]()[].source
         source[].json_calls += 1
         return JsValue(99.0)
@@ -44,7 +57,8 @@ struct View:
 def view(source: ArcPointer[Source], prototype_identity: String) -> JsValue:
     var context = allocate_callable_environment(View(source), View.destroy)
     return js_value_from_source_object(
-        WeakReferenceIdentity(source), prototype_identity,
+        WeakReferenceIdentity(source),
+        prototype_identity,
         Callable[Tuple[], Int](context, View.length),
         Callable[Tuple[Int], JsString](context, View.key),
         Callable[Tuple[Int], JsValue](context, View.value),

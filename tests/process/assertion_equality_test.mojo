@@ -1,5 +1,10 @@
 from std.testing import assert_equal, assert_true
-from tsonic_node.assertions import strict_equal, strict_equal_with_message, not_strict_equal, not_strict_equal_with_message
+from tsonic_node.assertions import (
+    strict_equal,
+    strict_equal_with_message,
+    not_strict_equal,
+    not_strict_equal_with_message,
+)
 from tsonic_node.buffer import Buffer
 
 
@@ -14,7 +19,9 @@ def main() raises:
     not_strict_equal(greatest, greatest - 1)
     var rejected = False
     try:
-        strict_equal_with_message(Float64(-0.0), Float64(0.0), "different zeros")
+        strict_equal_with_message(
+            Float64(-0.0), Float64(0.0), "different zeros"
+        )
     except error:
         rejected = True
         assert_equal(String(error), "different zeros")

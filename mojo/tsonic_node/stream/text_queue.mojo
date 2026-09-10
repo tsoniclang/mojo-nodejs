@@ -22,10 +22,15 @@ def _end_byte(chunk: _TextChunk, units: Int) raises -> Int:
     var remaining = units
     while remaining > 0:
         var lead = bytes[offset]
-        var size = 1 if lead < 0x80 else 2 if lead < 0xE0 else 3 if lead < 0xF0 else 4
+        var size = (
+            1 if lead < 0x80 else 2 if lead < 0xE0 else 3 if lead < 0xF0 else 4
+        )
         var count = 2 if size == 4 else 1
         if remaining < count:
-            raise Error("Decoded stream read would split a surrogate pair; native strings cannot represent that result")
+            raise Error(
+                "Decoded stream read would split a surrogate pair; native"
+                " strings cannot represent that result"
+            )
         remaining -= count
         offset += size
     return offset
@@ -71,9 +76,11 @@ struct TextQueue(Movable):
             var chunk = self._chunks.popleft()
             var count = min(remaining, chunk.length)
             var end = _end_byte(chunk, count)
-            output += chunk.storage[][byte=chunk.start:end]
+            output += chunk.storage[][byte = chunk.start : end]
             remaining -= count
             if count < chunk.length:
-                self._chunks.appendleft(_TextChunk(chunk.storage, end, chunk.length - count))
+                self._chunks.appendleft(
+                    _TextChunk(chunk.storage, end, chunk.length - count)
+                )
         self.length -= size
         return Optional(output^)

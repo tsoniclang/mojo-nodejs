@@ -1,8 +1,19 @@
 from std.testing import assert_equal, assert_false, assert_true
-from tsonic_runtime import Location, TsError, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Location,
+    TsError,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.buffer import Buffer
 from tsonic_node.internal.callback_queue import Notification
-from tsonic_node.readline import Interface, ReadLineOptions, create_interface, has_pending_readline
+from tsonic_node.readline import (
+    Interface,
+    ReadLineOptions,
+    create_interface,
+    has_pending_readline,
+)
 from tsonic_node.readline.events import LineCallback, ErrorCallback
 from support.input_events import poll_input_events
 
@@ -27,9 +38,13 @@ struct Action:
             raise Error("selected readline failure")
 
     @staticmethod
-    def line(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
+    def line(
+        context: ErasedCallableContext, var arguments: Tuple[String]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
-        action[].trace.write(action[].trace.read() + action[].label + "[" + arguments[0] + "]")
+        action[].trace.write(
+            action[].trace.read() + action[].label + "[" + arguments[0] + "]"
+        )
         action[].complete()
 
     @staticmethod
@@ -39,7 +54,9 @@ struct Action:
         action[].complete()
 
     @staticmethod
-    def error(context: ErasedCallableContext, var arguments: Tuple[TsError]) raises:
+    def error(
+        context: ErasedCallableContext, var arguments: Tuple[TsError]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
         var error = arguments[0].copy()
         assert_equal(error.name, "SelectedError")
@@ -48,13 +65,31 @@ struct Action:
         action[].trace.write(action[].trace.read() + action[].label)
 
 
-def line(trace: Location[String], label: String = "", fail: Bool = False, interface: Optional[Interface] = None, operation: String = "") -> LineCallback:
-    var environment = allocate_callable_environment(Action(trace, label, fail, interface, operation), destroy_callable_environment[Action])
+def line(
+    trace: Location[String],
+    label: String = "",
+    fail: Bool = False,
+    interface: Optional[Interface] = None,
+    operation: String = "",
+) -> LineCallback:
+    var environment = allocate_callable_environment(
+        Action(trace, label, fail, interface, operation),
+        destroy_callable_environment[Action],
+    )
     return LineCallback(environment, Action.line)
 
 
-def empty(trace: Location[String], label: String, fail: Bool = False, interface: Optional[Interface] = None, operation: String = "") -> Notification:
-    var environment = allocate_callable_environment(Action(trace, label, fail, interface, operation), destroy_callable_environment[Action])
+def empty(
+    trace: Location[String],
+    label: String,
+    fail: Bool = False,
+    interface: Optional[Interface] = None,
+    operation: String = "",
+) -> Notification:
+    var environment = allocate_callable_environment(
+        Action(trace, label, fail, interface, operation),
+        destroy_callable_environment[Action],
+    )
     return Notification(environment, Action.empty)
 
 
@@ -79,7 +114,9 @@ def line_question_and_eof() raises:
             break
         _ = poll_input_events()
     assert_false(has_pending_readline())
-    assert_equal(trace.read(), "answer[first]line[]once[]line[😀]line[tail]close")
+    assert_equal(
+        trace.read(), "answer[first]line[]once[]line[😀]line[tail]close"
+    )
 
 
 def transitions_and_reentry() raises:
@@ -87,12 +124,16 @@ def transitions_and_reentry() raises:
     var trace = Location(String())
     _ = interface.on_empty("pause", empty(trace, "P"))
     _ = interface.on_empty("resume", empty(trace, "R"))
-    _ = interface.once_empty("close", empty(trace, "C", interface=interface, operation="close"))
+    _ = interface.once_empty(
+        "close", empty(trace, "C", interface=interface, operation="close")
+    )
     _ = interface.pause()
     _ = interface.pause()
     _ = interface.resume()
     _ = interface.resume()
-    _ = interface.once_line("line", line(trace, "once", interface=interface, operation="write"))
+    _ = interface.once_line(
+        "line", line(trace, "once", interface=interface, operation="write")
+    )
     _ = interface.on_line("line", line(trace, "all"))
     interface.write("outer\n")
     assert_equal(trace.read(), "PRonce[outer]all[outer]all[nested]")
@@ -151,11 +192,18 @@ def input_error_identity() raises:
     var options = ReadLineOptions()
     var interface = create_interface(options)
     var trace = Location(String())
-    var environment = allocate_callable_environment(Action(trace, "E", False, None, ""), destroy_callable_environment[Action])
+    var environment = allocate_callable_environment(
+        Action(trace, "E", False, None, ""),
+        destroy_callable_environment[Action],
+    )
     var callback = ErrorCallback(environment, Action.error)
     _ = interface.once_error("error", callback)
-    var error = TsError("SelectedError", "exact input error", String("exact stack"))
-    assert_true(options.input._state[].events.state[].errors.emit((error.copy(),)))
+    var error = TsError(
+        "SelectedError", "exact input error", String("exact stack")
+    )
+    assert_true(
+        options.input._state[].events.state[].errors.emit((error.copy(),))
+    )
     assert_equal(trace.read(), "E")
     _ = interface.on_error("error", callback)
     _ = interface.off_error("error", callback)

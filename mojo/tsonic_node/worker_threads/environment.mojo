@@ -13,11 +13,18 @@ def _initial_environment() -> List[EnvironmentEntry]:
     return List[EnvironmentEntry]()
 
 
-comptime _environment = GlobalCell["tsonic.node.worker-threads.environment", _initial_environment]()
+comptime _environment = GlobalCell[
+    "tsonic.node.worker-threads.environment", _initial_environment
+]()
 
 
 def _key_equal(left: JsValue, right: JsValue) -> Bool:
-    if left.is_number() and right.is_number() and left._number_value() == 0 and right._number_value() == 0:
+    if (
+        left.is_number()
+        and right.is_number()
+        and left._number_value() == 0
+        and right._number_value() == 0
+    ):
         return True
     return object_is(left, right)
 
@@ -29,7 +36,9 @@ def get_environment_data(key: JsValue) -> JsValue:
     return JsValue.undefined()
 
 
-def set_environment_data(key: JsValue, value: JsValue = JsValue.undefined()) raises:
+def set_environment_data(
+    key: JsValue, value: JsValue = JsValue.undefined()
+) raises:
     for index in range(len(_environment.get()[])):
         if _key_equal(_environment.get()[][index].key, key):
             if value.is_undefined():
@@ -47,7 +56,9 @@ def set_environment_data(key: JsValue, value: JsValue = JsValue.undefined()) rai
 def environment_snapshot() raises -> JsValue:
     var entries = List[JsValue]()
     for entry in _environment.get()[]:
-        entries.append(js_value_from_array_values(List[JsValue](entry.key, entry.value)))
+        entries.append(
+            js_value_from_array_values(List[JsValue](entry.key, entry.value))
+        )
     return js_value_from_array_values(entries^)
 
 
@@ -65,6 +76,8 @@ def restore_environment(snapshot: JsValue) raises:
             raise Error("Worker environment snapshot contains a deleted entry")
         for existing in entries:
             if _key_equal(existing.key, key):
-                raise Error("Worker environment snapshot contains a duplicate key")
+                raise Error(
+                    "Worker environment snapshot contains a duplicate key"
+                )
         entries.append(EnvironmentEntry(key, value))
     _environment.get()[] = entries^

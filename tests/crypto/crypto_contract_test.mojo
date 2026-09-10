@@ -23,7 +23,9 @@ def main() raises:
     var mac = create_hmac("sha256", key)
     var shared = mac
     _ = mac.update_buffer(
-        Buffer.from_string("xwhat do ya want for nothing?y").subarray(1, Float64(29))
+        Buffer.from_string("xwhat do ya want for nothing?y").subarray(
+            1, Float64(29)
+        )
     )
     assert_equal(
         shared.digest().to_string("hex"),

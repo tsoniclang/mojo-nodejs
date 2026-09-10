@@ -49,7 +49,12 @@ struct SocketState(Movable):
     var readable: TypedListeners[Tuple[]]
     var closes: TypedListeners[Tuple[Bool]]
 
-    def __init__(out self, endpoint: NetworkEndpoint, connected: Bool, allow_half_open: Bool):
+    def __init__(
+        out self,
+        endpoint: NetworkEndpoint,
+        connected: Bool,
+        allow_half_open: Bool,
+    ):
         self.endpoint = endpoint
         self.writes = List[Optional[WriteChunk]]()
         self.write_index = 0

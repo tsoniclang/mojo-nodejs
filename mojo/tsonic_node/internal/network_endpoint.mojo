@@ -15,12 +15,16 @@ struct AddressInfo(ImplicitlyCopyable):
 struct _EndpointOwner(Movable):
     var handle: OptionalPointer[NoneType, MutUntrackedOrigin]
 
-    def __init__(out self, handle: OptionalPointer[NoneType, MutUntrackedOrigin]):
+    def __init__(
+        out self, handle: OptionalPointer[NoneType, MutUntrackedOrigin]
+    ):
         self.handle = handle
 
     def __deinit__(deinit self):
         if self.handle:
-            external_call["tsonic_node_net_endpoint_free", NoneType](self.handle.value())
+            external_call["tsonic_node_net_endpoint_free", NoneType](
+                self.handle.value()
+            )
 
 
 struct NetworkEndpoint(ImplicitlyCopyable):
@@ -31,29 +35,46 @@ struct NetworkEndpoint(ImplicitlyCopyable):
         if host.find("\0") >= 0:
             raise Error("Network host contains a null byte")
         var native_host = host
-        var handle = external_call["tsonic_node_net_endpoint_new", OptionalPointer[NoneType, MutUntrackedOrigin]](
-            native_host.as_c_string_slice().ptr().as_unsafe_any_origin(), native_port, c_int(listener),
+        var handle = external_call[
+            "tsonic_node_net_endpoint_new",
+            OptionalPointer[NoneType, MutUntrackedOrigin],
+        ](
+            native_host.as_c_string_slice().ptr().as_unsafe_any_origin(),
+            native_port,
+            c_int(listener),
         )
         if not handle:
             raise Error("Unable to allocate network endpoint")
         self._owner = ArcPointer(_EndpointOwner(handle))
 
-    def __init__(out self, handle: OptionalPointer[NoneType, MutUntrackedOrigin]):
+    def __init__(
+        out self, handle: OptionalPointer[NoneType, MutUntrackedOrigin]
+    ):
         self._owner = ArcPointer(_EndpointOwner(handle))
 
     def close(self):
-        external_call["tsonic_node_net_endpoint_close", NoneType](self._owner[].handle.value())
+        external_call["tsonic_node_net_endpoint_close", NoneType](
+            self._owner[].handle.value()
+        )
 
     def progress(self) -> Int32:
-        return external_call["tsonic_node_net_endpoint_progress", c_int](self._owner[].handle.value())
+        return external_call["tsonic_node_net_endpoint_progress", c_int](
+            self._owner[].handle.value()
+        )
 
     def descriptor(self) -> Int32:
-        return external_call["tsonic_node_net_endpoint_descriptor", c_int](self._owner[].handle.value())
+        return external_call["tsonic_node_net_endpoint_descriptor", c_int](
+            self._owner[].handle.value()
+        )
 
     def accept(self) raises -> Optional[Self]:
         var status = Int32(0)
-        var handle = external_call["tsonic_node_net_endpoint_accept", OptionalPointer[NoneType, MutUntrackedOrigin]](
-            self._owner[].handle.value(), Pointer(to=status),
+        var handle = external_call[
+            "tsonic_node_net_endpoint_accept",
+            OptionalPointer[NoneType, MutUntrackedOrigin],
+        ](
+            self._owner[].handle.value(),
+            Pointer(to=status),
         )
         if status != 0:
             raise network_error(status)
@@ -61,13 +82,16 @@ struct NetworkEndpoint(ImplicitlyCopyable):
 
     def no_delay(self, enabled: Bool) raises:
         var status = external_call["tsonic_node_net_endpoint_no_delay", c_int](
-            self._owner[].handle.value(), c_int(enabled),
+            self._owner[].handle.value(),
+            c_int(enabled),
         )
         if status != 0:
             raise network_error(status)
 
     def shutdown(self) raises:
-        var status = external_call["tsonic_node_net_endpoint_shutdown", c_int](self._owner[].handle.value())
+        var status = external_call["tsonic_node_net_endpoint_shutdown", c_int](
+            self._owner[].handle.value()
+        )
         if status != 0:
             raise network_error(status)
 
@@ -80,21 +104,36 @@ struct NetworkEndpoint(ImplicitlyCopyable):
         var port = Int32(0)
         var family = Int32(0)
         var status = external_call["tsonic_node_net_endpoint_address", c_int](
-            self._owner[].handle.value(), c_int(peer), bytes.unsafe_ptr(), c_size_t(len(bytes)),
-            Pointer(to=port), Pointer(to=family),
+            self._owner[].handle.value(),
+            c_int(peer),
+            bytes.unsafe_ptr(),
+            c_size_t(len(bytes)),
+            Pointer(to=port),
+            Pointer(to=family),
         )
         if status != 0:
             raise network_error(status)
         return AddressInfo(
-            String(unsafe_from_utf8_ptr=bytes.unsafe_ptr().unsafe_bitcast[UInt8]()),
-            "IPv4" if family == 4 else "IPv6", Float64(port),
+            String(
+                unsafe_from_utf8_ptr=bytes.unsafe_ptr().unsafe_bitcast[UInt8]()
+            ),
+            "IPv4" if family == 4 else "IPv6",
+            Float64(port),
         )
 
 
 def network_error(status: Int32) -> Error:
-    var name = external_call["uv_err_name", Pointer[UInt8, ImmUntrackedOrigin]](status)
-    var text = external_call["uv_strerror", Pointer[UInt8, ImmUntrackedOrigin]](status)
-    return Error(String(unsafe_from_utf8_ptr=name) + ": " + String(unsafe_from_utf8_ptr=text))
+    var name = external_call["uv_err_name", Pointer[UInt8, ImmUntrackedOrigin]](
+        status
+    )
+    var text = external_call["uv_strerror", Pointer[UInt8, ImmUntrackedOrigin]](
+        status
+    )
+    return Error(
+        String(unsafe_from_utf8_ptr=name)
+        + ": "
+        + String(unsafe_from_utf8_ptr=text)
+    )
 
 
 def poll_network_resolution() -> Bool:

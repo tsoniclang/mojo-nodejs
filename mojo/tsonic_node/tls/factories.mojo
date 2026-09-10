@@ -11,7 +11,9 @@ from ..net.options import timeout_duration
 def connect(options: ConnectionOptions) raises -> TLSSocket:
     var host = options.host.value() if options.host else "localhost"
     var servername = options.servername.value() if options.servername else ""
-    var verification_name = servername if servername.byte_length() != 0 else host
+    var verification_name = (
+        servername if servername.byte_length() != 0 else host
+    )
     if host.find("\0") >= 0 or servername.find("\0") >= 0:
         raise Error("TLS host contains a null byte")
     var port = _port(options.port.value() if options.port else 443)
@@ -42,7 +44,9 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
     if not handle:
         raise Error(_take_error(error, "Unable to establish TLS connection"))
     var socket = TLSSocket(handle)
-    socket._state[].allow_half_open = options.allow_half_open.value() if options.allow_half_open else False
+    socket._state[].allow_half_open = (
+        options.allow_half_open.value() if options.allow_half_open else False
+    )
     _ = socket.set_timeout(timeout)
     return socket^
 
@@ -60,7 +64,9 @@ def create_server(
 ) raises -> Server:
     if not options.key or not options.cert:
         raise Error("TLS server requires key and cert options")
-    var handshake_timeout = timeout_duration(options.handshake_timeout.value()) if options.handshake_timeout else 120000.0
+    var handshake_timeout = timeout_duration(
+        options.handshake_timeout.value()
+    ) if options.handshake_timeout else 120000.0
     var ca = _join_certificates(options.ca)
     var alpn = _alpn_wire(options.alpn_protocols)
     var key = String(options.key.value())
@@ -88,6 +94,8 @@ def create_server(
     var server = Server(ArcPointer(_TlsServerNativeState(handle)))
     if callback:
         server._state[].secure_connections.add(callback.value())
-    server._state[].allow_half_open = options.allow_half_open.value() if options.allow_half_open else False
+    server._state[].allow_half_open = (
+        options.allow_half_open.value() if options.allow_half_open else False
+    )
     server._state[].handshake_timeout = handshake_timeout
     return server^

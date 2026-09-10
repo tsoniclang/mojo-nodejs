@@ -26,11 +26,16 @@ def _initial_callbacks() -> CallbackQueue:
 
 
 comptime _requests = GlobalCell["tsonic.node.dns.requests", _initial_requests]()
-comptime _callbacks = GlobalCell["tsonic.node.dns.callbacks", _initial_callbacks]()
+comptime _callbacks = GlobalCell[
+    "tsonic.node.dns.callbacks", _initial_callbacks
+]()
 
 
 def _enqueue(input: String, kind: Int32, callback: DnsCallback) raises:
-    if len(_requests.get()[]) + _callbacks.get()[].pending_count() >= REQUEST_LIMIT:
+    if (
+        len(_requests.get()[]) + _callbacks.get()[].pending_count()
+        >= REQUEST_LIMIT
+    ):
         raise Error("Pending DNS requests exceed the finite runtime limit")
     _requests.get()[].append(PendingRequest(DnsRequest(input, kind), callback))
 
@@ -56,7 +61,9 @@ def has_pending_dns() -> Bool:
 
 
 def _publish(pending: PendingRequest) raises:
-    var failure = pending.request.error_value() if pending.request.failed() else js_value_from_null()
+    var failure = (
+        pending.request.error_value() if pending.request.failed() else js_value_from_null()
+    )
     if pending.callback.isa[LookupCallback]():
         var address = Optional[String]()
         var family = Optional[Float64]()
@@ -64,12 +71,18 @@ def _publish(pending: PendingRequest) raises:
             var result = pending.request.lookup_address()
             family = result.family_value()
             address = result.address_value()
-        _callbacks.get()[].defer(pending.callback.unsafe_get[LookupCallback](), (failure, address^, family))
+        _callbacks.get()[].defer(
+            pending.callback.unsafe_get[LookupCallback](),
+            (failure, address^, family),
+        )
     else:
         var values = Optional[List[String]]()
         if not pending.request.failed():
             values = pending.request.values()
-        _callbacks.get()[].defer(pending.callback.unsafe_get[AddressListCallback](), (failure, values^))
+        _callbacks.get()[].defer(
+            pending.callback.unsafe_get[AddressListCallback](),
+            (failure, values^),
+        )
 
 
 def poll_dns() raises -> Bool:

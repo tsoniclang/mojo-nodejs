@@ -1,5 +1,11 @@
 from std.testing import assert_equal, assert_true, assert_false
-from tsonic_runtime import Location, ErasedCallableContext, RaisingCallable, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Location,
+    ErasedCallableContext,
+    RaisingCallable,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.internal.callback_queue import CallbackQueue, Notification
 
 
@@ -16,12 +22,16 @@ struct Action:
         var action = context.unsafe_bitcast[Action]()
         action[].trace.write(action[].trace.read() + action[].name)
         if action[].enqueue:
-            action[].queue.push(notification(action[].trace, action[].queue, "C"))
+            action[].queue.push(
+                notification(action[].trace, action[].queue, "C")
+            )
         if action[].fail:
             raise Error("deliberate callback failure")
 
     @staticmethod
-    def typed(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
+    def typed(
+        context: ErasedCallableContext, var arguments: Tuple[String]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
         action[].trace.write(action[].trace.read() + arguments[0])
 
@@ -30,8 +40,16 @@ struct Action:
         destroy_callable_environment[Action](context)
 
 
-def notification(trace: Location[String], queue: CallbackQueue, name: String, fail: Bool = False, enqueue: Bool = False) -> Notification:
-    var environment = allocate_callable_environment(Action(trace, queue, name, fail, enqueue), Action.destroy)
+def notification(
+    trace: Location[String],
+    queue: CallbackQueue,
+    name: String,
+    fail: Bool = False,
+    enqueue: Bool = False,
+) -> Notification:
+    var environment = allocate_callable_environment(
+        Action(trace, queue, name, fail, enqueue), Action.destroy
+    )
     return Notification(environment, Action.invoke)
 
 
@@ -65,8 +83,12 @@ def main() raises:
 
     var reserved = bounded.reserve()
     var retained_alias = reserved
-    var environment = allocate_callable_environment(Action(trace, bounded, "unused", False, False), Action.destroy)
-    var typed = RaisingCallable[Tuple[String], NoneType](environment, Action.typed)
+    var environment = allocate_callable_environment(
+        Action(trace, bounded, "unused", False, False), Action.destroy
+    )
+    var typed = RaisingCallable[Tuple[String], NoneType](
+        environment, Action.typed
+    )
     rejected = False
     try:
         bounded.defer(typed, ("not-accepted",))

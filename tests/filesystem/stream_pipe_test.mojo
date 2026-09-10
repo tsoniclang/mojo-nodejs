@@ -4,8 +4,18 @@ from std.time import monotonic, sleep
 from tsonic_runtime import WeakReferenceIdentity
 from support.stream_events import require_unhandled_stream_error
 from tsonic_node.buffer import Buffer
-from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
-from tsonic_node.filesystem.streams import ReadStreamOptions, WriteStreamOptions, create_read_stream, create_write_stream
+from tsonic_node.filesystem import (
+    RmOptions,
+    read_text_file,
+    remove_path,
+    write_text_file,
+)
+from tsonic_node.filesystem.streams import (
+    ReadStreamOptions,
+    WriteStreamOptions,
+    create_read_stream,
+    create_write_stream,
+)
 from tsonic_node.stream import Readable, stdout, stderr
 from tsonic_node.stream.readable import has_active_readables, poll_readables
 from tsonic_node.stream.completion import has_pending_streams, poll_streams
@@ -134,7 +144,9 @@ def standard_output_does_not_end() raises:
     assert_false(source._state[].events.state[].data.has_listeners())
 
 
-def retained_ended_source(root: String) raises -> Tuple[Readable, WeakReferenceIdentity]:
+def retained_ended_source(
+    root: String,
+) raises -> Tuple[Readable, WeakReferenceIdentity]:
     var source = Readable()
     source.append(Buffer.from_string("finished"))
     source._accept_read(None)
@@ -150,7 +162,9 @@ def retained_ended_source(root: String) raises -> Tuple[Readable, WeakReferenceI
     return (source, identity)
 
 
-def retained_paused_source(root: String) raises -> Tuple[Readable, WeakReferenceIdentity]:
+def retained_paused_source(
+    root: String,
+) raises -> Tuple[Readable, WeakReferenceIdentity]:
     var source = Readable()
     var output = create_write_stream(root + "/closed-destination")
     var identity = WeakReferenceIdentity(output._state)

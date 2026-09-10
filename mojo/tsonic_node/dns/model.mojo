@@ -3,8 +3,12 @@ from tsonic_js import JsValue
 from tsonic_runtime import RaisingCallable
 
 
-comptime LookupCallback = RaisingCallable[Tuple[JsValue, Optional[String], Optional[Float64]], NoneType]
-comptime AddressListCallback = RaisingCallable[Tuple[JsValue, Optional[List[String]]], NoneType]
+comptime LookupCallback = RaisingCallable[
+    Tuple[JsValue, Optional[String], Optional[Float64]], NoneType
+]
+comptime AddressListCallback = RaisingCallable[
+    Tuple[JsValue, Optional[List[String]]], NoneType
+]
 
 
 @fieldwise_init

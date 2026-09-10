@@ -26,10 +26,18 @@ def progress(state: ArcPointer[SocketState]) raises -> Bool:
             worked = True
     if not state[].destroyed and state[].connected:
         worked = flush(state) or worked
-        if not state[].destroyed and not state[].read_ended and not state[].paused:
+        if (
+            not state[].destroyed
+            and not state[].read_ended
+            and not state[].paused
+        ):
             if state[].flowing:
                 var received = 0
-                while received < 65536 and not state[].destroyed and not state[].paused:
+                while (
+                    received < 65536
+                    and not state[].destroyed
+                    and not state[].paused
+                ):
                     var chunk = read(state)
                     if not chunk:
                         break
@@ -37,14 +45,20 @@ def progress(state: ArcPointer[SocketState]) raises -> Bool:
                     _ = state[].data.emit((chunk.value(),))
                     worked = True
             else:
-                var ready = external_call["tsonic_node_socket_peek", c_int](state[].endpoint.descriptor())
+                var ready = external_call["tsonic_node_socket_peek", c_int](
+                    state[].endpoint.descriptor()
+                )
                 if ready == -1:
                     fail(state, socket_error())
                 elif ready == 0:
                     state[].read_ended = True
                     state[].end_pending = True
                     worked = True
-                elif ready > 0 and state[].readable.has_listeners() and not state[].readable_notified:
+                elif (
+                    ready > 0
+                    and state[].readable.has_listeners()
+                    and not state[].readable_notified
+                ):
                     state[].readable_notified = True
                     _ = state[].readable.emit(())
                     worked = True
@@ -55,7 +69,11 @@ def progress(state: ArcPointer[SocketState]) raises -> Bool:
             _ = state[].ends.emit(())
             worked = True
         worked = flush(state) or worked
-        if state[].need_drain and state[].queued_bytes == 0 and not state[].destroyed:
+        if (
+            state[].need_drain
+            and state[].queued_bytes == 0
+            and not state[].destroyed
+        ):
             state[].need_drain = False
             _ = state[].drains.emit(())
             worked = True
@@ -67,7 +85,10 @@ def progress(state: ArcPointer[SocketState]) raises -> Bool:
             destroy(state)
             worked = True
         if not state[].destroyed and state[].timeout_armed:
-            if monotonic_milliseconds() - state[].last_activity >= state[].timeout:
+            if (
+                monotonic_milliseconds() - state[].last_activity
+                >= state[].timeout
+            ):
                 state[].timeout_armed = False
                 _ = state[].timeouts.emit(())
                 worked = True

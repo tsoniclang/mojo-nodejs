@@ -1,9 +1,23 @@
 from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from std.time import sleep
-from tsonic_runtime import ErasedCallableContext, Location, RaisingCallable, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    ErasedCallableContext,
+    Location,
+    RaisingCallable,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.internal.network_endpoint import monotonic_milliseconds
-from tsonic_node.net import ConnectionOptions, Socket, create_connection_options, create_server, create_server_callback, poll_net, has_active_net
+from tsonic_node.net import (
+    ConnectionOptions,
+    Socket,
+    create_connection_options,
+    create_server,
+    create_server_callback,
+    poll_net,
+    has_active_net,
+)
 
 
 @fieldwise_init
@@ -21,7 +35,9 @@ struct Counter:
 
 
 def notification(count: Location[Int]) -> RaisingCallable[Tuple[], NoneType]:
-    var environment = allocate_callable_environment(Counter(count), Counter.destroy)
+    var environment = allocate_callable_environment(
+        Counter(count), Counter.destroy
+    )
     return RaisingCallable[Tuple[], NoneType](environment, Counter.invoke)
 
 
@@ -30,7 +46,9 @@ struct Receiver:
     var peer: Location[Optional[Socket]]
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[Socket]) raises:
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[Socket]
+    ) raises:
         context.unsafe_bitcast[Receiver]()[].peer.write(arguments[0])
 
     @staticmethod
@@ -49,14 +67,22 @@ def main() raises:
     assert_false(has_active_net())
 
     var peer = Location(Optional[Socket]())
-    var environment = allocate_callable_environment(Receiver(peer), Receiver.destroy)
-    var server = create_server_callback(RaisingCallable[Tuple[Socket], NoneType](environment, Receiver.invoke))
+    var environment = allocate_callable_environment(
+        Receiver(peer), Receiver.destroy
+    )
+    var server = create_server_callback(
+        RaisingCallable[Tuple[Socket], NoneType](environment, Receiver.invoke)
+    )
     _ = server.listen_port_host(0, "127.0.0.1")
-    var client = create_connection_options(ConnectionOptions(server.address().value().port, "127.0.0.1"))
+    var client = create_connection_options(
+        ConnectionOptions(server.address().value().port, "127.0.0.1")
+    )
     var connected = Location(0)
     _ = client.once_empty("connect", notification(connected))
     var deadline = monotonic_milliseconds() + 5000
-    while (connected.read() == 0 or not peer.read()) and monotonic_milliseconds() < deadline:
+    while (
+        connected.read() == 0 or not peer.read()
+    ) and monotonic_milliseconds() < deadline:
         _ = poll_net()
         sleep(0.001)
     assert_equal(connected.read(), 1)

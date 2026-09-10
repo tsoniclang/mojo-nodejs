@@ -39,11 +39,18 @@ def deep_value_equal(left: JsValue, right: JsValue) raises -> Bool:
                 if left_bytes.length != right_bytes.length:
                     return False
                 for index in range(left_bytes.length):
-                    if left_bytes.storage[][left_bytes.offset + index] != right_bytes.storage[][right_bytes.offset + index]:
+                    if (
+                        left_bytes.storage[][left_bytes.offset + index]
+                        != right_bytes.storage[][right_bytes.offset + index]
+                    ):
                         return False
                 continue
-            var left_position = active_left.get(frame.left._identity_address(), -1)
-            var right_position = active_right.get(frame.right._identity_address(), -1)
+            var left_position = active_left.get(
+                frame.left._identity_address(), -1
+            )
+            var right_position = active_right.get(
+                frame.right._identity_address(), -1
+            )
             if left_position != -1 or right_position != -1:
                 if left_position != right_position:
                     return False
@@ -56,7 +63,9 @@ def deep_value_equal(left: JsValue, right: JsValue) raises -> Bool:
                 for index in range(frame.length):
                     right_keys[frame.right._aggregate_key(index)] = index
                 for index in range(frame.length):
-                    var right_index = right_keys.get(frame.left._aggregate_key(index), -1)
+                    var right_index = right_keys.get(
+                        frame.left._aggregate_key(index), -1
+                    )
                     if right_index == -1:
                         return False
                     frame.right_indexes.append(right_index)
@@ -76,7 +85,9 @@ def deep_value_equal(left: JsValue, right: JsValue) raises -> Bool:
             if not left_present:
                 frames.append(frame^)
                 continue
-        var right_index = index if frame.left.is_array() else frame.right_indexes[index]
+        var right_index = (
+            index if frame.left.is_array() else frame.right_indexes[index]
+        )
         var left_child = frame.left._aggregate_value(index)
         var right_child = frame.right._aggregate_value(right_index)
         frames.append(frame^)

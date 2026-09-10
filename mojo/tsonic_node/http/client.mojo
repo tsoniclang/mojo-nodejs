@@ -22,10 +22,17 @@ struct _ClientState:
     var destroyed: Bool
     var native: Optional[NativeRequest]
 
-    def __init__(out self, address: URL, options: RequestOptions, callback: Optional[ResponseCallback]) raises:
+    def __init__(
+        out self,
+        address: URL,
+        options: RequestOptions,
+        callback: Optional[ResponseCallback],
+    ) raises:
         self.address = address
         self.options = options.copy()
-        self.method = options.method.value().upper() if options.method else String("GET")
+        self.method = (
+            options.method.value().upper() if options.method else String("GET")
+        )
         check_token(self.method, "method")
         self.callback = callback
         self.headers = List[Tuple[String, String]]()
@@ -39,7 +46,12 @@ struct _ClientState:
 struct ClientRequest(ImplicitlyCopyable):
     var _state: ArcPointer[_ClientState]
 
-    def __init__(out self, address: URL, options: RequestOptions, callback: Optional[ResponseCallback]) raises:
+    def __init__(
+        out self,
+        address: URL,
+        options: RequestOptions,
+        callback: Optional[ResponseCallback],
+    ) raises:
         self._state = ArcPointer(_ClientState(address, options, callback))
 
     def path(self) raises -> String:
@@ -59,7 +71,9 @@ struct ClientRequest(ImplicitlyCopyable):
         check_token(name, "header name")
         for byte in value.as_bytes():
             if (byte < 32 and byte != 9) or byte == 127:
-                raise Error("HTTP header contains a prohibited control character")
+                raise Error(
+                    "HTTP header contains a prohibited control character"
+                )
         var key = name.lower()
         for index in range(len(self._state[].headers)):
             if self._state[].headers[index][0].lower() == key:
@@ -93,10 +107,17 @@ struct ClientRequest(ImplicitlyCopyable):
             raise Error("Cannot end a destroyed HTTP request")
         if self._state[].ended:
             return self
-        var native = NativeRequest(self._state[].address.href(), self._state[].options)
+        var native = NativeRequest(
+            self._state[].address.href(), self._state[].options
+        )
         for header in self._state[].headers:
             native.header(header[0], header[1])
-        native.start(self._state[].method, self._state[].body, self._state[].body_present, self._state[].options.timeout)
+        native.start(
+            self._state[].method,
+            self._state[].body,
+            self._state[].body_present,
+            self._state[].options.timeout,
+        )
         self._state[].native = native
         self._state[].ended = True
         self._state[].body = List[Byte]()
@@ -129,7 +150,9 @@ def _initial_requests() -> List[ClientRequest]:
     return List[ClientRequest]()
 
 
-comptime _requests = GlobalCell["tsonic.node.http.client.requests", _initial_requests]()
+comptime _requests = GlobalCell[
+    "tsonic.node.http.client.requests", _initial_requests
+]()
 
 
 def has_pending_requests() -> Bool:
@@ -157,7 +180,12 @@ def poll_requests() raises -> Bool:
         var native = request._state[].native.value()
         try:
             native.check_error()
-            var response = IncomingMessage("", request._state[].address.href(), native.body(), Optional(native.status()))
+            var response = IncomingMessage(
+                "",
+                request._state[].address.href(),
+                native.body(),
+                Optional(native.status()),
+            )
             if request._state[].callback:
                 request._state[].callback.value().call((response,))
         except error:
@@ -171,28 +199,42 @@ def poll_requests() raises -> Bool:
     return len(completed) != 0
 
 
-def request_for_scheme(url: String, scheme: String, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def request_for_scheme(
+    url: String, scheme: String, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     var address = URL(url)
     if address.protocol() != scheme:
         raise Error("Request URL does not match the selected Node module")
     return ClientRequest(address, RequestOptions(), callback)
 
 
-def request_for_scheme(options: RequestOptions, scheme: String, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def request_for_scheme(
+    options: RequestOptions,
+    scheme: String,
+    callback: Optional[ResponseCallback] = None,
+) raises -> ClientRequest:
     return ClientRequest(request_url(options, scheme), options, callback)
 
 
-def request(url: String, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def request(
+    url: String, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request_for_scheme(url, "http:", callback)
 
 
-def request(options: RequestOptions, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def request(
+    options: RequestOptions, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request_for_scheme(options, "http:", callback)
 
 
-def get(url: String, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def get(
+    url: String, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request(url, callback).end()
 
 
-def get(options: RequestOptions, callback: Optional[ResponseCallback] = None) raises -> ClientRequest:
+def get(
+    options: RequestOptions, callback: Optional[ResponseCallback] = None
+) raises -> ClientRequest:
     return request(options, callback).end()

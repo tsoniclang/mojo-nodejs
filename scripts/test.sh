@@ -118,12 +118,18 @@ for test_file in "${test_files[@]}"; do
     -o "${NATIVE_BUILD}/${test_name}" && \
     SSL_CERT_FILE="${PWD}/tests/fixtures/localhost-cert.pem" timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/${test_name}"; then
     printf 'PASS %s\n' "$test_file"
+    case "$test_name" in
+      process/process_arguments_test)
+        if ! timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/${test_name}" "first" "" "two words" "--flag" "😀"; then failed=1; fi
+        ;;
+      path/path_oracle_test)
+        if ! timeout "$RUN_TIMEOUT" node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/${test_name}"; then failed=1; fi
+        ;;
+    esac
   else
     printf 'FAIL %s\n' "$test_file"
     failed=1
   fi
 done
 
-if ! timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/process/process_arguments_test" "first" "" "two words" "--flag" "😀"; then failed=1; fi
-if ! timeout "$RUN_TIMEOUT" node scripts/verify-path-oracle.mjs "${NATIVE_BUILD}/path/path_oracle_test"; then failed=1; fi
 exit "$failed"

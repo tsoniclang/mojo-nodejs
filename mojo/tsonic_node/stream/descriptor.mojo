@@ -32,7 +32,9 @@ struct StreamDescriptor(ImplicitlyCopyable):
     def bytes_written(self) -> Int64:
         return self._state[].bytes_written
 
-    def begin_read(self, size: Int, offset: Optional[Int64]) raises -> NativeRead:
+    def begin_read(
+        self, size: Int, offset: Optional[Int64]
+    ) raises -> NativeRead:
         if not self.is_open():
             raise Error("Cannot read a closed stream descriptor")
         return NativeRead(self._state[].descriptor, size, offset)
@@ -51,15 +53,20 @@ struct StreamDescriptor(ImplicitlyCopyable):
         if external_call["fsync", c_int](c_int(self._state[].descriptor)) != 0:
             raise Error("Unable to flush stream: ", get_errno())
 
-    def read(self, size: Int, offset: Optional[Int64]) raises -> Optional[Buffer]:
+    def read(
+        self, size: Int, offset: Optional[Int64]
+    ) raises -> Optional[Buffer]:
         if not self.is_open():
             return None
         var bytes = List[Byte](capacity=size)
         for _ in range(size):
             bytes.append(0)
         var count = external_call["tsonic_node_stream_read", Int64](
-            c_int(self._state[].descriptor), bytes.unsafe_ptr(), c_size_t(size),
-            offset.value() if offset else Int64(0), c_int(Bool(offset)),
+            c_int(self._state[].descriptor),
+            bytes.unsafe_ptr(),
+            c_size_t(size),
+            offset.value() if offset else Int64(0),
+            c_int(Bool(offset)),
         )
         if count < 0:
             raise Error("Unable to read stream: ", get_errno())
@@ -76,9 +83,11 @@ struct StreamDescriptor(ImplicitlyCopyable):
         var count = Int64(0)
         while count < Int64(len(bytes)):
             var written = external_call["tsonic_node_stream_write", Int64](
-                c_int(self._state[].descriptor), bytes.unsafe_ptr().unsafe_offset(Int(count)),
+                c_int(self._state[].descriptor),
+                bytes.unsafe_ptr().unsafe_offset(Int(count)),
                 c_size_t(len(bytes) - Int(count)),
-                offset.value() + count if offset else Int64(0), c_int(Bool(offset)),
+                offset.value() + count if offset else Int64(0),
+                c_int(Bool(offset)),
             )
             if written <= 0:
                 raise Error("Unable to write stream: ", get_errno())

@@ -122,7 +122,9 @@ def main() raises:
     var received = receive_message_on_port(channel.port2)
     assert_true(received.value().message.is_string())
     assert_equal(received.value().message.string_value(), JsString("payload"))
-    assert_false(received.value().message.same_identity(JsValue(JsString("payload"))))
+    assert_false(
+        received.value().message.same_identity(JsValue(JsString("payload")))
+    )
     _ = channel.port2.unref_chain()
     assert_false(channel.port2.has_ref())
     _ = channel.port2.ref_chain()
@@ -132,7 +134,10 @@ def main() raises:
     assert_equal(message_count.read(), 1)
 
     set_environment_data(JsValue(JsString("mode")), JsValue(JsString("test")))
-    assert_equal(get_environment_data(JsValue(JsString("mode"))).string_value(), JsString("test"))
+    assert_equal(
+        get_environment_data(JsValue(JsString("mode"))).string_value(),
+        JsString("test"),
+    )
     assert_true(is_main_thread())
 
     var identity = js_value_error("identity")

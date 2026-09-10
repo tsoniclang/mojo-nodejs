@@ -2,9 +2,25 @@ from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.buffer import Buffer
 from tsonic_node.filesystem import (
-    RmOptions, access, append_file, chmod, close_file, copy_file, fstat, lstat,
-    open_file, read_file, read_into, read_link, remove_path, stat, symbolic_link, make_temp_directory,
-    truncate_file, write_from, write_string,
+    RmOptions,
+    access,
+    append_file,
+    chmod,
+    close_file,
+    copy_file,
+    fstat,
+    lstat,
+    open_file,
+    read_file,
+    read_into,
+    read_link,
+    remove_path,
+    stat,
+    symbolic_link,
+    make_temp_directory,
+    truncate_file,
+    write_from,
+    write_string,
 )
 
 
@@ -15,7 +31,9 @@ def main() raises:
         var first_temp = make_temp_directory(root + "/temp-")
         var second_temp = make_temp_directory(root + "/temp-")
         assert_true(first_temp != second_temp)
-        assert_equal(first_temp.byte_length(), (root + "/temp-XXXXXX").byte_length())
+        assert_equal(
+            first_temp.byte_length(), (root + "/temp-XXXXXX").byte_length()
+        )
         assert_true(stat(first_temp).is_directory())
         var missing_parent = False
         try:
@@ -29,9 +47,13 @@ def main() raises:
             var value = Buffer.allocate(12, 45)
             var retained_alias = value
             assert_equal(read_into(descriptor, value, 2, 7, 0), 7)
-            assert_equal(retained_alias.subarray(2, Float64(9)).to_string(), "abc😀")
+            assert_equal(
+                retained_alias.subarray(2, Float64(9)).to_string(), "abc😀"
+            )
             assert_equal(retained_alias.get(0), 45)
-            assert_equal(write_from(descriptor, Buffer.from_string("xyz"), 0, 3, 0), 3)
+            assert_equal(
+                write_from(descriptor, Buffer.from_string("xyz"), 0, 3, 0), 3
+            )
             var selected = fstat(descriptor)
             assert_equal(selected.size, 7)
             assert_true(selected.is_file())
@@ -65,7 +87,9 @@ def main() raises:
         except:
             rejected = True
         assert_true(rejected)
-        var options = RmOptions(recursive=True, force=True, max_retries=2, retry_delay=1)
+        var options = RmOptions(
+            recursive=True, force=True, max_retries=2, retry_delay=1
+        )
         remove_path(root + "/alias", options)
         assert_equal(read_file(path).to_string(), "xyz")
         remove_path(root + "/absent", options)

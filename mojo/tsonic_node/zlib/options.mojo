@@ -22,7 +22,8 @@ struct ZlibOptions(ImplicitlyCopyable):
     var info: Optional[Bool]
 
     def __init__(
-        out self, flush: Optional[Float64] = None,
+        out self,
+        flush: Optional[Float64] = None,
         finish_flush: Optional[Float64] = None,
         chunk_size: Optional[Float64] = None,
         window_bits: Optional[Float64] = None,
@@ -85,14 +86,18 @@ def optional_integer(value: Optional[Float64]) raises -> Int32:
 
 
 def output_limit(value: Optional[Float64]) raises -> Int:
-    var result = Int(checked_integer(value.value(), Float64(MAX_OUTPUT), "maxOutputLength")) if value else MAX_OUTPUT
+    var result = Int(
+        checked_integer(value.value(), Float64(MAX_OUTPUT), "maxOutputLength")
+    ) if value else MAX_OUTPUT
     if result == 0:
         raise Error("maxOutputLength must be positive")
     return result
 
 
 def chunk_size(value: Optional[Float64]) raises -> Int:
-    var result = Int(checked_integer(value.value(), Float64(MAX_OUTPUT), "chunkSize")) if value else 16384
+    var result = Int(
+        checked_integer(value.value(), Float64(MAX_OUTPUT), "chunkSize")
+    ) if value else 16384
     if result < 64:
         raise Error("chunkSize must be at least 64")
     return result
@@ -105,7 +110,9 @@ def validate_flush(value: Optional[Float64], maximum: Int) raises:
 
 def finish_flush(options: CodecOptions) -> Int32:
     if options.isa[ZlibOptions]():
-        return Int32(options.unsafe_get[ZlibOptions]().finish_flush.value_or(4.0))
+        return Int32(
+            options.unsafe_get[ZlibOptions]().finish_flush.value_or(4.0)
+        )
     return Int32(options.unsafe_get[BrotliOptions]().finish_flush.value_or(2.0))
 
 

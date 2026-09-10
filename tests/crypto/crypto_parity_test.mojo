@@ -1,6 +1,12 @@
 from std.testing import assert_equal, assert_false, assert_true
 from tsonic_node import Buffer
-from tsonic_node.crypto import create_hash, random_bytes, random_fill, random_int, timing_safe_equal
+from tsonic_node.crypto import (
+    create_hash,
+    random_bytes,
+    random_fill,
+    random_int,
+    timing_safe_equal,
+)
 from tsonic_node.crypto_catalog import get_ciphers, get_curves, get_hashes
 
 
@@ -16,16 +22,30 @@ def main() raises:
     var copied = initial.copy_hash()
     _ = initial.update_string("b")
     _ = copied.update_string("c")
-    assert_equal(initial.digest("hex"), create_hash("SHA256").update_string("ab").digest("hex"))
-    assert_equal(copied.digest("hex"), create_hash("SHA256").update_string("ac").digest("hex"))
+    assert_equal(
+        initial.digest("hex"),
+        create_hash("SHA256").update_string("ab").digest("hex"),
+    )
+    assert_equal(
+        copied.digest("hex"),
+        create_hash("SHA256").update_string("ac").digest("hex"),
+    )
     var rejected = False
     try:
         _ = initial.copy_hash()
     except:
         rejected = True
     assert_true(rejected)
-    assert_true(timing_safe_equal(Buffer.from_string("same"), Buffer.from_string("same")))
-    assert_false(timing_safe_equal(Buffer.from_string("same"), Buffer.from_string("diff")))
+    assert_true(
+        timing_safe_equal(
+            Buffer.from_string("same"), Buffer.from_string("same")
+        )
+    )
+    assert_false(
+        timing_safe_equal(
+            Buffer.from_string("same"), Buffer.from_string("diff")
+        )
+    )
     rejected = False
     try:
         _ = timing_safe_equal(Buffer(), Buffer.from_string("x"))

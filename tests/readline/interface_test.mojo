@@ -1,11 +1,31 @@
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from std.time import monotonic, sleep
-from tsonic_runtime import Location, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Location,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.buffer import Buffer
-from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
-from tsonic_node.filesystem.streams import ReadStreamOptions, create_read_stream, create_write_stream
-from tsonic_node.readline import Interface, QuestionCallback, ReadLineOptions, create_interface, has_pending_readline
+from tsonic_node.filesystem import (
+    RmOptions,
+    read_text_file,
+    remove_path,
+    write_text_file,
+)
+from tsonic_node.filesystem.streams import (
+    ReadStreamOptions,
+    create_read_stream,
+    create_write_stream,
+)
+from tsonic_node.readline import (
+    Interface,
+    QuestionCallback,
+    ReadLineOptions,
+    create_interface,
+    has_pending_readline,
+)
 from support.input_events import poll_input_events
 from tsonic_node.stream import Readable
 
@@ -19,11 +39,18 @@ struct AnswerAction:
     var reenter: Bool
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[String]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
         action[].trace.write(action[].trace.read() + "[" + arguments[0] + "]")
         if action[].remaining > 1:
-            action[].interface.value().question("next? ", answer(action[].trace, action[].interface, action[].remaining - 1))
+            action[].interface.value().question(
+                "next? ",
+                answer(
+                    action[].trace, action[].interface, action[].remaining - 1
+                ),
+            )
         if action[].reenter:
             _ = poll_input_events()
         if action[].fail:
@@ -34,8 +61,17 @@ struct AnswerAction:
         destroy_callable_environment[Self](context)
 
 
-def answer(trace: Location[String], interface: Optional[Interface] = None, remaining: Int = 1, fail: Bool = False, reenter: Bool = False) -> QuestionCallback:
-    var context = allocate_callable_environment(AnswerAction(trace, interface, remaining, fail, reenter), AnswerAction.destroy)
+def answer(
+    trace: Location[String],
+    interface: Optional[Interface] = None,
+    remaining: Int = 1,
+    fail: Bool = False,
+    reenter: Bool = False,
+) -> QuestionCallback:
+    var context = allocate_callable_environment(
+        AnswerAction(trace, interface, remaining, fail, reenter),
+        AnswerAction.destroy,
+    )
     return QuestionCallback(context, AnswerAction.invoke)
 
 

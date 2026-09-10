@@ -15,8 +15,17 @@ def rejected(options: ConnectionOptions, message: String) raises:
 
 
 def main() raises:
-    rejected(ConnectionOptions(host=Optional("localhost\0.invalid")), "TLS host contains a null byte")
-    rejected(ConnectionOptions(servername=Optional("localhost\0.invalid")), "TLS host contains a null byte")
+    rejected(
+        ConnectionOptions(host=Optional("localhost\0.invalid")),
+        "TLS host contains a null byte",
+    )
+    rejected(
+        ConnectionOptions(servername=Optional("localhost\0.invalid")),
+        "TLS host contains a null byte",
+    )
     var authorities = List[String]()
     authorities.append("certificate\0trailing")
-    rejected(ConnectionOptions(ca=Optional(authorities^)), "TLS authority contains a null byte")
+    rejected(
+        ConnectionOptions(ca=Optional(authorities^)),
+        "TLS authority contains a null byte",
+    )

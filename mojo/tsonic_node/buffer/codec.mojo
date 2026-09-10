@@ -8,11 +8,21 @@ def encoding_name(value: String) raises -> String:
     var name = value.lower()
     if name == "utf8" or name == "utf-8":
         return "utf8"
-    if name == "ucs2" or name == "ucs-2" or name == "utf16le" or name == "utf-16le":
+    if (
+        name == "ucs2"
+        or name == "ucs-2"
+        or name == "utf16le"
+        or name == "utf-16le"
+    ):
         return "utf16le"
     if name == "binary" or name == "latin1":
         return "latin1"
-    if name == "ascii" or name == "hex" or name == "base64" or name == "base64url":
+    if (
+        name == "ascii"
+        or name == "hex"
+        or name == "base64"
+        or name == "base64url"
+    ):
         return name
     raise Error("Unsupported Buffer encoding: ", value)
 
@@ -140,7 +150,9 @@ def encoded_byte_length(value: String, encoding: String) raises -> Float64:
 def encode_binary_string(value: String) raises -> String:
     for point in value.codepoints():
         if point.to_u32() > 255:
-            raise Error("btoa input contains a character outside the byte range")
+            raise Error(
+                "btoa input contains a character outside the byte range"
+            )
     return decode_bytes(encode_bytes(value, "latin1"), "base64")
 
 
@@ -163,10 +175,14 @@ def decode_binary_string(value: String) raises -> String:
         var byte = UInt8(bytes[index])
         if _base64_digit(byte) < 0 or byte == 45 or byte == 95:
             raise Error("atob input contains an invalid base64 character")
-    return decode_bytes(encode_bytes(String(compact[byte=:end]), "base64"), "latin1")
+    return decode_bytes(
+        encode_bytes(String(compact[byte=:end]), "base64"), "latin1"
+    )
 
 
-def writable_byte_count(bytes: List[Byte], maximum: Int, encoding: String) -> Int:
+def writable_byte_count(
+    bytes: List[Byte], maximum: Int, encoding: String
+) -> Int:
     var count = min(maximum, len(bytes))
     if encoding == "utf16le":
         return count - count % 2
@@ -182,7 +198,12 @@ def transcode_bytes(
     var source = encoding_name(source_encoding)
     var target = encoding_name(target_encoding)
     for name in (source, target):
-        if name != "utf8" and name != "utf16le" and name != "latin1" and name != "ascii":
+        if (
+            name != "utf8"
+            and name != "utf16le"
+            and name != "latin1"
+            and name != "ascii"
+        ):
             raise Error("Buffer.transcode requires a text encoding")
     var units = List[UInt16]()
     if source == "utf16le":

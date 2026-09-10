@@ -50,7 +50,10 @@ def _categories() -> List[_Category]:
 
 def parse_class(pattern: JsString, start: Int) -> Optional[CharacterClass]:
     var index = start + 1
-    var negated = index < len(pattern) and (pattern.code_unit_at(index).value() == 33 or pattern.code_unit_at(index).value() == 94)
+    var negated = index < len(pattern) and (
+        pattern.code_unit_at(index).value() == 33
+        or pattern.code_unit_at(index).value() == 94
+    )
     if negated:
         index += 1
     var beginning = index
@@ -63,21 +66,35 @@ def parse_class(pattern: JsString, start: Int) -> Optional[CharacterClass]:
         var unit = pattern.code_unit_at(index).value()
         if unit == 93 and index > beginning:
             if not positives and not negatives:
-                return Optional(CharacterClass("(?!)", index + 1, unicode, None))
+                return Optional(
+                    CharacterClass("(?!)", index + 1, unicode, None)
+                )
             if count == 1 and literal and not negated:
-                return Optional(CharacterClass(escaped_unit(literal.value()), index + 1, unicode, literal))
+                return Optional(
+                    CharacterClass(
+                        escaped_unit(literal.value()),
+                        index + 1,
+                        unicode,
+                        literal,
+                    )
+                )
             var source = String()
             if positives:
                 source = "[" + ("^" if negated else "") + positives + "]"
             if negatives:
                 var inverse = "[" + ("" if negated else "^") + negatives + "]"
-                source = "(?:" + source + "|" + inverse + ")" if source else inverse
+                source = (
+                    "(?:" + source + "|" + inverse + ")" if source else inverse
+                )
             return Optional(CharacterClass(source^, index + 1, unicode, None))
         var category = False
         if unit == 91:
             for entry in _categories():
                 var name = JsString("[:" + entry.name + ":]")
-                if pattern.slice(Float64(index), Float64(index + len(name))) == name:
+                if (
+                    pattern.slice(Float64(index), Float64(index + len(name)))
+                    == name
+                ):
                     if entry.complement:
                         negatives += entry.expression
                     else:
@@ -89,10 +106,20 @@ def parse_class(pattern: JsString, start: Int) -> Optional[CharacterClass]:
                     break
         if category:
             continue
-        if index + 2 < len(pattern) and pattern.code_unit_at(index + 1).value() == 45 and pattern.code_unit_at(index + 2).value() != 93:
+        if (
+            index + 2 < len(pattern)
+            and pattern.code_unit_at(index + 1).value() == 45
+            and pattern.code_unit_at(index + 2).value() != 93
+        ):
             var ending = pattern.code_unit_at(index + 2).value()
-            if ending == 91 and index + 3 < len(pattern) and pattern.code_unit_at(index + 3).value() == 58:
-                return Optional(CharacterClass("(?!)", len(pattern), unicode, None))
+            if (
+                ending == 91
+                and index + 3 < len(pattern)
+                and pattern.code_unit_at(index + 3).value() == 58
+            ):
+                return Optional(
+                    CharacterClass("(?!)", len(pattern), unicode, None)
+                )
             if ending > unit:
                 positives += escaped_unit(unit) + "-" + escaped_unit(ending)
                 count += 2

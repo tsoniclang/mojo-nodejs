@@ -6,7 +6,9 @@ def _initial_completions() -> CallbackQueue:
     return CallbackQueue(1 << 20)
 
 
-comptime stream_completions = GlobalCell["tsonic.node.stream.completions", _initial_completions]()
+comptime stream_completions = GlobalCell[
+    "tsonic.node.stream.completions", _initial_completions
+]()
 
 comptime WriteCallback = RaisingCallable[Tuple[Optional[TsError]], NoneType]
 

@@ -41,7 +41,9 @@ def normalize(path: String) -> String:
     if path.byte_length() == 1:
         return separator if path == "/" else path
     var root = windows_root(path, True)
-    var tail = _join(_parts(String(path[byte=root.tail_start:]), not root.absolute))
+    var tail = _join(
+        _parts(String(path[byte = root.tail_start :]), not root.absolute)
+    )
     if not tail and not root.absolute:
         tail = "."
     if tail and is_separator(path.as_bytes()[path.byte_length() - 1]):
@@ -54,7 +56,9 @@ def normalize(path: String) -> String:
         var guarded = len(bytes) >= 2 and is_drive(bytes[0]) and bytes[1] == 58
         var original = path.as_bytes()
         for index in range(len(original)):
-            if original[index] == 58 and (index + 1 == len(original) or is_separator(original[index + 1])):
+            if original[index] == 58 and (
+                index + 1 == len(original) or is_separator(original[index + 1])
+            ):
                 guarded = True
         if guarded:
             prefix = ".\\"
@@ -74,7 +78,12 @@ def join(parts: List[String]) -> String:
         if not combined:
             combined = part
             var bytes = part.as_bytes()
-            allow_unc = len(bytes) > 2 and is_separator(bytes[0]) and is_separator(bytes[1]) and not is_separator(bytes[2])
+            allow_unc = (
+                len(bytes) > 2
+                and is_separator(bytes[0])
+                and is_separator(bytes[1])
+                and not is_separator(bytes[2])
+            )
         else:
             combined += separator + part
     if not allow_unc and combined:
@@ -87,7 +96,11 @@ def join(parts: List[String]) -> String:
     return normalize(combined)
 
 
-def _resolve(parts: List[String], current: Optional[String], drive_current: Optional[String]) raises -> String:
+def _resolve(
+    parts: List[String],
+    current: Optional[String],
+    drive_current: Optional[String],
+) raises -> String:
     var device = String()
     var tail = String()
     var absolute = False
@@ -99,11 +112,17 @@ def _resolve(parts: List[String], current: Optional[String], drive_current: Opti
         else:
             part = current.value() if current else String(cwd())
         if index == -1 and device:
-            var selected_current = drive_current if current else environment("=" + device)
+            var selected_current = drive_current if current else environment(
+                "=" + device
+            )
             if selected_current and selected_current.value():
                 part = selected_current.value()
             var bytes = part.as_bytes()
-            if len(bytes) >= 3 and bytes[2] == 92 and String(part[byte=:2]).lower() != device.lower():
+            if (
+                len(bytes) >= 3
+                and bytes[2] == 92
+                and String(part[byte=:2]).lower() != device.lower()
+            ):
                 part = device + separator
         index -= 1
         if not part:
@@ -114,15 +133,21 @@ def _resolve(parts: List[String], current: Optional[String], drive_current: Opti
                 continue
             device = root.device if not device else device
         if not absolute:
-            tail = String(part[byte=root.tail_start:]) + separator + tail
+            tail = String(part[byte = root.tail_start :]) + separator + tail
             absolute = root.absolute
         if absolute and device:
             break
-    var result = device + (separator if absolute else String()) + _join(_parts(tail, not absolute))
+    var result = (
+        device
+        + (separator if absolute else String())
+        + _join(_parts(tail, not absolute))
+    )
     return result^ if result else String(".")
 
 
-def resolve_with_cwd(parts: List[String], current: String, drive_current: Optional[String] = None) raises -> String:
+def resolve_with_cwd(
+    parts: List[String], current: String, drive_current: Optional[String] = None
+) raises -> String:
     return _resolve(parts, current, drive_current)
 
 
@@ -134,7 +159,9 @@ def basename(path: String, suffix: String = "") -> String:
     if suffix and suffix == path:
         return ""
     var bytes = path.as_bytes()
-    var start = 2 if len(bytes) >= 2 and is_drive(bytes[0]) and bytes[1] == 58 else 0
+    var start = (
+        2 if len(bytes) >= 2 and is_drive(bytes[0]) and bytes[1] == 58 else 0
+    )
     return posix.basename(String(path[byte=start:]).replace("\\", "/"), suffix)
 
 
@@ -151,13 +178,15 @@ def dirname(path: String) -> String:
     while end > root.display_end and is_separator(bytes[end - 1]):
         end -= 1
     if end == root.display_end:
-        return String(path[byte=:root.display_end])
+        return String(path[byte = : root.display_end])
     var start = end
     while start > root.display_end and not is_separator(bytes[start - 1]):
         start -= 1
     if start <= root.display_end:
-        return String(path[byte=:root.display_end]) if root.display_end else String(".")
-    return String(path[byte=:start - 1])
+        return String(
+            path[byte = : root.display_end]
+        ) if root.display_end else String(".")
+    return String(path[byte = : start - 1])
 
 
 def parse(path: String) -> PathParts:
@@ -169,11 +198,16 @@ def parse(path: String) -> PathParts:
     var start = end
     while start > root.display_end and not is_separator(bytes[start - 1]):
         start -= 1
-    var root_text = String(path[byte=:root.display_end])
-    var directory = String(path[byte=:start - 1]) if start > root.display_end else root_text.copy()
+    var root_text = String(path[byte = : root.display_end])
+    var directory = (
+        String(path[byte = : start - 1]) if start
+        > root.display_end else root_text.copy()
+    )
     var base = String(path[byte=start:end])
     var extension = posix.extname(base)
-    var name = String(base[byte=:base.byte_length() - extension.byte_length()])
+    var name = String(
+        base[byte = : base.byte_length() - extension.byte_length()]
+    )
     return PathParts(root_text^, directory^, base^, name^, extension^)
 
 
@@ -185,17 +219,22 @@ def format_path(parts: PathParts) -> String:
     var directory = parts.directory if parts.directory else parts.root
     if not directory:
         return base
-    return directory + base if directory == parts.root else directory + separator + base
+    return (
+        directory + base if directory
+        == parts.root else directory + separator + base
+    )
 
 
 def format_path(parts: PathInput) -> String:
-    return format_path(PathParts(
-        parts.root.value() if parts.root else String(),
-        parts.directory.value() if parts.directory else String(),
-        parts.base.value() if parts.base else String(),
-        parts.name.value() if parts.name else String(),
-        parts.extension.value() if parts.extension else String(),
-    ))
+    return format_path(
+        PathParts(
+            parts.root.value() if parts.root else String(),
+            parts.directory.value() if parts.directory else String(),
+            parts.base.value() if parts.base else String(),
+            parts.name.value() if parts.name else String(),
+            parts.extension.value() if parts.extension else String(),
+        )
+    )
 
 
 def relative(from_path: String, to_path: String) raises -> String:
@@ -209,10 +248,18 @@ def relative(from_path: String, to_path: String) raises -> String:
     var target_root = windows_root(target)
     if source_root.device.lower() != target_root.device.lower():
         return target^
-    var source_tail = _parts(String(source[byte=source_root.tail_start:]), False)
-    var target_tail = _parts(String(target[byte=target_root.tail_start:]), False)
+    var source_tail = _parts(
+        String(source[byte = source_root.tail_start :]), False
+    )
+    var target_tail = _parts(
+        String(target[byte = target_root.tail_start :]), False
+    )
     var shared = 0
-    while shared < len(source_tail) and shared < len(target_tail) and source_tail[shared].lower() == target_tail[shared].lower():
+    while (
+        shared < len(source_tail)
+        and shared < len(target_tail)
+        and source_tail[shared].lower() == target_tail[shared].lower()
+    ):
         shared += 1
     var result = List[String]()
     for _ in range(shared, len(source_tail)):
@@ -233,6 +280,11 @@ def to_namespaced_path(path: String) raises -> String:
         return path
     if result.startswith("\\\\") and bytes[2] != 63 and bytes[2] != 46:
         return "\\\\?\\UNC\\" + String(result[byte=2:])
-    if len(bytes) >= 3 and is_drive(bytes[0]) and bytes[1] == 58 and bytes[2] == 92:
+    if (
+        len(bytes) >= 3
+        and is_drive(bytes[0])
+        and bytes[1] == 58
+        and bytes[2] == 92
+    ):
         return "\\\\?\\" + result
     return result^

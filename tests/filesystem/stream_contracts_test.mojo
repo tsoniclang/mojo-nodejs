@@ -4,7 +4,10 @@ from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node import Buffer, RmOptions, read_text_file, remove_path
-from tsonic_node.filesystem.streams import WriteStreamOptions, create_write_stream
+from tsonic_node.filesystem.streams import (
+    WriteStreamOptions,
+    create_write_stream,
+)
 from tsonic_node.stream import Readable
 
 

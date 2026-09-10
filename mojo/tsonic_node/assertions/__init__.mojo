@@ -42,6 +42,8 @@ def deep_strict_equal(actual: JsValue, expected: JsValue) raises:
         raise Error("Values are not deeply strictly equal")
 
 
-def deep_strict_equal_with_message(actual: JsValue, expected: JsValue, message: String) raises:
+def deep_strict_equal_with_message(
+    actual: JsValue, expected: JsValue, message: String
+) raises:
     if not deep_value_equal(actual, expected):
         raise Error(message)

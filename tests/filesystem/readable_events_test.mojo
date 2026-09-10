@@ -2,12 +2,31 @@ from std.memory.arc_pointer import WeakPointer
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from std.time import monotonic, sleep
-from tsonic_runtime import Location, TsError, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Location,
+    TsError,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.buffer import Buffer
-from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
-from tsonic_node.filesystem.streams import create_read_stream, create_write_stream
+from tsonic_node.filesystem import (
+    RmOptions,
+    read_text_file,
+    remove_path,
+    write_text_file,
+)
+from tsonic_node.filesystem.streams import (
+    create_read_stream,
+    create_write_stream,
+)
 from tsonic_node.internal.callback_queue import Notification
-from tsonic_node.readline import ReadLineOptions, create_interface, QuestionCallback, has_pending_readline
+from tsonic_node.readline import (
+    ReadLineOptions,
+    create_interface,
+    QuestionCallback,
+    has_pending_readline,
+)
 from tsonic_node.stream import Readable
 from tsonic_node.stream.chunk import StreamChunk
 from tsonic_node.stream.read_events import DataCallback, ReadErrorCallback
@@ -25,10 +44,14 @@ struct Action:
     var fail: Bool
 
     @staticmethod
-    def data(context: ErasedCallableContext, var arguments: Tuple[StreamChunk]) raises:
+    def data(
+        context: ErasedCallableContext, var arguments: Tuple[StreamChunk]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
         var value = arguments[0].copy()
-        var text = value.unsafe_get[String]() if value.isa[String]() else value.unsafe_get[Buffer]().to_string()
+        var text = value.unsafe_get[String]() if value.isa[
+            String
+        ]() else value.unsafe_get[Buffer]().to_string()
         action[].trace.write(action[].trace.read() + action[].label + text)
         if action[].replacement >= 0:
             assert_true(value.isa[Buffer]())
@@ -42,30 +65,50 @@ struct Action:
         action[].trace.write(action[].trace.read() + action[].label)
 
     @staticmethod
-    def error(context: ErasedCallableContext, var arguments: Tuple[TsError]) raises:
+    def error(
+        context: ErasedCallableContext, var arguments: Tuple[TsError]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
         assert_true(arguments[0].message.byte_length() != 0)
         action[].trace.write(action[].trace.read() + action[].label)
 
     @staticmethod
-    def answer(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
+    def answer(
+        context: ErasedCallableContext, var arguments: Tuple[String]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
-        action[].trace.write(action[].trace.read() + action[].label + arguments[0])
+        action[].trace.write(
+            action[].trace.read() + action[].label + arguments[0]
+        )
 
 
-def data(trace: Location[String], label: String = "", replacement: Int = -1, fail: Bool = False) -> DataCallback:
-    var environment = allocate_callable_environment(Action(trace, label, replacement, fail), destroy_callable_environment[Action])
+def data(
+    trace: Location[String],
+    label: String = "",
+    replacement: Int = -1,
+    fail: Bool = False,
+) -> DataCallback:
+    var environment = allocate_callable_environment(
+        Action(trace, label, replacement, fail),
+        destroy_callable_environment[Action],
+    )
     return DataCallback(environment, Action.data)
 
 
 def notification(trace: Location[String], label: String) -> Notification:
-    var environment = allocate_callable_environment(Action(trace, label, -1, False), destroy_callable_environment[Action])
+    var environment = allocate_callable_environment(
+        Action(trace, label, -1, False), destroy_callable_environment[Action]
+    )
     return Notification(environment, Action.empty)
 
 
 def drain() raises:
     var deadline = monotonic() + 10000000000
-    while has_active_readables() or has_pending_streams() or has_pending_readline():
+    while (
+        has_active_readables()
+        or has_pending_streams()
+        or has_pending_readline()
+    ):
         assert_true(monotonic() < deadline)
         _ = poll_input_events()
         sleep(0.001)
@@ -164,7 +207,9 @@ def callback_failure_does_not_destroy_source() raises:
 def input_error_is_not_eof() raises:
     var input = Readable(-1)
     var trace = Location(String())
-    var environment = allocate_callable_environment(Action(trace, "error", -1, False), destroy_callable_environment[Action])
+    var environment = allocate_callable_environment(
+        Action(trace, "error", -1, False), destroy_callable_environment[Action]
+    )
     _ = input.on_error("error", ReadErrorCallback(environment, Action.error))
     _ = input.on_empty("end", notification(trace, "unexpected-end"))
     _ = input.on_empty("close", notification(trace, ":close"))
@@ -183,7 +228,10 @@ def readline_and_pipe_share_input(root: String) raises:
     var options = ReadLineOptions()
     options.input = input
     var interface = create_interface(options)
-    var environment = allocate_callable_environment(Action(trace, ":answer:", -1, False), destroy_callable_environment[Action])
+    var environment = allocate_callable_environment(
+        Action(trace, ":answer:", -1, False),
+        destroy_callable_environment[Action],
+    )
     interface.question("", QuestionCallback(environment, Action.answer))
     input.append(Buffer.from_string("shared\n"))
     input._accept_read(None)

@@ -3,9 +3,18 @@ from support.stream_events import require_unhandled_stream_error
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.event_loop import run_event_loop
-from tsonic_node import Buffer, RmOptions, read_text_file, remove_path, write_text_file
+from tsonic_node import (
+    Buffer,
+    RmOptions,
+    read_text_file,
+    remove_path,
+    write_text_file,
+)
 from tsonic_node.filesystem.streams import (
-    ReadStreamOptions, WriteStreamOptions, create_read_stream, create_write_stream,
+    ReadStreamOptions,
+    WriteStreamOptions,
+    create_read_stream,
+    create_write_stream,
 )
 
 

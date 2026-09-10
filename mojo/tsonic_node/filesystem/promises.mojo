@@ -27,7 +27,11 @@ from .contents import (
     append_file as append_file_sync,
     append_text_file as append_text_file_sync,
 )
-from .descriptors import access as access_sync, chmod as chmod_sync, truncate_file as truncate_file_sync
+from .descriptors import (
+    access as access_sync,
+    chmod as chmod_sync,
+    truncate_file as truncate_file_sync,
+)
 from .links import read_link as read_link_sync
 
 
@@ -35,7 +39,9 @@ async def append_file(path: String, value: Buffer) raises:
     append_file_sync(path, value)
 
 
-async def append_text_file(path: String, value: String, encoding: String = "utf8") raises:
+async def append_text_file(
+    path: String, value: String, encoding: String = "utf8"
+) raises:
     append_text_file_sync(path, value, encoding)
 
 
@@ -63,7 +69,9 @@ async def write_file(path: String, value: Buffer) raises:
     write_file_sync(path, value)
 
 
-async def write_text_file(path: String, value: String, encoding: String = "utf8") raises:
+async def write_text_file(
+    path: String, value: String, encoding: String = "utf8"
+) raises:
     write_text_file_sync(path, value, encoding)
 
 

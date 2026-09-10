@@ -18,7 +18,9 @@ struct PathDialect(ImplicitlyCopyable):
         return win32.normalize(path) if self.windows else posix.normalize(path)
 
     def is_absolute(self, path: String) -> Bool:
-        return win32.is_absolute(path) if self.windows else posix.is_absolute(path)
+        return win32.is_absolute(path) if self.windows else posix.is_absolute(
+            path
+        )
 
     def matches_glob(self, path: String, pattern: String) raises -> Bool:
         return matches_glob(path, pattern, self.windows)
@@ -33,7 +35,9 @@ struct PathDialect(ImplicitlyCopyable):
         return win32.dirname(path) if self.windows else posix.dirname(path)
 
     def basename(self, path: String, suffix: String = "") -> String:
-        return win32.basename(path, suffix) if self.windows else posix.basename(path, suffix)
+        return win32.basename(path, suffix) if self.windows else posix.basename(
+            path, suffix
+        )
 
     def extname(self, path: String) -> String:
         return win32.extname(path) if self.windows else posix.extname(path)
@@ -42,13 +46,19 @@ struct PathDialect(ImplicitlyCopyable):
         return win32.parse(path) if self.windows else posix.parse(path)
 
     def format_path(self, parts: PathParts) -> String:
-        return win32.format_path(parts) if self.windows else posix.format_path(parts)
+        return win32.format_path(parts) if self.windows else posix.format_path(
+            parts
+        )
 
     def format_path(self, parts: PathInput) -> String:
-        return win32.format_path(parts) if self.windows else posix.format_path(parts)
+        return win32.format_path(parts) if self.windows else posix.format_path(
+            parts
+        )
 
     def relative(self, source: String, target: String) raises -> String:
-        return win32.relative(source, target) if self.windows else posix.relative(source, target)
+        return win32.relative(
+            source, target
+        ) if self.windows else posix.relative(source, target)
 
     def to_namespaced_path(self, path: String) raises -> String:
         return win32.to_namespaced_path(path) if self.windows else path

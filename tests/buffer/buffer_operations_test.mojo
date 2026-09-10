@@ -1,7 +1,19 @@
 from std.collections import List
 from std.math import FloatLiteral
 from std.testing import assert_equal, assert_true
-from tsonic_node.buffer import Buffer, buffer_alloc, buffer_alloc_number, buffer_alloc_string, buffer_from_buffer, buffer_from_numbers, buffer_from_string_encoded, buffer_concat, buffer_is_ascii, buffer_is_utf8, buffer_transcode
+from tsonic_node.buffer import (
+    Buffer,
+    buffer_alloc,
+    buffer_alloc_number,
+    buffer_alloc_string,
+    buffer_from_buffer,
+    buffer_from_numbers,
+    buffer_from_string_encoded,
+    buffer_concat,
+    buffer_is_ascii,
+    buffer_is_utf8,
+    buffer_transcode,
+)
 
 
 def main() raises:
@@ -29,7 +41,10 @@ def main() raises:
     assert_true(rejected)
     assert_equal(original.copy(copied, 100), 0)
     assert_equal(original.slice(-2).to_string(), "cd")
-    assert_equal(original.slice(Float64(FloatLiteral.nan)).to_string(), original.to_string())
+    assert_equal(
+        original.slice(Float64(FloatLiteral.nan)).to_string(),
+        original.to_string(),
+    )
 
     var buffer = buffer_alloc_number(8, 46)
     assert_equal(buffer.write("😀", 1, 3), 0)
@@ -95,9 +110,22 @@ def main() raises:
     assert_true(not buffer_is_ascii(Buffer.from_string("é")))
     assert_true(buffer_is_utf8(Buffer.from_string("é😀")))
     assert_true(not buffer_is_utf8(buffer_from_string_encoded("c080", "hex")))
-    assert_equal(buffer_transcode(Buffer.from_string("€é"), "utf8", "ascii").to_string(), "??")
-    assert_equal(buffer_transcode(Buffer.from_string("€é"), "utf8", "latin1").to_string("hex"), "3fe9")
-    assert_equal(buffer_transcode(buffer_from_string_encoded("00d8", "hex"), "utf16le", "utf8").to_string(), "�")
+    assert_equal(
+        buffer_transcode(Buffer.from_string("€é"), "utf8", "ascii").to_string(),
+        "??",
+    )
+    assert_equal(
+        buffer_transcode(Buffer.from_string("€é"), "utf8", "latin1").to_string(
+            "hex"
+        ),
+        "3fe9",
+    )
+    assert_equal(
+        buffer_transcode(
+            buffer_from_string_encoded("00d8", "hex"), "utf16le", "utf8"
+        ).to_string(),
+        "�",
+    )
     var buffers = List[Buffer]()
     buffers.append(Buffer.from_string("ab"))
     buffers.append(Buffer.from_string("cd"))

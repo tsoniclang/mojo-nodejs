@@ -8,8 +8,12 @@ def read_link(path: String) raises -> String:
     var length = c_size_t(0)
     var status = c_int(0)
     var native_path = path
-    var value = external_call["tsonic_node_fs_readlink", OptionalPointer[Byte, MutUntrackedOrigin]](
-        native_path.as_c_string_slice(), Pointer(to=length), Pointer(to=status),
+    var value = external_call[
+        "tsonic_node_fs_readlink", OptionalPointer[Byte, MutUntrackedOrigin]
+    ](
+        native_path.as_c_string_slice(),
+        Pointer(to=length),
+        Pointer(to=status),
     )
     check_status(Int32(status), "readlink")
     try:

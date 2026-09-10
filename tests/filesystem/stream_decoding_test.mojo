@@ -1,8 +1,17 @@
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.buffer import Buffer, buffer_from_string_encoded
-from tsonic_node.filesystem import RmOptions, remove_path, write_text_file, read_text_file
-from tsonic_node.filesystem.streams import ReadStreamOptions, create_read_stream, create_write_stream
+from tsonic_node.filesystem import (
+    RmOptions,
+    remove_path,
+    write_text_file,
+    read_text_file,
+)
+from tsonic_node.filesystem.streams import (
+    ReadStreamOptions,
+    create_read_stream,
+    create_write_stream,
+)
 from tsonic_node.stream import Readable
 from tsonic_node.event_loop import run_event_loop
 from tsonic_node.stream.decoder import StreamDecoder
@@ -29,14 +38,18 @@ def decoder_boundaries() raises:
         var decoder = StreamDecoder(encoding)
         var output = String()
         for index in range(len(source)):
-            output += decoder.write(source.subarray(Float64(index), Float64(index + 1)))
+            output += decoder.write(
+                source.subarray(Float64(index), Float64(index + 1))
+            )
         output += decoder.end()
         assert_equal(output, source.to_string(encoding))
     for encoding in ("ascii", "latin1", "hex"):
         var decoder = StreamDecoder(encoding)
         var output = String()
         for index in range(len(source)):
-            output += decoder.write(source.subarray(Float64(index), Float64(index + 1)))
+            output += decoder.write(
+                source.subarray(Float64(index), Float64(index + 1))
+            )
         output += decoder.end()
         assert_equal(output, source.to_string(encoding))
 
@@ -52,7 +65,9 @@ def invalid_and_eof() raises:
     assert_equal(decoder.write(buffer_from_string_encoded("e2", "hex")), "")
     assert_equal(decoder.write(Buffer.from_string("a")), "�a")
     decoder = StreamDecoder("utf16le")
-    assert_equal(decoder.write(buffer_from_string_encoded("6100ff", "hex")), "a")
+    assert_equal(
+        decoder.write(buffer_from_string_encoded("6100ff", "hex")), "a"
+    )
     assert_equal(decoder.end(), "")
     decoder = StreamDecoder("utf16le")
     assert_equal(decoder.write(buffer_from_string_encoded("00d8", "hex")), "")

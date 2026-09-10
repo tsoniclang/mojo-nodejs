@@ -46,21 +46,42 @@ struct Stats(Copyable):
 def _snapshot(value: Pointer[NoneType, MutUntrackedOrigin]) -> Stats:
     var fields = List[Int](capacity=10)
     for field in range(10):
-        fields.append(Int(external_call["tsonic_node_fs_stat_field", Int64](value, c_int(field))))
-    return Stats(fields[0], external_call["tsonic_node_fs_stat_time", Float64](value, c_int(1)),
-                 fields[1], fields[2], fields[3], fields[4], fields[5], fields[6],
-                 fields[7] != 0, fields[8] != 0, fields[9] != 0,
-                 external_call["tsonic_node_fs_stat_time", Float64](value, c_int(0)),
-                 external_call["tsonic_node_fs_stat_time", Float64](value, c_int(2)),
-                 external_call["tsonic_node_fs_stat_time", Float64](value, c_int(3)))
+        fields.append(
+            Int(
+                external_call["tsonic_node_fs_stat_field", Int64](
+                    value, c_int(field)
+                )
+            )
+        )
+    return Stats(
+        fields[0],
+        external_call["tsonic_node_fs_stat_time", Float64](value, c_int(1)),
+        fields[1],
+        fields[2],
+        fields[3],
+        fields[4],
+        fields[5],
+        fields[6],
+        fields[7] != 0,
+        fields[8] != 0,
+        fields[9] != 0,
+        external_call["tsonic_node_fs_stat_time", Float64](value, c_int(0)),
+        external_call["tsonic_node_fs_stat_time", Float64](value, c_int(2)),
+        external_call["tsonic_node_fs_stat_time", Float64](value, c_int(3)),
+    )
 
 
 def _stat(path: String, follow: Bool) raises -> Stats:
     checked_path(path)
     var status = c_int(0)
     var native_path = path
-    var value = external_call["tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]](
-        native_path.as_c_string_slice(), c_int(-1), c_int(follow), Pointer(to=status),
+    var value = external_call[
+        "tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]
+    ](
+        native_path.as_c_string_slice(),
+        c_int(-1),
+        c_int(follow),
+        Pointer(to=status),
     )
     check_status(Int32(status), "stat")
     try:
@@ -80,8 +101,13 @@ def lstat(path: String) raises -> Stats:
 def fstat(descriptor: Float64) raises -> Stats:
     var number = c_int(checked_integer(descriptor, 2147483647, "descriptor"))
     var status = c_int(0)
-    var value = external_call["tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]](
-        OptionalPointer[Byte, MutUntrackedOrigin](), number, c_int(0), Pointer(to=status),
+    var value = external_call[
+        "tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]
+    ](
+        OptionalPointer[Byte, MutUntrackedOrigin](),
+        number,
+        c_int(0),
+        Pointer(to=status),
     )
     check_status(Int32(status), "fstat")
     try:

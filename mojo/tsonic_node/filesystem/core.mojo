@@ -80,7 +80,9 @@ def make_directory_default(path: String) raises:
 def make_directory(path: String, options: MkdirOptions = MkdirOptions()) raises:
     var recursive = options.recursive.value() if options.recursive else False
     checked_path(path)
-    var mode = Int(checked_integer(options.mode.value(), 4294967295, "mode")) if options.mode else 0o777
+    var mode = Int(
+        checked_integer(options.mode.value(), 4294967295, "mode")
+    ) if options.mode else 0o777
     if recursive:
         makedirs(Path(path), mode=mode, exist_ok=True)
     else:
@@ -124,17 +126,29 @@ def remove_path_default(path: String) raises:
 def remove_directory(path: String) raises:
     checked_path(path)
     var native_path = path
-    check_status(external_call["tsonic_node_fs_rmdir", Int32](native_path.as_c_string_slice()), "rmdir")
+    check_status(
+        external_call["tsonic_node_fs_rmdir", Int32](
+            native_path.as_c_string_slice()
+        ),
+        "rmdir",
+    )
 
 
 def remove_path(path: String, options: RmOptions) raises:
     checked_path(path)
-    var retries = UInt32(checked_integer(options.max_retries.value(), 4294967295, "maxRetries")) if options.max_retries else UInt32(0)
-    var delay = UInt32(checked_integer(options.retry_delay.value(), 4294967295, "retryDelay")) if options.retry_delay else UInt32(100)
+    var retries = UInt32(
+        checked_integer(options.max_retries.value(), 4294967295, "maxRetries")
+    ) if options.max_retries else UInt32(0)
+    var delay = UInt32(
+        checked_integer(options.retry_delay.value(), 4294967295, "retryDelay")
+    ) if options.retry_delay else UInt32(100)
     var native_path = path
     var status = external_call["tsonic_node_fs_remove", Int32](
-        native_path.as_c_string_slice(), c_int(options.recursive.value() if options.recursive else False),
-        c_int(options.force.value() if options.force else False), retries, delay,
+        native_path.as_c_string_slice(),
+        c_int(options.recursive.value() if options.recursive else False),
+        c_int(options.force.value() if options.force else False),
+        retries,
+        delay,
     )
     check_status(status, "rm")
 
@@ -143,7 +157,9 @@ def make_temp_directory(prefix: String) raises -> String:
     checked_path(prefix)
     var status = c_int(0)
     var native_prefix = prefix
-    var value = external_call["tsonic_node_fs_mkdtemp", OptionalPointer[UInt8, MutUntrackedOrigin]](native_prefix.as_c_string_slice(), Pointer(to=status))
+    var value = external_call[
+        "tsonic_node_fs_mkdtemp", OptionalPointer[UInt8, MutUntrackedOrigin]
+    ](native_prefix.as_c_string_slice(), Pointer(to=status))
     check_status(Int32(status), "mkdtemp")
     try:
         return String(unsafe_from_utf8_ptr=value.value())
@@ -161,9 +177,14 @@ def copy_file(source: String, destination: String, mode: Float64 = 0) raises:
     var flags = c_int(checked_integer(mode, 7, "copy mode"))
     var native_source = source
     var native_destination = destination
-    check_status(external_call["tsonic_node_fs_copy", Int32](
-        native_source.as_c_string_slice(), native_destination.as_c_string_slice(), flags,
-    ), "copyFile")
+    check_status(
+        external_call["tsonic_node_fs_copy", Int32](
+            native_source.as_c_string_slice(),
+            native_destination.as_c_string_slice(),
+            flags,
+        ),
+        "copyFile",
+    )
 
 
 def rename_path(source: String, destination: String) raises:

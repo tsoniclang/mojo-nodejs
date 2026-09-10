@@ -11,7 +11,10 @@ def main() raises:
     assert_equal(inspect(JsValue(-0.0)), "-0")
     assert_equal(inspect(JsValue(Float64(FloatLiteral.nan))), "NaN")
     assert_equal(inspect(JsValue(JsString("line\nnext"))), "'line\\nnext'")
-    assert_equal(inspect(json_parse(JsString('{"count":2,"values":[1,true,null]}'))), "{ count: 2, values: [ 1, true, null ] }")
+    assert_equal(
+        inspect(json_parse(JsString('{"count":2,"values":[1,true,null]}'))),
+        "{ count: 2, values: [ 1, true, null ] }",
+    )
     var bytes = Buffer.from_string("ab")
     var saved = buffer_to_js_value(bytes)
     bytes.set(1, 99)
@@ -23,4 +26,7 @@ def main() raises:
     children.append(builder.append_undefined())
     children.append(root)
     builder.set_aggregate_children(root, children^)
-    assert_equal(inspect(builder.value(root)), "[ <1 empty item>, undefined, [Circular] ]")
+    assert_equal(
+        inspect(builder.value(root)),
+        "[ <1 empty item>, undefined, [Circular] ]",
+    )

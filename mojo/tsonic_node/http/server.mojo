@@ -4,9 +4,17 @@ from std.memory import ArcPointer
 from tsonic_runtime import GlobalCell, RaisingCallable
 
 from .messages import IncomingMessage, ServerResponse
-from .connections import accept_connection, has_pending_connections, poll_connections
+from .connections import (
+    accept_connection,
+    has_pending_connections,
+    poll_connections,
+)
 from .transport import HttpTransport
-from ..internal.network_endpoint import NetworkEndpoint, network_error, poll_network_resolution
+from ..internal.network_endpoint import (
+    NetworkEndpoint,
+    network_error,
+    poll_network_resolution,
+)
 
 
 comptime RequestArguments = Tuple[IncomingMessage, ServerResponse]
@@ -28,7 +36,9 @@ struct Server(ImplicitlyCopyable):
     var _state: ArcPointer[ServerState]
 
     def __init__(out self, handler: RequestHandler):
-        self._state = ArcPointer(ServerState(None, handler, None, False, False, True))
+        self._state = ArcPointer(
+            ServerState(None, handler, None, False, False, True)
+        )
 
     def listen_default_host(
         self,
@@ -90,7 +100,10 @@ comptime _max_servers = 1024
 
 def has_active_servers() -> Bool:
     for index in range(len(_servers.get()[])):
-        if _servers.get()[][index]._state[].active and _servers.get()[][index]._state[].referenced:
+        if (
+            _servers.get()[][index]._state[].active
+            and _servers.get()[][index]._state[].referenced
+        ):
             return True
     return has_pending_connections()
 
@@ -112,7 +125,9 @@ def poll_servers() raises -> Bool:
             if server._state[].listening_callback:
                 server._state[].listening_callback.value().call(())
             did_work = True
-        if server._state[].active and _socket_readable(server._state[].endpoint.value().descriptor()):
+        if server._state[].active and _socket_readable(
+            server._state[].endpoint.value().descriptor()
+        ):
             _accept_request(server)
             did_work = True
     var connection_work = poll_connections()
@@ -121,7 +136,9 @@ def poll_servers() raises -> Bool:
 
 def _accept_request(server: Server) raises:
     var status = c_int(0)
-    var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].endpoint.value().descriptor(), Pointer(to=status))
+    var descriptor = external_call["tsonic_node_socket_accept", c_int](
+        server._state[].endpoint.value().descriptor(), Pointer(to=status)
+    )
     if descriptor == -2:
         return
     if descriptor < 0:

@@ -1,8 +1,23 @@
 from std.collections import List
 from std.testing import assert_equal, assert_false, assert_true
-from tsonic_js import JsString, JsValue, json_parse, json_stringify, js_value_from_array_values, js_value_structured_clone, object_keys, inspect_value, js_value_to_string
+from tsonic_js import (
+    JsString,
+    JsValue,
+    json_parse,
+    json_stringify,
+    js_value_from_array_values,
+    js_value_structured_clone,
+    object_keys,
+    inspect_value,
+    js_value_to_string,
+)
 from tsonic_js.value import encode_structured_clone, decode_structured_clone
-from tsonic_node.buffer import Buffer, buffer_to_js_value, buffer_from_js_value, buffer_is_buffer
+from tsonic_node.buffer import (
+    Buffer,
+    buffer_to_js_value,
+    buffer_from_js_value,
+    buffer_is_buffer,
+)
 
 
 def main() raises:
@@ -19,8 +34,15 @@ def main() raises:
     assert_equal(js_value_to_string(saved).to_native_strict(), "aZc")
     assert_equal(inspect_value(saved), "<Buffer 61 5a 63>")
     assert_equal(len(object_keys(saved)), 3)
-    assert_equal(json_stringify(saved).value().to_native_strict(), '{"type":"Buffer","data":[97,90,99]}')
-    var fake = json_parse(JsString('{"type":"Buffer","data":[97,90,99],"brand":"node:buffer::Buffer"}'))
+    assert_equal(
+        json_stringify(saved).value().to_native_strict(),
+        '{"type":"Buffer","data":[97,90,99]}',
+    )
+    var fake = json_parse(
+        JsString(
+            '{"type":"Buffer","data":[97,90,99],"brand":"node:buffer::Buffer"}'
+        )
+    )
     assert_false(buffer_is_buffer(fake))
     var values = List[JsValue]()
     values.append(saved)
@@ -32,7 +54,10 @@ def main() raises:
     assert_true(clone.array_at(0).is_byte_view())
     assert_true(clone.array_at(0).same_identity(clone.array_at(1)))
     assert_false(clone.array_at(0).same_identity(saved))
-    assert_equal(json_stringify(clone.array_at(0)).value().to_native_strict(), '{"0":97,"1":90,"2":99}')
+    assert_equal(
+        json_stringify(clone.array_at(0)).value().to_native_strict(),
+        '{"0":97,"1":90,"2":99}',
+    )
     clone.array_at(0).byte_view().set(1, 81)
     assert_equal(clone.array_at(2).byte_view().get(0), 81)
     assert_equal(source.get(1), 90)

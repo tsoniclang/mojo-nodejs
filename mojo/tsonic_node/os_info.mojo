@@ -83,11 +83,15 @@ def uptime() raises -> Float64:
 
 
 def endianness() -> String:
-    return "LE" if external_call["tsonic_node_os_little_endian", c_int]() else "BE"
+    return "LE" if external_call[
+        "tsonic_node_os_little_endian", c_int
+    ]() else "BE"
 
 
 def _system_name(field: Int32) raises -> String:
-    var result = external_call["tsonic_node_os_name", OptionalPointer[c_char, MutUntrackedOrigin]](c_int(field))
+    var result = external_call[
+        "tsonic_node_os_name", OptionalPointer[c_char, MutUntrackedOrigin]
+    ](c_int(field))
     if not result:
         raise Error("Unable to determine system name: ", get_errno())
     try:
