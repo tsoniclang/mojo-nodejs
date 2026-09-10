@@ -1,4 +1,4 @@
-from std.variant import Variant
+from std.utils import Variant
 from std.memory import ArcPointer
 from tsonic_runtime import ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
 from ..internal.callback_queue import Notification
@@ -33,7 +33,7 @@ struct PipeSink(ImplicitlyCopyable):
         var response = self.state[].target.unsafe_get[ServerResponse]()
         return not response.is_finished() and not response.is_drained()
 
-    def ready(mut self) -> Bool:
+    def ready(self) -> Bool:
         if self.state[].waiting and self.state[].target.isa[Writable]():
             self.state[].waiting = self.state[].target.unsafe_get[Writable]().pipe_needs_drain()
         return not self.state[].waiting

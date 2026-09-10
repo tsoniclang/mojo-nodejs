@@ -166,12 +166,11 @@ struct Interface(ImplicitlyCopyable):
     def _history(self, text: String):
         if not self._state[].terminal or self._state[].history_size == 0 or text.byte_length() == 0:
             return
-        var history = self._state[].history
-        if len(history) and history[0] == text:
+        if len(self._state[].history) and self._state[].history[0] == text:
             return
-        var retained = List[String](capacity=min(self._state[].history_size, len(history) + 1))
+        var retained = List[String](capacity=min(self._state[].history_size, len(self._state[].history) + 1))
         retained.append(text)
-        for previous in history:
+        for previous in self._state[].history:
             if len(retained) == self._state[].history_size:
                 break
             if not self._state[].unique_history or previous != text:

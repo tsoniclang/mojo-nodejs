@@ -18,7 +18,7 @@ struct _TransportState(Movable):
         if self.descriptor >= 0:
             _ = close(self.descriptor)
         if self.tls:
-            self.tls.value().destroy()
+            _ = self.tls.value().destroy()
 
 
 struct HttpTransport(ImplicitlyCopyable):
@@ -68,7 +68,7 @@ struct HttpTransport(ImplicitlyCopyable):
 
     def close(self):
         if self._state[].tls:
-            self._state[].tls.value().destroy()
+            _ = self._state[].tls.value().destroy()
         if self._state[].descriptor >= 0:
             _ = close(self._state[].descriptor)
             self._state[].descriptor = -1

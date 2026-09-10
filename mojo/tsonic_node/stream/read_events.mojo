@@ -42,7 +42,8 @@ struct ReadEvents(ImplicitlyCopyable):
         return self.state[].notifications[event]
 
     def has(self, event: String) -> Bool:
-        return event in self.state[].notifications and self.state[].notifications[event].has_listeners()
+        var listeners = self.state[].notifications.get(event)
+        return Bool(listeners) and listeners.value().has_listeners()
 
     def emit(self, event: String) raises:
         if event in self.state[].notifications:
@@ -52,12 +53,15 @@ struct ReadEvents(ImplicitlyCopyable):
         if self.state[].closed:
             return
         var pending = Dict[String, CallbackReservation]()
-        for event in ("end", "error", "close"):
-            var committed = self.state[].end_queued if event == "end" else self.state[].close_queued if event == "close" else Bool(self.state[].error)
-            if not committed and event not in self.state[].reservations:
-                pending[event] = stream_completions.get()[].reserve()
+        self.prepare_event("end", self.state[].end_queued, pending)
+        self.prepare_event("error", Bool(self.state[].error), pending)
+        self.prepare_event("close", self.state[].close_queued, pending)
         for event in pending:
             self.state[].reservations[event] = pending[event]
+
+    def prepare_event(self, event: String, committed: Bool, mut pending: Dict[String, CallbackReservation]) raises:
+        if not committed and event not in self.state[].reservations:
+            pending[event] = stream_completions.get()[].reserve()
 
     def queue(self, event: String) raises:
         if event not in self.state[].reservations:

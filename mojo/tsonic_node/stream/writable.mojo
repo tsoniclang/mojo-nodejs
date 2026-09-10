@@ -58,7 +58,7 @@ struct Writable(ImplicitlyCopyable):
 
     def _write(mut self, value: Buffer, callback: Optional[WriteCallback]) raises -> Bool:
         self._state[].events.prepare()
-        if len(value) > 9007199254740991 - self._state[].buffered_bytes:
+        if Int64(len(value)) > 9007199254740991 - self._state[].buffered_bytes:
             raise Error("Stream buffered byte count exceeds the exact source range")
         var completion = Optional[StreamCompletion]()
         if callback:
@@ -70,7 +70,7 @@ struct Writable(ImplicitlyCopyable):
             self._fail(error)
             return False
         self._state[].chunks.append(_WriteRequest(value, completion))
-        self._state[].buffered_bytes += len(value)
+        self._state[].buffered_bytes += Int64(len(value))
         if self._state[].corked == 0:
             self._flush()
         var ready = self._state[].buffered_bytes < self._state[].high_water_mark or self._state[].buffered_bytes == 0

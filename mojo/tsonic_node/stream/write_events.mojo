@@ -59,7 +59,7 @@ struct WriteEvents(ImplicitlyCopyable):
         if event not in self.state[].reservations:
             pending[event] = stream_completions.get()[].reserve()
 
-    def discard(self, event: String):
+    def discard(self, event: String) raises:
         if event in self.state[].reservations:
             _ = self.state[].reservations.pop(event)
 

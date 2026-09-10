@@ -58,7 +58,7 @@ struct LineBuffer(Movable):
             self._emit()
         self._finished = True
 
-    def take(mut self) -> Optional[String]:
+    def take(mut self) raises -> Optional[String]:
         if len(self._complete) == 0:
             return None
         var line = self._complete.popleft()

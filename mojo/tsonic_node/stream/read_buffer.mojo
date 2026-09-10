@@ -5,7 +5,7 @@ from .decoder import StreamDecoder
 from .chunk import StreamChunk
 
 
-struct ReadBuffer(Movable):
+struct ReadBuffer(Movable, Sized):
     var _bytes: ByteQueue
     var _text: TextQueue
     var _decoder: Optional[StreamDecoder]

@@ -174,7 +174,7 @@ struct Readable(ImplicitlyCopyable):
         var size = max(minimum, self._state[].chunk_size)
         if self._state[].end:
             var position = self._state[].position.value() if self._state[].position else self._state[].bytes_read
-            size = Int(min(Int64(size), max(0, self._state[].end.value() - position + 1)))
+            size = Int(min(Int64(size), max(Int64(0), self._state[].end.value() - position + 1)))
             if position > self._state[].end.value():
                 self._state[].eof = True
                 self._state[].chunks.finish()
@@ -267,7 +267,7 @@ struct Readable(ImplicitlyCopyable):
         finally:
             self._state[].polling = False
 
-    def _prune_sinks(self, all_sinks: Bool = False):
+    def _prune_sinks(self, all_sinks: Bool = False) raises:
         var retained = List[PipeSubscription]()
         for subscription in self._state[].pipes:
             if not all_sinks and subscription.sink.writable():

@@ -44,7 +44,7 @@ struct CallbackReservation(ImplicitlyCopyable):
         queue[].committed += 1
         queue[].pending.append(callback)
 
-    def defer[Arguments: Copyable](
+    def defer[Arguments: Copyable & Deinitable](
         self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
     ) raises:
         var environment = allocate_callable_environment(
@@ -54,9 +54,9 @@ struct CallbackReservation(ImplicitlyCopyable):
 
 
 @fieldwise_init
-struct _Invocation[Arguments: Copyable]:
-    var callback: RaisingCallable[Arguments, NoneType]
-    var arguments: Arguments
+struct _Invocation[Arguments: Copyable & Deinitable]:
+    var callback: RaisingCallable[Self.Arguments, NoneType]
+    var arguments: Self.Arguments
 
     @staticmethod
     def invoke(context: ErasedCallableContext, var _arguments: Tuple[]) raises:
@@ -91,7 +91,7 @@ struct CallbackQueue(ImplicitlyCopyable):
     def push(self, notification: Notification) raises:
         self.reserve().commit(notification)
 
-    def defer[Arguments: Copyable](
+    def defer[Arguments: Copyable & Deinitable](
         self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
     ) raises:
         self.reserve().defer(callback, arguments^)

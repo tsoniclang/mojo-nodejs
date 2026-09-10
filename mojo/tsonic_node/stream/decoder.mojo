@@ -11,7 +11,7 @@ def _utf8_boundary(bytes: List[Byte]) -> Int:
     while start > 0 and stop - start < 4 and bytes[start] & 0xC0 == 0x80:
         start -= 1
     var lead = bytes[start]
-    var needed = 2 if 0xC2 <= lead <= 0xDF else 3 if 0xE0 <= lead <= 0xEF else 4 if 0xF0 <= lead <= 0xF4 else 0
+    var needed = 2 if lead >= 0xC2 and lead <= 0xDF else 3 if lead >= 0xE0 and lead <= 0xEF else 4 if lead >= 0xF0 and lead <= 0xF4 else 0
     if needed == 0 or stop - start >= needed:
         return stop
     for index in range(start + 1, stop):
@@ -49,7 +49,7 @@ struct StreamDecoder(Movable):
             boundary -= boundary % 2
             if boundary >= 2:
                 var last = UInt16(bytes[boundary - 2]) | (UInt16(bytes[boundary - 1]) << 8)
-                if 0xD800 <= last <= 0xDBFF:
+                if last >= 0xD800 and last <= 0xDBFF:
                     boundary -= 2
         elif self.name == "base64" or self.name == "base64url":
             boundary -= boundary % 3
