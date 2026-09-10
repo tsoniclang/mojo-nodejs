@@ -1,5 +1,4 @@
 from std.collections import List, Span
-from std.collections.string import StringSpan
 from std.memory import ArcPointer, bitcast
 from tsonic_runtime import WeakReferenceIdentity
 from tsonic_runtime.numeric import source_number_to_uint32
@@ -9,6 +8,8 @@ from .codec import (
     encode_bytes,
     encoding_name,
     writable_byte_count,
+    bytes_are_ascii,
+    bytes_are_utf8,
 )
 from .search import search_bytes, search_number
 from .ranges import copy_offset, clamp_offset, slice_offset
@@ -515,21 +516,14 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         return self.includes_string(value, None, encoding)
 
     def is_ascii(self) -> Bool:
-        for index in range(self._length):
-            if self._bytes[][self._offset + index] >= 128:
-                return False
-        return True
+        return bytes_are_ascii(
+            Span(self._bytes[])[self._offset : self._offset + self._length]
+        )
 
     def is_utf8(self) -> Bool:
-        try:
-            _ = StringSpan(
-                from_utf8=Span(self._bytes[])[
-                    self._offset : self._offset + self._length
-                ]
-            )
-            return True
-        except:
-            return False
+        return bytes_are_utf8(
+            Span(self._bytes[])[self._offset : self._offset + self._length]
+        )
 
     def same_storage(self, other: Self) -> Bool:
         return self._bytes is other._bytes
@@ -537,15 +531,6 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
     def _validate_index(self, index: Int) raises:
         if index < 0 or index >= self._length:
             raise Error("Buffer index is outside the valid range")
-
-    def _validate_range(self, offset: Int, width: Int) raises:
-        if (
-            offset < 0
-            or width < 0
-            or offset > self._length
-            or width > self._length - offset
-        ):
-            raise Error("Buffer range is outside the valid range")
 
     def _read_uint(
         self, offset: Float64, width: Int, little_endian: Bool

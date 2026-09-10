@@ -8,38 +8,12 @@ from ..http import ServerResponse
 from .descriptor import StreamDescriptor
 from .read_buffer import ReadBuffer
 from .chunk import StreamChunk
-from .native_read import NativeRead
+from .read_state import _ReadableState
 from .read_size import requested_read_size, increased_read_threshold
 from .writable import Writable
 from .pipe_sink import PipeSink, PipeSubscription
 from .read_events import ReadEvents, DataCallback, ReadErrorCallback
 from .completion import stream_completions
-
-
-@fieldwise_init
-struct _ReadableState:
-    var descriptor: Optional[StreamDescriptor]
-    var chunks: ReadBuffer
-    var paused: Bool
-    var ended: Bool
-    var closed: Bool
-    var failed: Bool
-    var eof: Bool
-    var path: String
-    var chunk_size: Int
-    var position: Optional[Int64]
-    var end: Optional[Int64]
-    var bytes_read: Int64
-    var auto_close: Bool
-    var asynchronous: Bool
-    var native_read: Optional[NativeRead]
-    var pipes: List[PipeSubscription]
-    var events: ReadEvents
-    var registered: Bool
-    var flowing: Bool
-    var polling: Bool
-    var resume_pending: Bool
-    var readable_pending: Bool
 
 
 struct Readable(ImplicitlyCopyable):

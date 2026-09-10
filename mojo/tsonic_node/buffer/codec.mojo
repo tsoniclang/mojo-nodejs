@@ -1,7 +1,22 @@
 from std.base64 import b64encode
 from std.collections import List, Span
-from std.collections.string import Codepoint
+from std.collections.string import Codepoint, StringSpan
 from tsonic_js.string import JsString
+
+
+def bytes_are_ascii(bytes: Span[Byte]) -> Bool:
+    for byte in bytes:
+        if byte >= 128:
+            return False
+    return True
+
+
+def bytes_are_utf8(bytes: Span[Byte]) -> Bool:
+    try:
+        _ = StringSpan(from_utf8=bytes)
+        return True
+    except:
+        return False
 
 
 def encoding_name(value: String) raises -> String:
