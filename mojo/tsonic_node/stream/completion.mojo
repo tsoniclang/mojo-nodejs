@@ -20,7 +20,7 @@ struct StreamCompletion(ImplicitlyCopyable):
         self.reservation = stream_completions.get()[].reserve()
 
     def complete(self, error: Optional[TsError] = None) raises:
-        self.reservation.defer(self.callback, (error,))
+        self.reservation.defer(self.callback, (error.copy(),))
 
 
 def has_pending_streams() -> Bool:

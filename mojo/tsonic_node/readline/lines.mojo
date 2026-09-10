@@ -72,6 +72,9 @@ struct LineBuffer(Movable):
     def finished(self) -> Bool:
         return self._finished
 
+    def has_lines(self) -> Bool:
+        return len(self._complete) != 0
+
     def cursor(self) -> Int:
         var result = 0
         for point in self.current.codepoints():

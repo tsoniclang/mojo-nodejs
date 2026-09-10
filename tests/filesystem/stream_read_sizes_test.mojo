@@ -5,6 +5,7 @@ from std.tempfile import mkdtemp
 from tsonic_node import Buffer, RmOptions, remove_path, write_text_file
 from tsonic_node.filesystem.streams import ReadStreamOptions, create_read_stream
 from tsonic_node.stream import Readable
+from tsonic_node.stream.completion import poll_streams
 from tsonic_node.stream.read_size import requested_read_size, increased_read_threshold
 
 
@@ -69,6 +70,8 @@ def file_sizes(root: String) raises:
     assert_equal(source.bytes_read(), 8)
     assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "gh")
     assert_false(Bool(alias.read_sized(3.0)))
+    assert_false(source.readable_ended())
+    _ = poll_streams()
     assert_true(source.readable_ended())
     assert_false(source.readable())
     options.start = 2
@@ -78,6 +81,7 @@ def file_sizes(root: String) raises:
     assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "fg")
     assert_false(Bool(source.read()))
     assert_equal(source.bytes_read(), 5)
+    _ = poll_streams()
     assert_true(source.readable_ended())
     options = ReadStreamOptions()
     options.high_water_mark = 0

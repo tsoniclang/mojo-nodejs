@@ -5,7 +5,8 @@ from tsonic_runtime import Location, ErasedCallableContext, allocate_callable_en
 from tsonic_node.buffer import Buffer
 from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
 from tsonic_node.filesystem.streams import ReadStreamOptions, create_read_stream, create_write_stream
-from tsonic_node.readline import Interface, QuestionCallback, ReadLineOptions, create_interface, has_pending_readline, poll_readline
+from tsonic_node.readline import Interface, QuestionCallback, ReadLineOptions, create_interface, has_pending_readline
+from support.input_events import poll_input_events
 from tsonic_node.stream import Readable
 
 
@@ -24,7 +25,7 @@ struct AnswerAction:
         if action[].remaining > 1:
             action[].interface.value().question("next? ", answer(action[].trace, action[].interface, action[].remaining - 1))
         if action[].reenter:
-            _ = poll_readline()
+            _ = poll_input_events()
         if action[].fail:
             raise Error("deliberate answer failure")
 
@@ -42,7 +43,7 @@ def drain_questions() raises:
     var deadline = monotonic() + 10000000000
     while has_pending_readline():
         assert_true(monotonic() < deadline)
-        _ = poll_readline()
+        _ = poll_input_events()
         sleep(0.001)
 
 
@@ -54,16 +55,16 @@ def retained_input() raises:
     var trace = Location(String())
     interface.question("first? ", answer(trace, interface, 3))
     assert_equal(trace.read(), "")
-    assert_false(poll_readline())
+    _ = poll_input_events()
     assert_true(has_pending_readline())
     _ = alias.pause()
     assert_true(input.is_paused())
     input.append(Buffer.from_string("first\n\nlast\n"))
-    assert_false(poll_readline())
+    assert_false(poll_input_events())
     assert_equal(trace.read(), "")
     _ = alias.resume()
     assert_false(input.is_paused())
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(trace.read(), "[first][][last]")
     assert_true(has_pending_readline())
     alias.close()
@@ -80,11 +81,11 @@ def chunk_splits() raises:
         var trace = Location(String())
         interface.question("", answer(trace))
         input.append(bytes.subarray(0, Float64(split)))
-        _ = poll_readline()
+        _ = poll_input_events()
         if split != len(bytes):
             assert_equal(trace.read(), "")
         input.append(bytes.subarray(Float64(split)))
-        _ = poll_readline()
+        _ = poll_input_events()
         assert_equal(trace.read(), "[a😀é]")
         interface.close()
 
@@ -187,7 +188,7 @@ def callback_failure_retains_other_work() raises:
     second.question("", answer(trace))
     var rejected = False
     try:
-        _ = poll_readline()
+        _ = poll_input_events()
     except error:
         rejected = "deliberate answer failure" in String(error)
     assert_true(rejected)
@@ -216,14 +217,14 @@ def interface_consumes_between_questions() raises:
     var interface = create_interface(options)
     assert_true(has_pending_readline())
     input.append(Buffer.from_string("old\ncurrent"))
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(interface.line(), "current")
     var trace = Location(String())
     interface.question("", answer(trace))
-    assert_false(poll_readline())
+    assert_false(poll_input_events())
     assert_equal(trace.read(), "")
     input.append(Buffer.from_string("\n"))
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(trace.read(), "[current]")
     assert_true(has_pending_readline())
     input._accept_read(None)
@@ -243,7 +244,7 @@ def eof_callback_failure() raises:
     while not rejected:
         assert_true(monotonic() < deadline)
         try:
-            _ = poll_readline()
+            _ = poll_input_events()
         except error:
             rejected = "deliberate answer failure" in String(error)
     assert_equal(trace.read(), "[tail]")

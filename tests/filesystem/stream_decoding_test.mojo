@@ -105,6 +105,7 @@ def file_decoding(root: String) raises:
     assert_equal(require_text(alias.read_sized(1.0)), "é")
     assert_equal(require_text(source.read_sized(1.0)), "Z")
     assert_false(Bool(source.read()))
+    run_event_loop()
     assert_true(source.readable_ended())
     assert_equal(source.bytes_read(), 7)
     source = create_read_stream(path, options)

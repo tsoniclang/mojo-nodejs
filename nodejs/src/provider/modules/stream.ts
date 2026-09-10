@@ -6,6 +6,7 @@ import type {
 import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
 import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
 import { readableReadMember, readableReadOperations } from "./stream/readable-calls.js";
+import { readableEventMembers, readableEventOperations } from "./stream/readable-events.js";
 import {
   booleanType,
   boolCarrier,
@@ -44,6 +45,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         kind: "class",
         members: Object.freeze([
           readableReadMember(readableId),
+          ...readableEventMembers(moduleSpecifier, "Readable"),
           methodMember(readableId, "setEncoding", [{ name: "encoding", type: stringType }], providerRef(moduleSpecifier, "Readable")),
           Object.freeze({
             id: `${readableId}.pipe`, name: "pipe", kind: "method",
@@ -87,11 +89,12 @@ export function streamTypes(): readonly MojoProviderTypeDefinition[] {
 export function streamOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
     ...readableReadOperations(readableId, readableCarrier),
+    ...readableEventOperations(moduleSpecifier, "Readable", readableCarrier),
     instanceCall(readableId, `${readableId}.setEncoding`, `${readableId}.setEncoding(encoding)`, "set_encoding", readableCarrier, [nativeString], readableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(writable)`, "pipe_to", readableCarrier, [writableCarrier], writableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(serverResponse)`, "pipe_to_response", readableCarrier, [httpServerResponseCarrier], httpServerResponseCarrier, true, "mut"),
-    instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, false, "mut"),
-    instanceCall(readableId, `${readableId}.resume`, `${readableId}.resume()`, "resume", readableCarrier, [], readableCarrier, false, "mut"),
+    instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, true, "mut"),
+    instanceCall(readableId, `${readableId}.resume`, `${readableId}.resume()`, "resume", readableCarrier, [], readableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.isPaused`, `${readableId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier),
     ...writableCallOperations(writableId, writableCarrier),
     ...writableEventOperations(moduleSpecifier, "Writable", writableCarrier),

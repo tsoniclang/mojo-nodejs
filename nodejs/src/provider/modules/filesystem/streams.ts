@@ -5,6 +5,7 @@ import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "../stream/writable-calls.js";
 import { writableEventMembers, writableEventOperations } from "../stream/writable-events.js";
 import { readableReadMember, readableReadOperations } from "../stream/readable-calls.js";
+import { readableEventMembers, readableEventOperations } from "../stream/readable-events.js";
 import {
   booleanType, boolCarrier, float64Carrier, functionCall,
   httpServerResponseCarrier, instanceCall, methodMember, nativeString,
@@ -44,6 +45,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
     Object.freeze({ id: readId, name: "ReadStream", kind: "class" as const,
       heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Readable") }]), members: Object.freeze([
       readableReadMember(readId),
+      ...readableEventMembers(moduleSpecifier, "ReadStream"),
       methodMember(readId, "setEncoding", [{ name: "encoding", type: stringType }], readType),
       overloadedMethodMember(readId, "pipe", [
         { signatureSuffix: "writeStream", parameters: [{ name: "destination", type: writeType }], returnType: writeType },
@@ -116,12 +118,13 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
       propertyRead(id, `${id}.${counter}`, targetCounter, carrier, float64Carrier, "method"));
   }
   operations.push(...readableReadOperations(readId, readableCarrier));
+  operations.push(...readableEventOperations(moduleSpecifier, "ReadStream", readableCarrier));
   operations.push(instanceCall(readId, `${readId}.setEncoding`, `${readId}.setEncoding(encoding)`, "set_encoding", readableCarrier, [nativeString], readableCarrier, true, "mut"));
   for (const [suffix, destination, target] of [
     ["writeStream", writableCarrier, "pipe_to"], ["writable", writableCarrier, "pipe_to"],
     ["serverResponse", httpServerResponseCarrier, "pipe_to_response"],
   ] as const) operations.push(instanceCall(readId, `${readId}.pipe`, `${readId}.pipe(${suffix})`, target, readableCarrier, [destination], destination, true, "mut"));
-  for (const name of ["pause", "resume"] as const) operations.push(instanceCall(readId, `${readId}.${name}`, `${readId}.${name}()`, name, readableCarrier, [], readableCarrier, false, "mut"));
+  for (const name of ["pause", "resume"] as const) operations.push(instanceCall(readId, `${readId}.${name}`, `${readId}.${name}()`, name, readableCarrier, [], readableCarrier, true, "mut"));
   operations.push(instanceCall(readId, `${readId}.isPaused`, `${readId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier));
   operations.push(...writableCallOperations(writeId, writableCarrier));
   operations.push(...writableEventOperations(moduleSpecifier, "WriteStream", writableCarrier));
