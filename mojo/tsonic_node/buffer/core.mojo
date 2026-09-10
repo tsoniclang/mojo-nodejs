@@ -580,7 +580,7 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         signed: Bool,
     ) raises:
         var bits = width * 8 - (1 if signed else 0)
-        var limit = Int64(1) << bits
+        var limit = Int64(1) << Int64(bits)
         var minimum = -limit if signed else Int64(0)
         if value < Float64(minimum) or value > Float64(limit - 1):
             raise Error("Buffer numeric value is outside the valid range")

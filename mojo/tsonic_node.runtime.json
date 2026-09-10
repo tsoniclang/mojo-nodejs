@@ -5,6 +5,7 @@
     "c-compiler": "==2.0.0",
     "c-ares": "==1.34.8",
     "cxx-compiler": "==2.0.0",
+    "icu": "==78.3",
     "openssl": "==3.6.4",
     "libuv": "==1.51.0",
     "libcurl": "==8.21.0",
@@ -94,6 +95,7 @@
     { "language": "c", "standard": "c11", "path": "tsonic_node.native/tls/lifecycle.c" }
   ],
   "assets": [
+    "tsonic_node.native/url/scalar_params.h",
     "tsonic_node.native/stream/read.h",
     "tsonic_node.native/dns/api.h",
     "tsonic_node.native/dns/model.h",

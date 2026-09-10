@@ -17,6 +17,6 @@ def read_link(path: String) raises -> String:
     )
     check_status(Int32(status), "readlink")
     try:
-        return String(Span(value.value(), Int(length)))
+        return String(from_utf8_lossy=Span(value.value(), Int(length)))
     finally:
         external_call["tsonic_node_fs_free", NoneType](value.value())

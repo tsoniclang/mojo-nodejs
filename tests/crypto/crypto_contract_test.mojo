@@ -59,10 +59,12 @@ def main() raises:
             rejected = True
         assert_true(rejected)
     assert_equal(len(random_bytes(0)), 0)
+    assert_equal(len(random_bytes(0.9)), 0)
     assert_equal(len(random_bytes(1.5)), 1)
     assert_equal(len(random_bytes(32)), 32)
     for invalid in [
         -1.0,
+        -0.1,
         Float64(FloatLiteral.nan),
         Float64(FloatLiteral.infinity),
         2147483648.0,

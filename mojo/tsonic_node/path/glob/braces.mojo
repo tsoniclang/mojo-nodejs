@@ -168,5 +168,5 @@ def expand_braces(pattern: String) raises -> List[String]:
             retained_bytes += work.text.byte_length()
             require_source_size(retained_bytes)
             require_expansion_size(len(result) + 1)
-            result.append(work.text^)
+            result.append(work^.text)
     return result^

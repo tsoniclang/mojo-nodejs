@@ -159,8 +159,6 @@ def random_bytes(size: Float64) raises -> Buffer:
     if size != size or size < 0 or size > 2147483647:
         raise Error("Random byte count must be between 0 and 2147483647")
     var length = Int(size)
-    if Float64(length) != size:
-        raise Error("Random byte count must be an integer")
     var bytes = List[Byte](capacity=length)
     for _ in range(length):
         bytes.append(0)

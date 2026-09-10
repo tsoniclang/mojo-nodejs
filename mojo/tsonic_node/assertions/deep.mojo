@@ -27,10 +27,10 @@ def deep_value_equal(left: JsValue, right: JsValue) raises -> Bool:
     while len(frames):
         var frame = frames.pop()
         if frame.index == -1:
-            if object_is(frame.left, frame.right):
-                continue
             if not frame.left.same_prototype(frame.right):
                 return False
+            if object_is(frame.left, frame.right):
+                continue
             if not frame.left.is_array() and not frame.left.is_object():
                 return False
             if frame.left.is_byte_view():

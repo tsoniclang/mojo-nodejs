@@ -4,14 +4,14 @@ from std.collections.string import Codepoint, StringSpan
 from tsonic_js.string import JsString
 
 
-def bytes_are_ascii(bytes: Span[Byte]) -> Bool:
+def bytes_are_ascii(bytes: Span[Byte, _]) -> Bool:
     for byte in bytes:
         if byte >= 128:
             return False
     return True
 
 
-def bytes_are_utf8(bytes: Span[Byte]) -> Bool:
+def bytes_are_utf8(bytes: Span[Byte, _]) -> Bool:
     try:
         _ = StringSpan(from_utf8=bytes)
         return True
@@ -212,7 +212,7 @@ def transcode_bytes(
 ) raises -> List[Byte]:
     var source = encoding_name(source_encoding)
     var target = encoding_name(target_encoding)
-    for name in (source, target):
+    for name in [source, target]:
         if (
             name != "utf8"
             and name != "utf16le"

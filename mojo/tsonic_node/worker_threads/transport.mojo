@@ -115,9 +115,8 @@ struct PortTransport(ImplicitlyCopyable):
             return MessagePacket(packet.kind, JsValue.undefined())
         if packet.kind != 2 and packet.kind != 3:
             raise Error("Worker channel received an invalid frame kind")
-        return MessagePacket(
-            packet.kind, decode_structured_clone(packet.bytes^)
-        )
+        var kind = packet.kind
+        return MessagePacket(kind, decode_structured_clone(packet^.bytes))
 
     def exit_code(self) raises -> Optional[Int32]:
         return self._remote.value().exit_code() if self._remote else Optional[

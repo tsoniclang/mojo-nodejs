@@ -66,7 +66,7 @@ def total_memory() -> Float64:
 
 
 def load_average() -> List[Float64]:
-    var values = Array[Float64, 3](0.0)
+    var values: Array[Float64, 3] = [0.0, 0.0, 0.0]
     external_call["uv_loadavg", NoneType](values.unsafe_ptr())
     var result = List[Float64](capacity=3)
     for index in range(3):
