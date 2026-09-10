@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { compileMojo, projectArtifactTexts } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("Buffer predicate exposes exact generic named and static relations", () => {
@@ -20,7 +20,9 @@ test("Buffer predicate exposes exact generic named and static relations", () => 
     const rows = definition.operations.filter((entry) => entry.exportId === exportId &&
       entry.memberId === memberId && entry.signatureId === signature.id);
     assert.equal(rows.length, 1);
-    assert.equal(rows[0].target.name, "buffer_is_buffer");
+    assert.equal(rows[0].target.kind, "value-predicate");
+    assert.equal(rows[0].target.predicate.acceptedType.name, "Buffer");
+    assert.equal(rows[0].target.predicate.boxed.name, "buffer_is_buffer");
     assert.equal(rows[0].target.genericParameters[0].name, "T");
     assert.equal(rows[0].target.genericParameters[0].position, "inferred");
     assert.equal(rows[0].target.arguments[0].convention, "imm");
@@ -55,4 +57,8 @@ export function main(): void {
 `,
   } });
   assert.deepEqual(result.diagnostics, []);
+  const emitted = projectArtifactTexts(result).map((artifact) => artifact.text).join("\n");
+  assert.match(emitted, /\.isa\[Buffer\]\(\)|\.isa\[String\]\(\)/u);
+  assert.doesNotMatch(emitted, /buffer_to_js_value\(/u);
+  assert.doesNotMatch(emitted, /def generic\[T/u);
 });
