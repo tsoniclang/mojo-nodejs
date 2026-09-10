@@ -58,8 +58,9 @@ def _snapshot(value: Pointer[NoneType, MutUntrackedOrigin]) -> Stats:
 def _stat(path: String, follow: Bool) raises -> Stats:
     checked_path(path)
     var status = c_int(0)
+    var native_path = path
     var value = external_call["tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]](
-        path.as_c_string_slice(), c_int(-1), c_int(follow), Pointer(to=status),
+        native_path.as_c_string_slice(), c_int(-1), c_int(follow), Pointer(to=status),
     )
     check_status(Int32(status), "stat")
     try:

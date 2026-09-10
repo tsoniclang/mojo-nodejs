@@ -7,8 +7,10 @@ def open_file(path: String, flags: String, mode: Float64 = 0o666) raises -> Floa
     checked_path(path)
     checked_path(flags)
     var permissions = UInt32(checked_integer(mode, 4294967295, "mode"))
+    var native_path = path
+    var native_flags = flags
     var descriptor = external_call["tsonic_node_fs_open", c_int](
-        path.as_c_string_slice(), flags.as_c_string_slice(), permissions,
+        native_path.as_c_string_slice(), native_flags.as_c_string_slice(), permissions,
     )
     if descriptor < 0:
         raise Error("Unable to open file: ", get_errno())
@@ -68,13 +70,15 @@ def write_string(descriptor: Float64, value: String, position: Optional[Float64]
 def access(path: String, mode: Float64 = 0) raises:
     checked_path(path)
     var permissions = c_int(checked_integer(mode, 7, "access mode"))
-    check_status(external_call["tsonic_node_fs_access", Int32](path.as_c_string_slice(), permissions), "access")
+    var native_path = path
+    check_status(external_call["tsonic_node_fs_access", Int32](native_path.as_c_string_slice(), permissions), "access")
 
 
 def chmod(path: String, mode: Float64) raises:
     checked_path(path)
+    var native_path = path
     var permissions = c_int(checked_integer(mode, 0o7777, "permission mode"))
-    check_status(external_call["tsonic_node_fs_chmod", Int32](path.as_c_string_slice(), permissions), "chmod")
+    check_status(external_call["tsonic_node_fs_chmod", Int32](native_path.as_c_string_slice(), permissions), "chmod")
 
 
 def truncate_file(path: String, length: Float64 = 0) raises:

@@ -4,6 +4,7 @@ from std.testing import assert_equal, assert_true, assert_false
 from tsonic_js import JsValue
 from tsonic_runtime import Location, ErasedCallableContext, RaisingCallable, allocate_callable_environment, destroy_callable_environment
 from tsonic_node.dns import LookupCallback, AddressListCallback, lookup_callback, reverse_callback, poll_dns, has_pending_dns
+from tsonic_node.dns.native import DnsRequest, poll_native_lookup
 
 
 @fieldwise_init
@@ -48,6 +49,19 @@ struct FailureCompletion:
 
 
 def main() raises:
+    var input = String("127.0.0.1")
+    var request = DnsRequest(input, 0)
+    assert_equal(input, "127.0.0.1")
+    input = "changed-after-request.invalid"
+    for turn in range(10000):
+        _ = poll_native_lookup()
+        if request.ready():
+            break
+        sleep(0.001)
+    assert_true(request.ready())
+    assert_false(request.failed())
+    assert_equal(request.lookup_address().address, "127.0.0.1")
+    assert_equal(input, "changed-after-request.invalid")
     var count = Location(0)
     lookup_callback("127.0.0.1", completed(count, True))
     lookup_callback("127.0.0.1", completed(count))

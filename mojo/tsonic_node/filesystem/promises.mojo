@@ -9,6 +9,7 @@ from .core import (
     make_directory as make_directory_sync,
     make_directory_default as make_directory_default_sync,
     read_directory_names,
+    remove_directory as remove_directory_sync,
     remove_path as remove_path_sync,
     remove_path_default as remove_path_default_sync,
     rename_path as rename_path_sync,
@@ -84,6 +85,10 @@ async def make_directory(path: String, options: MkdirOptions) raises:
 
 async def remove_path_default(path: String) raises:
     remove_path_default_sync(path)
+
+
+async def remove_directory(path: String) raises:
+    remove_directory_sync(path)
 
 
 async def remove_path(path: String, options: RmOptions) raises:

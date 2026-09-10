@@ -59,6 +59,13 @@ void* tsonic_node_fs_readlink(const char* path, size_t* length, int* status) {
   return result;
 }
 
+int tsonic_node_fs_rmdir(const char* path) {
+  uv_fs_t request;
+  int status = uv_fs_rmdir(NULL, &request, path, NULL);
+  uv_fs_req_cleanup(&request);
+  return status;
+}
+
 static int remove_once(const char* path, int recursive) {
   uv_fs_t request;
   int status = uv_fs_lstat(NULL, &request, path, NULL);

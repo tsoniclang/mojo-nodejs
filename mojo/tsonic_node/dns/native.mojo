@@ -22,14 +22,15 @@ struct DnsRequest(ImplicitlyCopyable):
     def __init__(out self, input: String, kind: Int32) raises:
         if input.find("\0") >= 0 or input.byte_length() > 4096:
             raise Error("DNS input contains a null byte or exceeds its length limit")
+        var native_input = input
         var handle = OptionalPointer[NoneType, MutUntrackedOrigin]()
         if kind == 0:
             handle = external_call["tsonic_node_dns_lookup_start", OptionalPointer[NoneType, MutUntrackedOrigin]](
-                input.as_c_string_slice().ptr().as_unsafe_any_origin(),
+                native_input.as_c_string_slice().ptr().as_unsafe_any_origin(),
             )
         else:
             handle = external_call["tsonic_node_dns_default_query_start", OptionalPointer[NoneType, MutUntrackedOrigin]](
-                input.as_c_string_slice().ptr().as_unsafe_any_origin(), kind,
+                native_input.as_c_string_slice().ptr().as_unsafe_any_origin(), kind,
             )
         if not handle:
             raise Error("Unable to allocate a bounded DNS request")

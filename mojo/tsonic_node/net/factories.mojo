@@ -65,8 +65,9 @@ def create_server_options_callback(options: ServerOptions, callback: ConnectionC
 def is_ip(value: String) -> Float64:
     if value.find("\0") >= 0:
         return 0
+    var native_value = value
     return Float64(external_call["tsonic_node_is_ip", c_int](
-        value.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        native_value.as_c_string_slice().ptr().as_unsafe_any_origin(),
     ))
 
 

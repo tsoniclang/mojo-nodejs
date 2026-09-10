@@ -78,8 +78,9 @@ def _watch(path: String, options: WatchOptions, change: Optional[WatchListener],
     var interval = options.interval.value() if options.interval else Float64(5007)
     if interval != interval or interval < 1 or interval > 4294967295 or interval != Float64(UInt32(interval)):
         raise Error("A watchFile interval must be a positive uint32 number of milliseconds")
+    var native_path = path
     var handle = external_call["tsonic_node_fs_watch_new", OptionalPointer[NoneType, MutUntrackedOrigin]](
-        path.as_c_string_slice(), c_int(Bool(stat)), UInt32(interval),
+        native_path.as_c_string_slice(), c_int(Bool(stat)), UInt32(interval),
         c_int(options.recursive.value() if options.recursive else False),
         c_int(options.persistent.value() if options.persistent else True),
     )
@@ -159,7 +160,7 @@ def poll_watchers() raises -> Bool:
                     stat_listener.value().call((_snapshot(event.value(), False), _snapshot(event.value(), True)))
                 elif change_listener:
                     var length = c_size_t(0)
-                    var name = external_call["tsonic_node_fs_event_filename", OptionalPointer[c_char, ImmutUntrackedOrigin]](event.value(), Pointer(to=length))
+                    var name = external_call["tsonic_node_fs_event_filename", OptionalPointer[c_char, ImmUntrackedOrigin]](event.value(), Pointer(to=length))
                     var filename = Optional[String]()
                     if name:
                         filename = String(from_utf8=Span(unsafe_ptr=name.value().unsafe_bitcast[Byte](), length=Int(length)))

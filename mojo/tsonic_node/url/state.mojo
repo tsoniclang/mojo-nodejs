@@ -36,7 +36,7 @@ def create_params_state(input: String) raises -> ArcPointer[UrlState]:
 
 def get_url_field(state: ArcPointer[UrlState], field: Int32) raises -> String:
     var length = c_size_t(0)
-    var text = external_call["tsonic_node_url_get", OptionalPointer[c_char, ImmutUntrackedOrigin]](
+    var text = external_call["tsonic_node_url_get", OptionalPointer[c_char, ImmUntrackedOrigin]](
         state[].handle.value(), c_int(field), Pointer(to=length),
     )
     if not text:

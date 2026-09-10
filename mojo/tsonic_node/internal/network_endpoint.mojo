@@ -30,8 +30,9 @@ struct NetworkEndpoint(ImplicitlyCopyable):
         var native_port = Int32(checked_integer(port, 65535, "port"))
         if host.find("\0") >= 0:
             raise Error("Network host contains a null byte")
+        var native_host = host
         var handle = external_call["tsonic_node_net_endpoint_new", OptionalPointer[NoneType, MutUntrackedOrigin]](
-            host.as_c_string_slice().ptr().as_unsafe_any_origin(), native_port, c_int(listener),
+            native_host.as_c_string_slice().ptr().as_unsafe_any_origin(), native_port, c_int(listener),
         )
         if not handle:
             raise Error("Unable to allocate network endpoint")

@@ -3,7 +3,7 @@ from .core import (
     copy_file, exists, lstat,
     make_directory, make_directory_default, make_temp_directory,
     read_directory, read_directory_names,
-    real_path, remove_path, remove_path_default,
+    real_path, remove_directory, remove_path, remove_path_default,
     rename_path, stat, symbolic_link, unlink,
 )
 from .contents import append_file, append_text_file, read_file, read_text_file, read_text_file_encoded, write_file, write_text_file

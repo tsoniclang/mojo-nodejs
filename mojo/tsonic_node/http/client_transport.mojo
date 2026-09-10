@@ -23,8 +23,9 @@ struct NativeRequest(ImplicitlyCopyable):
     var _state: ArcPointer[_NativeRequestState]
 
     def __init__(out self, url: String, options: RequestOptions) raises:
+        var native_url = url
         var handle = external_call["tsonic_node_http_new", OptionalPointer[NoneType, MutUntrackedOrigin]](
-            url.as_c_string_slice(), c_size_t(MAX_MESSAGE_BYTES),
+            native_url.as_c_string_slice(), c_size_t(MAX_MESSAGE_BYTES),
         )
         if not handle:
             raise Error("Unable to allocate HTTP transport")
@@ -69,8 +70,9 @@ struct NativeRequest(ImplicitlyCopyable):
 
     def start(self, method: String, body: List[Byte], present: Bool, timeout: Optional[Float64]) raises:
         var delay = c_long(checked_integer(timeout.value(), 2147483647, "request timeout")) if timeout else c_long(0)
+        var native_method = method
         if external_call["tsonic_node_http_start", c_int](
-            self._state[].handle.value(), method.as_c_string_slice(), body.unsafe_ptr(),
+            self._state[].handle.value(), native_method.as_c_string_slice(), body.unsafe_ptr(),
             c_size_t(len(body)), c_int(present), delay,
         ) == 0:
             self.check_error()
