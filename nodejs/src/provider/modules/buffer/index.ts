@@ -158,7 +158,10 @@ export function bufferModule(): MojoProviderModuleDefinition {
 
 export function bufferTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
-    nodeProviderType(bufferId, bufferCarrier, "implicitly-copyable"),
+    Object.freeze({
+      ...nodeProviderType(bufferId, bufferCarrier, "implicitly-copyable"),
+      sourceValueFactory: Object.freeze({ modulePath: Object.freeze(["tsonic_node", "buffer"]), name: "buffer_to_js_value" }),
+    }),
   ]);
 }
 

@@ -4,7 +4,7 @@ from tsonic_js import JsRegExp, JsString
 from .syntax import GlobSyntax
 from .braces import expand_braces
 from .components import split_components, normalize_components, pattern_components, is_drive, strip_drive_namespace
-from .limits import pattern_limit, require_source_size
+from .limits import pattern_limit, match_limit, require_source_size
 
 
 @fieldwise_init
@@ -63,12 +63,13 @@ def _match(path: List[String], pattern: List[_Component]) raises -> Bool:
 
 
 def matches_glob(path: String, pattern: String, windows: Bool = False) raises -> Bool:
-    if len(JsString(pattern)) > pattern_limit:
+    if pattern.byte_length() > pattern_limit * 3 or len(JsString(pattern)) > pattern_limit:
         raise Error("Path glob pattern exceeds 65536 UTF-16 code units")
     if not pattern:
         return not path
     var input = path.replace("\\", "/") if windows else path
     var file = normalize_components(split_components(input, windows), False)
+    var remaining = match_limit
     if windows:
         strip_drive_namespace(file)
     for alternative in expand_braces(pattern.replace("\\", "/")):
@@ -79,6 +80,9 @@ def matches_glob(path: String, pattern: String, windows: Bool = False) raises ->
                 if len(file) and len(selected) and is_drive(file[0]) and is_drive(selected[0]):
                     selected[0] = selected[0].lower()
                     file[0] = file[0].lower()
+            if len(file) > remaining // max(1, len(selected)):
+                raise Error("Path glob component-match budget exceeded")
+            remaining -= len(file) * len(selected)
             if _match(file, _compile(selected)):
                 return True
     return False

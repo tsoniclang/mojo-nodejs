@@ -2,6 +2,7 @@ comptime pattern_limit = 65536
 comptime expansion_limit = 65536
 comptime source_limit = 16777216
 comptime depth_limit = 128
+comptime match_limit = 16777216
 
 
 def require_source_size(size: Int) raises:

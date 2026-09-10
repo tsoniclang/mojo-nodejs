@@ -1,9 +1,15 @@
 from std.utils import Variant
+from tsonic_js import JsValue
 from .core import Buffer
+from .projection import buffer_brand
 
 
 def _is_buffer[T: Movable](value: T) -> Bool:
     return T == Buffer
+
+
+def _is_buffer(value: JsValue) -> Bool:
+    return value.has_native_brand(buffer_brand)
 
 
 def _is_buffer[*Members: Movable](value: Variant[*Members]) -> Bool:

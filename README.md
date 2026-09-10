@@ -32,6 +32,14 @@ as `node:stream`; `process.version` identifies this runtime as `tsonic-mojo`.
 Provider identities and overloads are exact closed data. Missing operations do
 not fall back to runtime name lookup.
 
+Buffer's provider type explicitly supplies its retained closed-value factory.
+Assigning a Buffer to `unknown` preserves live bytes and Buffer identity; no
+conversion to a JSON object occurs at assignment. Its `toJSON` presentation is
+selected only by JSON serialization. Structured clone instead produces the
+standard unsigned-byte view without the Buffer brand, while preserving shared
+backing between related cloned views. This source/runtime slice has authored
+proofs but is not yet certified.
+
 Provider construction is nested under `nodejs/src/provider/model/`: source
 types, native carriers, lifecycle definitions, declarations, and call/property
 relations have separate owners. `model.ts` is the stable explicit export surface.
@@ -90,7 +98,8 @@ Literal components compare directly. Pattern components use the existing
 ECMAScript regex primitive, while globstars match component positions with
 bounded state storage. A pattern exceeding 65,536 UTF-16 units, 65,536 brace
 alternatives, 128 nesting levels or the 16 MiB generated-source budget rejects
-explicitly. These are resource errors, not false match results. The new native,
+explicitly. Matching is also capped at 16,777,216 component states across all
+alternatives. These are resource errors, not false match results. The new native,
 source, differential and Pudding proofs are authored but remain unexecuted in
 the coding-only phase.
 
