@@ -66,7 +66,9 @@ def main() raises:
             assert_true(selected.is_file())
             assert_false(selected.is_symbolic_link())
             assert_true(selected.mtime_ms > 0)
-            assert_equal(selected.mtime().get_time(), selected.mtime_ms)
+            assert_equal(
+                selected.mtime().get_time(), Float64(Int(selected.mtime_ms))
+            )
             var rejected = False
             try:
                 _ = read_into(descriptor, value, 10, 3, Float64(0))

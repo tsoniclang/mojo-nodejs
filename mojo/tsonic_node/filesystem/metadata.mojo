@@ -1,5 +1,5 @@
 from std.collections import List
-from std.ffi import c_int, external_call
+from std.ffi import c_char, c_int, external_call
 from tsonic_js.date import JsDate
 from .validation import checked_integer, checked_path, check_status
 
@@ -75,10 +75,13 @@ def _stat(path: String, follow: Bool) raises -> Stats:
     checked_path(path)
     var status = c_int(0)
     var native_path = path
+    var path_pointer: OptionalPointer[c_char, ImmutAnyOrigin] = (
+        native_path.as_c_string_slice().ptr().as_unsafe_any_origin()
+    )
     var value = external_call[
         "tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]
     ](
-        native_path.as_c_string_slice().ptr(),
+        path_pointer,
         c_int(-1),
         c_int(follow),
         Pointer(to=status),
@@ -104,7 +107,7 @@ def fstat(descriptor: Float64) raises -> Stats:
     var value = external_call[
         "tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]
     ](
-        OptionalPointer[Byte, MutUntrackedOrigin](),
+        OptionalPointer[c_char, ImmutAnyOrigin](),
         number,
         c_int(0),
         Pointer(to=status),

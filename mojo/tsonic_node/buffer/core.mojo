@@ -80,6 +80,27 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         self._validate_index(index)
         self._bytes[][self._offset + index] = Byte(value)
 
+    def get_index(self, index: Float64) -> Optional[Float64]:
+        if not (index >= 0.0 and index < Float64(self._length)):
+            return None
+        var position = Int(index)
+        if Float64(position) != index:
+            return None
+        return Optional[Float64](
+            Float64(self._bytes[][self._offset + position])
+        )
+
+    def set_index(mut self, index: Float64, value: Optional[Float64]):
+        if not (index >= 0.0 and index < Float64(self._length)):
+            return
+        var position = Int(index)
+        if Float64(position) != index:
+            return
+        var number = value.value() if value else Float64(0)
+        self._bytes[][self._offset + position] = Byte(
+            source_number_to_uint32(number) & UInt32(255)
+        )
+
     def subarray(
         self, start: Float64 = 0, end: Optional[Float64] = None
     ) -> Self:
