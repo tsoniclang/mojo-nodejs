@@ -1,11 +1,11 @@
-import std.os.path
 from std.collections import List, Span
 from .url import URL
 from ..buffer import Buffer
+from ..path.posix import resolve
 
 
 def path_to_file_url(path: String) raises -> URL:
-    var absolute = std.os.path.abspath(path)
+    var absolute = resolve([path])
     if path.endswith("/") and not absolute.endswith("/"):
         absolute += "/"
     var escaped_bytes = List[Byte](capacity=absolute.byte_length())

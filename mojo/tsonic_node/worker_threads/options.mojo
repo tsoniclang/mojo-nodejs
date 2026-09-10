@@ -11,12 +11,12 @@ struct WorkerOptions(Copyable):
     def __init__(
         out self,
         name: Optional[String] = None,
-        argv: Optional[List[String]] = None,
+        var argv: Optional[List[String]] = None,
         env: JsValue = JsValue.undefined(),
         worker_data: JsValue = JsValue.undefined(),
     ):
         self.name = name
-        self.argv = argv
+        self.argv = argv^
         self.env = env
         self.worker_data = worker_data
 

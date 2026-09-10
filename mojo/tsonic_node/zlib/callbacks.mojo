@@ -58,13 +58,15 @@ def enqueue_result(
 
 
 def _enqueue[
-    Result: ImplicitlyCopyable
+    Result: Copyable & Deinitable
 ](
     input: Buffer,
     mode: Int32,
     options: CodecOptions,
     callback: RaisingCallable[Tuple[JsValue, Optional[Result]], NoneType],
-    operation: def(Buffer, Int32, CodecOptions) thin raises -> Result,
+    operation: def(
+        imm Buffer, imm Int32, imm CodecOptions
+    ) thin raises -> Result,
 ) raises:
     pending_zlib.get()[].require_capacity()
     var output = Optional[Result]()
@@ -73,4 +75,4 @@ def _enqueue[
         output = operation(input, mode, options)
     except error:
         failure = js_value_error(String(error))
-    pending_zlib.get()[].defer(callback, (failure, output))
+    pending_zlib.get()[].defer(callback, (failure, output^))

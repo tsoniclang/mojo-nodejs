@@ -78,7 +78,8 @@ def resolve(parts: List[String]) raises -> String:
         index -= 1
     var normalized = normalize(resolved^)
     while normalized.byte_length() > 1 and normalized.endswith(separator):
-        normalized = String(normalized[byte = : normalized.byte_length() - 1])
+        var trimmed = String(normalized[byte = : normalized.byte_length() - 1])
+        normalized = trimmed^
     if not normalized.startswith(separator):
         normalized = separator + normalized
     return normalized^

@@ -31,7 +31,8 @@ def process_info(
         ZlibOptions
     ]() else Zlib(mode, options.unsafe_get[BrotliOptions]())
     engine.end_buffer(input)
-    return ZlibInfo(engine.read().value_or(Buffer()), engine)
+    var output = engine.read()
+    return ZlibInfo(output.value() if output else Buffer(), engine)
 
 
 def process_result(

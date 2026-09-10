@@ -1,5 +1,4 @@
-from std.collections import List
-from std.memory import Span
+from std.collections import List, Span
 from tsonic_js import JsString
 
 

@@ -142,7 +142,7 @@ def new_pair() raises -> Tuple[WorkerChannel, WorkerChannel]:
 
 
 def spawn_channel(
-    arguments: String, environment: String, inherit_environment: Bool
+    var arguments: String, var environment: String, inherit_environment: Bool
 ) raises -> WorkerChannel:
     var status = Int32(0)
     var handle = external_call[

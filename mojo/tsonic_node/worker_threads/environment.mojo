@@ -56,9 +56,7 @@ def set_environment_data(
 def environment_snapshot() raises -> JsValue:
     var entries = List[JsValue]()
     for entry in _environment.get()[]:
-        entries.append(
-            js_value_from_array_values(List[JsValue](entry.key, entry.value))
-        )
+        entries.append(js_value_from_array_values([entry.key, entry.value]))
     return js_value_from_array_values(entries^)
 
 

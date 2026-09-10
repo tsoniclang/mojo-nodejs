@@ -175,7 +175,7 @@ def retained_history() raises:
     assert_equal(interface._state[].history[0], "third")
     assert_equal(interface._state[].history[1], "😀")
     interface.close()
-    for invalid in (-1.0, 1.5, 1048577.0):
+    for invalid in [Float64(-1), Float64(1.5), Float64(1048577)]:
         options.historySize = invalid
         var rejected = False
         try:
@@ -189,8 +189,8 @@ def eof_and_ranges(root: String) raises:
     write_text_file(root + "/lines", "xxfirst\r\n😀\nlast\nyy")
     var read_options = ReadStreamOptions()
     read_options.high_water_mark = Float64(1)
-    read_options.start = 2
-    read_options.end = 18
+    read_options.start = 2.0
+    read_options.end = 18.0
     var options = ReadLineOptions()
     options.input = create_read_stream(root + "/lines", read_options)
     var interface = create_interface(options)

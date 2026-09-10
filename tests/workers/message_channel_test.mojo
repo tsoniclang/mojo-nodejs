@@ -96,8 +96,9 @@ def main() raises:
     assert_equal(count.read(), 2)
     channel.port1.close()
     channel.port2.close()
-    created.read().value().port1.close()
-    created.read().value().port2.close()
+    var created_channel = created.read().value()
+    created_channel.port1.close()
+    created_channel.port2.close()
 
     var failing = message_channel_new()
     var sibling = message_channel_new()

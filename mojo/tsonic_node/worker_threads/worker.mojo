@@ -99,12 +99,12 @@ def worker_new(
     if name.find("\0") >= 0:
         raise Error("Worker name contains a null byte")
     var initialization = js_value_from_array_values(
-        List[JsValue](
+        [
             JsValue(JsString(identity)),
             options.worker_data,
             environment_snapshot(),
             JsValue(JsString(name)),
-        )
+        ]
     )
     var payload = encode_structured_clone(initialization)
     var arguments = packed_arguments(identity, options)

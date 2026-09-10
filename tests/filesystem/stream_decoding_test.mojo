@@ -34,7 +34,7 @@ def decoder_boundaries() raises:
         output += decoder.write(bytes.subarray(Float64(split)))
         output += decoder.end()
         assert_equal(output, "a😀z")
-    for encoding in ("base64", "base64url"):
+    for encoding in ["base64", "base64url"]:
         var decoder = StreamDecoder(encoding)
         var output = String()
         for index in range(len(source)):
@@ -43,7 +43,7 @@ def decoder_boundaries() raises:
             )
         output += decoder.end()
         assert_equal(output, source.to_string(encoding))
-    for encoding in ("ascii", "latin1", "hex"):
+    for encoding in ["ascii", "latin1", "hex"]:
         var decoder = StreamDecoder(encoding)
         var output = String()
         for index in range(len(source)):

@@ -113,7 +113,7 @@ def is_drive(part: String) -> Bool:
     if part.byte_length() != 2 or part.as_bytes()[1] != 58:
         return False
     var letter = part.as_bytes()[0]
-    return 65 <= letter <= 90 or 97 <= letter <= 122
+    return (letter >= 65 and letter <= 90) or (letter >= 97 and letter <= 122)
 
 
 def strip_drive_namespace(mut parts: List[String]):

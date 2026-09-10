@@ -113,7 +113,7 @@ def main() raises:
             host="127.0.0.1",
             servername="localhost",
             port=server.address().value().port,
-            ca=authorities,
+            ca=authorities.copy(),
             allow_half_open=True,
         )
     )

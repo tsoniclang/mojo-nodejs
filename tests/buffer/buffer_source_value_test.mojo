@@ -8,10 +8,10 @@ from tsonic_js import (
     js_value_from_array_values,
     js_value_structured_clone,
     object_keys,
-    inspect_value,
     js_value_to_string,
 )
 from tsonic_js.value import encode_structured_clone, decode_structured_clone
+from tsonic_js.inspection import inspect_value
 from tsonic_node.buffer import (
     Buffer,
     buffer_to_js_value,

@@ -62,10 +62,15 @@ def create_native(
     var identifiers = List[UInt32]()
     var values = List[UInt32]()
     if options.params:
-        for key, value in options.params.value().items():
+        for entry in options.params.value().items():
             identifiers.append(
-                UInt32(checked_integer(key, 4294967295, "Brotli parameter id"))
+                UInt32(
+                    checked_integer(
+                        entry.key, 4294967295, "Brotli parameter id"
+                    )
+                )
             )
+            ref value = entry.value
             var numeric = Float64(value.unsafe_get[Bool]()) if value.isa[
                 Bool
             ]() else value.unsafe_get[Float64]()

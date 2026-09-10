@@ -46,13 +46,20 @@ def main() raises:
             assert_equal(write_string(descriptor, "abc😀"), 7)
             var value = Buffer.allocate(12, 45)
             var retained_alias = value
-            assert_equal(read_into(descriptor, value, 2, 7, 0), 7)
+            assert_equal(read_into(descriptor, value, 2, 7, Float64(0)), 7)
             assert_equal(
                 retained_alias.subarray(2, Float64(9)).to_string(), "abc😀"
             )
             assert_equal(retained_alias.get(0), 45)
             assert_equal(
-                write_from(descriptor, Buffer.from_string("xyz"), 0, 3, 0), 3
+                write_from(
+                    descriptor,
+                    Buffer.from_string("xyz"),
+                    0,
+                    Float64(3),
+                    Float64(0),
+                ),
+                3,
             )
             var selected = fstat(descriptor)
             assert_equal(selected.size, 7)
@@ -62,7 +69,7 @@ def main() raises:
             assert_equal(selected.mtime().get_time(), selected.mtime_ms)
             var rejected = False
             try:
-                _ = read_into(descriptor, value, 10, 3, 0)
+                _ = read_into(descriptor, value, 10, 3, Float64(0))
             except:
                 rejected = True
             assert_true(rejected)
@@ -88,7 +95,10 @@ def main() raises:
             rejected = True
         assert_true(rejected)
         var options = RmOptions(
-            recursive=True, force=True, max_retries=2, retry_delay=1
+            recursive=True,
+            force=True,
+            max_retries=Float64(2),
+            retry_delay=Float64(1),
         )
         remove_path(root + "/alias", options)
         assert_equal(read_file(path).to_string(), "xyz")
@@ -101,7 +111,9 @@ def main() raises:
         assert_true(rejected)
         rejected = False
         try:
-            remove_path(root, RmOptions(recursive=True, max_retries=-1))
+            remove_path(
+                root, RmOptions(recursive=True, max_retries=Float64(-1))
+            )
         except:
             rejected = True
         assert_true(rejected)

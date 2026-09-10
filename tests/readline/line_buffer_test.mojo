@@ -6,7 +6,7 @@ def main() raises:
     var lines = LineBuffer()
     lines.feed("first\r")
     lines.feed("\n\nsecond\rthird\nfourth😀")
-    var first = lines.take().value()^
+    var first = lines.take().value().copy()
     assert_equal(first.text, "first")
     assert_true(first.terminated)
     assert_equal(lines.take().value().text, "")
@@ -18,7 +18,7 @@ def main() raises:
     lines.finish()
     lines.finish()
     assert_true(lines.has_lines())
-    var tail = lines.take().value()^
+    var tail = lines.take().value().copy()
     assert_equal(tail.text, "fourth😀")
     assert_false(tail.terminated)
     assert_false(lines.has_lines())

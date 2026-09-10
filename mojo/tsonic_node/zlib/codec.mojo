@@ -79,7 +79,7 @@ def process(input: Buffer, mode: Int32, options: CodecOptions) raises -> Buffer:
 
 
 def process(input: Buffer, mode: Int32, options: ZlibOptions) raises -> Buffer:
-    if options.info.value_or(False):
+    if options.info_value():
         raise Error("Compression info requires the engine/result contract")
     return process(input, mode, CodecOptions(options))
 
@@ -87,7 +87,7 @@ def process(input: Buffer, mode: Int32, options: ZlibOptions) raises -> Buffer:
 def process(
     input: Buffer, mode: Int32, options: BrotliOptions
 ) raises -> Buffer:
-    if options.info.value_or(False):
+    if options.info_value():
         raise Error("Compression info requires the engine/result contract")
     return process(input, mode, CodecOptions(options.copy()))
 

@@ -1,5 +1,4 @@
 from std.collections import List
-from std.math import FloatLiteral
 from std.testing import assert_equal, assert_true
 from tsonic_node.buffer import (
     Buffer,
@@ -30,7 +29,7 @@ def pool_allocation() raises:
     var pieces = List[Buffer](capacity=2)
     pieces.append(text)
     pieces.append(numbers)
-    var joined = buffer_concat(pieces, 6)
+    var joined = buffer_concat(pieces, Float64(6))
     var last = buffer_alloc_unsafe(15)
     var rolled = buffer_alloc_unsafe(1)
     assert_equal(first._offset, 0)
@@ -57,7 +56,7 @@ def pool_allocation() raises:
     view.set(0, 68)
     assert_equal(retained_alias.to_string(), "DCC")
     assert_equal(copied.to_string(), "CCC")
-    assert_equal(retained_alias.to_string("utf8", 1, 3), "CC")
+    assert_equal(retained_alias.to_string("utf8", 1, Float64(3)), "CC")
 
     var standalone = buffer_alloc(1)
     var slow = buffer_alloc_unsafe_slow(1)
@@ -92,7 +91,7 @@ def allocation_boundaries() raises:
     var empty = buffer_alloc_unsafe(0)
     assert_equal(len(empty), 0)
     assert_true(empty != buffer_alloc_unsafe(0))
-    assert_equal(len(buffer_concat(List[Buffer](), -1)), 0)
+    assert_equal(len(buffer_concat(List[Buffer](), Float64(-1))), 0)
     var invalid_sizes = List[Float64](capacity=5)
     invalid_sizes.append(-1)
     invalid_sizes.append(Float64(FloatLiteral.nan))

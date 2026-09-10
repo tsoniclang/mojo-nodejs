@@ -166,7 +166,7 @@ struct EventEmitter(ImplicitlyCopyable):
         var group = self._find(event)
         return Float64(len(group.value()[].listeners)) if group else 0.0
 
-    def event_names(self) -> List[JsValue]:
+    def event_names(self) raises -> List[JsValue]:
         var names = List[JsValue](capacity=len(self._state[].groups))
         for group in self._state[].groups:
             names.append(group[].event)

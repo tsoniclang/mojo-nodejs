@@ -46,7 +46,7 @@ struct ZlibOptions(ImplicitlyCopyable):
         self.info = info
 
     def info_value(self) -> Bool:
-        return self.info.value_or(False)
+        return self.info.value() if self.info else False
 
 
 @fieldwise_init
@@ -67,7 +67,7 @@ struct BrotliOptions(Copyable):
         self.info = None
 
     def info_value(self) -> Bool:
-        return self.info.value_or(False)
+        return self.info.value() if self.info else False
 
 
 comptime CodecOptions = Variant[ZlibOptions, BrotliOptions]
@@ -110,19 +110,21 @@ def validate_flush(value: Optional[Float64], maximum: Int) raises:
 
 def finish_flush(options: CodecOptions) -> Int32:
     if options.isa[ZlibOptions]():
-        return Int32(
-            options.unsafe_get[ZlibOptions]().finish_flush.value_or(4.0)
-        )
-    return Int32(options.unsafe_get[BrotliOptions]().finish_flush.value_or(2.0))
+        var value = options.unsafe_get[ZlibOptions]().finish_flush
+        return Int32(value.value()) if value else 4
+    var value = options.unsafe_get[BrotliOptions]().finish_flush
+    return Int32(value.value()) if value else 2
 
 
 def write_flush(options: CodecOptions) -> Int32:
     if options.isa[ZlibOptions]():
-        return Int32(options.unsafe_get[ZlibOptions]().flush.value_or(0.0))
-    return Int32(options.unsafe_get[BrotliOptions]().flush.value_or(0.0))
+        var value = options.unsafe_get[ZlibOptions]().flush
+        return Int32(value.value()) if value else 0
+    var value = options.unsafe_get[BrotliOptions]().flush
+    return Int32(value.value()) if value else 0
 
 
 def wants_info(options: CodecOptions) -> Bool:
     if options.isa[ZlibOptions]():
-        return options.unsafe_get[ZlibOptions]().info.value_or(False)
-    return options.unsafe_get[BrotliOptions]().info.value_or(False)
+        return options.unsafe_get[ZlibOptions]().info_value()
+    return options.unsafe_get[BrotliOptions]().info_value()

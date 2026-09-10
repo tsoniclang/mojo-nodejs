@@ -1,5 +1,4 @@
 from support.stream_values import require_buffer
-from std.math import FloatLiteral
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node import Buffer, RmOptions, remove_path, write_text_file
@@ -88,8 +87,8 @@ def file_sizes(root: String) raises:
     _ = poll_streams()
     assert_true(source.readable_ended())
     assert_false(source.readable())
-    options.start = 2
-    options.end = 6
+    options.start = 2.0
+    options.end = 6.0
     source = create_read_stream(path, options)
     assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "cde")
     assert_equal(require_buffer(source.read_sized(3.0)).to_string(), "fg")

@@ -28,12 +28,13 @@ struct Action:
 
     def complete(self) raises:
         if self.interface:
+            var interface = self.interface.value()
             if self.operation == "write":
-                self.interface.value().write("nested\n")
+                interface.write("nested\n")
             elif self.operation == "pause":
-                _ = self.interface.value().pause()
+                _ = interface.pause()
             elif self.operation == "close":
-                self.interface.value().close()
+                interface.close()
         if self.fail:
             raise Error("selected readline failure")
 

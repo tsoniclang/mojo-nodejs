@@ -81,7 +81,7 @@ failed=0
 for test_file in tests/native/*.c; do
   test_name="$(basename "${test_file}" .c)"
   if timeout "$BUILD_TIMEOUT" "${PIXI_BIN}" run bash -c 'exec "${CONDA_PREFIX:?}/bin/gcc" "$@"' -- \
-    -O2 -std=c11 -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
+    -O2 -std=c11 -pthread -I"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/include" \
     "$test_file" "${NATIVE_BUILD}/tls_bio.o" "${NATIVE_BUILD}/socket_io_bridge.o" "${NATIVE_BUILD}/net_endpoint.o" \
     "${NATIVE_BUILD}/tls_context.o" "${NATIVE_BUILD}/tls_handshake.o" "${NATIVE_BUILD}/tls_connection.o" \
     "${NATIVE_BUILD}/tls_server.o" "${NATIVE_BUILD}/tls_io.o" "${NATIVE_BUILD}/tls_lifecycle.o" \

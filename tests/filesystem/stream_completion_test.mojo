@@ -46,7 +46,7 @@ struct Action:
         assert_equal(read_text_file(action[].path), action[].contents)
         assert_equal(Bool(arguments[0]), action[].failed_write)
         if arguments[0]:
-            assert_true(len(arguments[0].value().message) != 0)
+            assert_true(arguments[0].value().message.byte_length() != 0)
         action[].trace.write(action[].trace.read() + action[].name)
         if action[].fail:
             raise Error("deliberate callback error")
@@ -84,7 +84,7 @@ struct Event:
     def error(
         context: ErasedCallableContext, var arguments: Tuple[TsError]
     ) raises:
-        assert_true(len(arguments[0].message) != 0)
+        assert_true(arguments[0].message.byte_length() != 0)
         Self.invoke(context, ())
 
 

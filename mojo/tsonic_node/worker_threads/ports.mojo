@@ -160,7 +160,7 @@ struct MessagePort(ImplicitlyCopyable):
     def has_ref(self) -> Bool:
         return self._state[].referenced and not self._state[].closed
 
-    def _listening(mut self, event: JsValue):
+    def _listening(mut self, event: JsValue) raises:
         if event.is_string() and event.string_value() == JsString("message"):
             self.start()
             self._state[].referenced = True
