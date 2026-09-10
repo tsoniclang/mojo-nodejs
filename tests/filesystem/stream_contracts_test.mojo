@@ -15,7 +15,7 @@ def queued_reads() raises:
         stream.append(buffer)
     var alias = stream
     for index in range(4096):
-        var value = alias.read()
+        var value = alias.read_sized(1.0)
         assert_true(Bool(value))
         assert_equal(value.value().get(0), UInt8(index % 251))
         assert_true(value.value().same_storage(retained[index]))

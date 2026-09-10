@@ -3,8 +3,9 @@ import type {
 } from "@tsonic/target-mojo/provider";
 import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "../stream/writable-calls.js";
+import { readableReadMember, readableReadOperations } from "../stream/readable-calls.js";
 import {
-  booleanType, boolCarrier, bufferCarrier, float64Carrier, functionCall,
+  booleanType, boolCarrier, float64Carrier, functionCall,
   httpServerResponseCarrier, instanceCall, methodMember, nativeString,
   nodeProviderType, numberType, optionalBoolCarrier, optionalFloat64Carrier,
   optionalStringCarrier, overloadedFunctionExport, overloadedMethodMember,
@@ -19,7 +20,6 @@ const readOptionsId = `${moduleSpecifier}::ReadStreamOptions`;
 const writeOptionsId = `${moduleSpecifier}::WriteStreamOptions`;
 const readType = providerRef(moduleSpecifier, "ReadStream");
 const writeType = providerRef(moduleSpecifier, "WriteStream");
-const bufferType = providerRef("node:buffer", "Buffer");
 const responseType = providerRef("node:http", "ServerResponse");
 const readOptions = mojoNamedTargetType("tsonic.mojo.node.ReadStreamOptions", ["tsonic_node", "filesystem"], "ReadStreamOptions");
 const writeOptions = mojoNamedTargetType("tsonic.mojo.node.WriteStreamOptions", ["tsonic_node", "filesystem"], "WriteStreamOptions");
@@ -41,7 +41,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
     })),
     Object.freeze({ id: readId, name: "ReadStream", kind: "class" as const,
       heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Readable") }]), members: Object.freeze([
-      methodMember(readId, "read", [], Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]) })),
+      readableReadMember(readId),
       overloadedMethodMember(readId, "pipe", [
         { signatureSuffix: "writeStream", parameters: [{ name: "destination", type: writeType }], returnType: writeType },
         { signatureSuffix: "writable", parameters: [{ name: "destination", type: providerRef("node:stream", "Writable") }], returnType: providerRef("node:stream", "Writable") },
@@ -110,7 +110,7 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
       propertyRead(id, `${id}.path`, "path", carrier, nativeString, "method"),
       propertyRead(id, `${id}.${counter}`, targetCounter, carrier, float64Carrier, "method"));
   }
-  operations.push(instanceCall(readId, `${readId}.read`, `${readId}.read()`, "read", readableCarrier, [], Object.freeze({ kind: "optional", value: bufferCarrier }), true, "mut"));
+  operations.push(...readableReadOperations(readId, readableCarrier));
   for (const [suffix, destination, target] of [
     ["writeStream", writableCarrier, "pipe_to"], ["writable", writableCarrier, "pipe_to"],
     ["serverResponse", httpServerResponseCarrier, "pipe_to_response"],

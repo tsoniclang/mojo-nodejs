@@ -4,10 +4,10 @@ import type {
   MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
+import { readableReadMember, readableReadOperations } from "./stream/readable-calls.js";
 import {
   booleanType,
   boolCarrier,
-  bufferCarrier,
   float64Carrier,
   httpServerResponseCarrier,
   instanceCall,
@@ -25,8 +25,6 @@ import {
 const moduleSpecifier = "node:stream";
 const readableId = `${moduleSpecifier}::Readable`;
 const writableId = `${moduleSpecifier}::Writable`;
-const bufferType = providerRef("node:buffer", "Buffer");
-const nullableBufferType = Object.freeze({ kind: "union" as const, types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]) });
 
 export function streamModule(): MojoProviderModuleDefinition {
   return Object.freeze({
@@ -42,7 +40,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         name: "Readable",
         kind: "class",
         members: Object.freeze([
-          methodMember(readableId, "read", [], nullableBufferType),
+          readableReadMember(readableId),
           Object.freeze({
             id: `${readableId}.pipe`, name: "pipe", kind: "method",
             signatures: Object.freeze([
@@ -83,7 +81,7 @@ export function streamTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function streamOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
-    instanceCall(readableId, `${readableId}.read`, `${readableId}.read()`, "read", readableCarrier, [], Object.freeze({ kind: "optional", value: bufferCarrier }), true, "mut"),
+    ...readableReadOperations(readableId, readableCarrier),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(writable)`, "pipe_to", readableCarrier, [writableCarrier], writableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(serverResponse)`, "pipe_to_response", readableCarrier, [httpServerResponseCarrier], httpServerResponseCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, false, "mut"),
