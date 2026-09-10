@@ -3,6 +3,7 @@ import type {
   MojoProviderOperationDefinition,
   MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
+import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
 import {
   booleanType,
   boolCarrier,
@@ -11,14 +12,12 @@ import {
   httpServerResponseCarrier,
   instanceCall,
   methodMember,
-  nativeString,
   nodeProviderType,
   numberType,
   propertyMember,
   propertyRead,
   providerRef,
   readableCarrier,
-  stringType,
   unitCarrier,
   writableCarrier,
 } from "../model.js";
@@ -63,21 +62,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         name: "Writable",
         kind: "class",
         members: Object.freeze([
-          Object.freeze({
-            id: `${writableId}.write`, name: "write", kind: "method",
-            signatures: Object.freeze([
-              Object.freeze({ id: `${writableId}.write(buffer)`, name: "write", parameters: Object.freeze([{ name: "chunk", type: bufferType }]), returnType: booleanType }),
-              Object.freeze({ id: `${writableId}.write(string)`, name: "write", parameters: Object.freeze([{ name: "chunk", type: stringType }]), returnType: booleanType }),
-            ]),
-          }),
-          Object.freeze({
-            id: `${writableId}.end`, name: "end", kind: "method",
-            signatures: Object.freeze([
-              Object.freeze({ id: `${writableId}.end()`, name: "end", parameters: Object.freeze([]), returnType: providerRef(moduleSpecifier, "Writable") }),
-              Object.freeze({ id: `${writableId}.end(buffer)`, name: "end", parameters: Object.freeze([{ name: "chunk", type: bufferType }]), returnType: providerRef(moduleSpecifier, "Writable") }),
-              Object.freeze({ id: `${writableId}.end(string)`, name: "end", parameters: Object.freeze([{ name: "chunk", type: stringType }]), returnType: providerRef(moduleSpecifier, "Writable") }),
-            ]),
-          }),
+          ...writableCallMembers(writableId, providerRef(moduleSpecifier, "Writable")),
           methodMember(writableId, "cork", [], Object.freeze({ kind: "void" })),
           methodMember(writableId, "uncork", [], Object.freeze({ kind: "void" })),
           propertyMember(writableId, "writableCorked", numberType),
@@ -104,11 +89,7 @@ export function streamOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, false, "mut"),
     instanceCall(readableId, `${readableId}.resume`, `${readableId}.resume()`, "resume", readableCarrier, [], readableCarrier, false, "mut"),
     instanceCall(readableId, `${readableId}.isPaused`, `${readableId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier),
-    instanceCall(writableId, `${writableId}.write`, `${writableId}.write(buffer)`, "write_buffer", writableCarrier, [bufferCarrier], boolCarrier, true, "mut"),
-    instanceCall(writableId, `${writableId}.write`, `${writableId}.write(string)`, "write_string", writableCarrier, [nativeString], boolCarrier, true, "mut"),
-    instanceCall(writableId, `${writableId}.end`, `${writableId}.end()`, "end", writableCarrier, [], writableCarrier, true, "mut"),
-    instanceCall(writableId, `${writableId}.end`, `${writableId}.end(buffer)`, "end_buffer", writableCarrier, [bufferCarrier], writableCarrier, true, "mut"),
-    instanceCall(writableId, `${writableId}.end`, `${writableId}.end(string)`, "end_string", writableCarrier, [nativeString], writableCarrier, true, "mut"),
+    ...writableCallOperations(writableId, writableCarrier),
     instanceCall(writableId, `${writableId}.cork`, `${writableId}.cork()`, "cork", writableCarrier, [], unitCarrier, false, "mut"),
     instanceCall(writableId, `${writableId}.uncork`, `${writableId}.uncork()`, "uncork", writableCarrier, [], unitCarrier, true, "mut"),
     propertyRead(writableId, `${writableId}.writableCorked`, "writable_corked", writableCarrier, float64Carrier, "method"),

@@ -7,6 +7,45 @@ comptime Notification = RaisingCallable[Tuple[], NoneType]
 
 
 @fieldwise_init
+struct _QueueState:
+    var pending: List[Notification]
+    var limit: Int
+    var committed: Int
+    var reserved: Int
+    var polling: Bool
+
+
+struct _ReservationState(Movable):
+    var queue: ArcPointer[_QueueState]
+    var active: Bool
+
+    def __init__(out self, queue: ArcPointer[_QueueState]):
+        self.queue = queue
+        self.active = True
+        self.queue[].reserved += 1
+
+    def __deinit__(deinit self):
+        if self.active:
+            self.queue[].reserved -= 1
+
+
+struct CallbackReservation(ImplicitlyCopyable):
+    var _state: ArcPointer[_ReservationState]
+
+    def __init__(out self, queue: ArcPointer[_QueueState]):
+        self._state = ArcPointer(_ReservationState(queue))
+
+    def commit(self, callback: Notification) raises:
+        if not self._state[].active:
+            raise Error("Callback reservation was already consumed")
+        self._state[].active = False
+        var queue = self._state[].queue
+        queue[].reserved -= 1
+        queue[].committed += 1
+        queue[].pending.append(callback)
+
+
+@fieldwise_init
 struct _Invocation[Arguments: Copyable]:
     var callback: RaisingCallable[Arguments, NoneType]
     var arguments: Arguments
@@ -22,26 +61,27 @@ struct _Invocation[Arguments: Copyable]:
 
 
 struct CallbackQueue(ImplicitlyCopyable):
-    var _pending: ArcPointer[List[Notification]]
-    var _limit: Int
+    var _state: ArcPointer[_QueueState]
 
     def __init__(out self, limit: Int):
-        self._pending = ArcPointer(List[Notification]())
-        self._limit = limit
+        self._state = ArcPointer(_QueueState(List[Notification](), limit, 0, 0, False))
 
     def require_capacity(self) raises:
-        if len(self._pending[]) >= self._limit:
+        if self._state[].committed + self._state[].reserved >= self._state[].limit:
             raise Error("Pending callbacks exceed the finite runtime limit")
 
+    def reserve(self) raises -> CallbackReservation:
+        self.require_capacity()
+        return CallbackReservation(self._state)
+
     def has_pending(self) -> Bool:
-        return len(self._pending[]) != 0
+        return len(self._state[].pending) != 0
 
     def pending_count(self) -> Int:
-        return len(self._pending[])
+        return len(self._state[].pending)
 
     def push(self, notification: Notification) raises:
-        self.require_capacity()
-        self._pending[].append(notification)
+        self.reserve().commit(notification)
 
     def defer[Arguments: Copyable](
         self, callback: RaisingCallable[Arguments, NoneType], var arguments: Arguments,
@@ -53,19 +93,27 @@ struct CallbackQueue(ImplicitlyCopyable):
         self.push(Notification(environment, _Invocation[Arguments].invoke))
 
     def poll(self) raises -> Bool:
-        if not self.has_pending():
+        if self._state[].polling or not self.has_pending():
             return False
+        self._state[].polling = True
+        try:
+            self._poll_batch()
+        finally:
+            self._state[].polling = False
+        return True
+
+    def _poll_batch(self) raises:
         var pending = List[Notification]()
-        swap(self._pending[], pending)
+        swap(self._state[].pending, pending)
         for index in range(len(pending)):
+            self._state[].committed -= 1
             try:
                 pending[index].call(())
             except error:
                 var retained = List[Notification]()
                 for next_index in range(index + 1, len(pending)):
                     retained.append(pending[next_index])
-                for entry in self._pending[]:
+                for entry in self._state[].pending:
                     retained.append(entry)
-                self._pending[] = retained^
+                self._state[].pending = retained^
                 raise error
-        return True

@@ -2,6 +2,7 @@ import type {
   MojoProviderModuleDefinition, MojoProviderOperationDefinition, MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
 import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
+import { writableCallMembers, writableCallOperations } from "../stream/writable-calls.js";
 import {
   booleanType, boolCarrier, bufferCarrier, float64Carrier, functionCall,
   httpServerResponseCarrier, instanceCall, methodMember, nativeString,
@@ -55,15 +56,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
     ]) }),
     Object.freeze({ id: writeId, name: "WriteStream", kind: "class" as const,
       heritage: Object.freeze([{ kind: "extends" as const, type: providerRef("node:stream", "Writable") }]), members: Object.freeze([
-      overloadedMethodMember(writeId, "write", [
-        { signatureSuffix: "buffer", parameters: [{ name: "chunk", type: bufferType }], returnType: booleanType },
-        { signatureSuffix: "string", parameters: [{ name: "chunk", type: stringType }], returnType: booleanType },
-      ]),
-      overloadedMethodMember(writeId, "end", [
-        { parameters: [], returnType: writeType },
-        { signatureSuffix: "buffer", parameters: [{ name: "chunk", type: bufferType }], returnType: writeType },
-        { signatureSuffix: "string", parameters: [{ name: "chunk", type: stringType }], returnType: writeType },
-      ]),
+      ...writableCallMembers(writeId, writeType),
       methodMember(writeId, "close", [], voidType),
       methodMember(writeId, "cork", [], voidType),
       methodMember(writeId, "uncork", [], voidType),
@@ -124,11 +117,7 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
   ] as const) operations.push(instanceCall(readId, `${readId}.pipe`, `${readId}.pipe(${suffix})`, target, readableCarrier, [destination], destination, true, "mut"));
   for (const name of ["pause", "resume"] as const) operations.push(instanceCall(readId, `${readId}.${name}`, `${readId}.${name}()`, name, readableCarrier, [], readableCarrier, false, "mut"));
   operations.push(instanceCall(readId, `${readId}.isPaused`, `${readId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier));
-  for (const [suffix, carrier, target] of [["buffer", bufferCarrier, "buffer"], ["string", nativeString, "string"]] as const) {
-    operations.push(instanceCall(writeId, `${writeId}.write`, `${writeId}.write(${suffix})`, `write_${target}`, writableCarrier, [carrier], boolCarrier, true, "mut"),
-      instanceCall(writeId, `${writeId}.end`, `${writeId}.end(${suffix})`, `end_${target}`, writableCarrier, [carrier], writableCarrier, true, "mut"));
-  }
-  operations.push(instanceCall(writeId, `${writeId}.end`, `${writeId}.end()`, "end", writableCarrier, [], writableCarrier, true, "mut"));
+  operations.push(...writableCallOperations(writeId, writableCarrier));
   for (const name of ["cork", "uncork"] as const) operations.push(instanceCall(writeId, `${writeId}.${name}`, `${writeId}.${name}()`, name, writableCarrier, [], unitCarrier, name === "uncork", "mut"));
   return Object.freeze(operations);
 }
