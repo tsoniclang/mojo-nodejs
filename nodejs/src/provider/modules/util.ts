@@ -11,6 +11,7 @@ import {
   fnExport,
   functionCall,
   instanceCall,
+  jsValueCarrier,
   nativeString,
   nodeProviderType,
   numberType,
@@ -109,6 +110,7 @@ export function utilOperations(): readonly MojoProviderOperationDefinition[] {
     functionCall(`${moduleSpecifier}::styleText`, `${moduleSpecifier}::styleText(style,text)`, "util", "style_text", [nativeString, nativeString], nativeString, true),
     functionCall(`${moduleSpecifier}::getSystemErrorName`, `${moduleSpecifier}::getSystemErrorName(code)`, "system_errors", "get_system_error_name", [float64Carrier], nativeString, true),
     functionCall(`${moduleSpecifier}::getSystemErrorMessage`, `${moduleSpecifier}::getSystemErrorMessage(code)`, "system_errors", "get_system_error_message", [float64Carrier], nativeString, true),
+    functionCall(`${moduleSpecifier}::inspect`, `${moduleSpecifier}::inspect(value)`, "util", "inspect", [jsValueCarrier], nativeString),
   ]);
 }
 
