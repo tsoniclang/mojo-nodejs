@@ -88,42 +88,25 @@ int tsonic_tls_apply_ca_text(SSL_CTX *context, const char *pem, char **error) {
     return 1;
 }
 
-int tsonic_tls_apply_certificate(
+static int apply_certificate_chain(
     SSL_CTX *context,
     const char *certificate_pem,
-    const char *key_pem,
-    const char *passphrase,
     char **error
 ) {
-    if (certificate_pem == NULL || key_pem == NULL ||
-        certificate_pem[0] == '\0' || key_pem[0] == '\0') {
-        tsonic_tls_set_error(error, "TLS identity requires non-empty cert and key values");
-        return 0;
-    }
     BIO *certificate_bio = BIO_new_mem_buf(certificate_pem, -1);
-    BIO *key_bio = BIO_new_mem_buf(key_pem, -1);
-    if (certificate_bio == NULL || key_bio == NULL) {
-        BIO_free(certificate_bio);
-        BIO_free(key_bio);
+    if (certificate_bio == NULL) {
         tsonic_tls_set_ssl_error(error, "Unable to read TLS server identity");
         return 0;
     }
     ERR_clear_error();
     X509 *certificate = PEM_read_bio_X509_AUX(certificate_bio, NULL, NULL, NULL);
-    EVP_PKEY *key = PEM_read_bio_PrivateKey(key_bio, NULL, key_password, (void *)passphrase);
-    BIO_free(key_bio);
-    if (certificate == NULL || key == NULL ||
-        SSL_CTX_use_certificate(context, certificate) != 1 ||
-        SSL_CTX_use_PrivateKey(context, key) != 1 ||
-        SSL_CTX_check_private_key(context) != 1) {
+    if (certificate == NULL || SSL_CTX_use_certificate(context, certificate) != 1) {
         X509_free(certificate);
-        EVP_PKEY_free(key);
         BIO_free(certificate_bio);
-        tsonic_tls_set_ssl_error(error, "TLS server certificate and key do not form a valid identity");
+        tsonic_tls_set_ssl_error(error, "Unable to initialize TLS certificate");
         return 0;
     }
     X509_free(certificate);
-    EVP_PKEY_free(key);
     if (SSL_CTX_clear_chain_certs(context) != 1) {
         tsonic_tls_set_ssl_error(error, "Unable to initialize TLS certificate chain");
         BIO_free(certificate_bio);
@@ -145,4 +128,32 @@ int tsonic_tls_apply_certificate(
             return 0;
         }
     }
+}
+
+int tsonic_tls_apply_certificate(SSL_CTX *context, const char *certificate_pem,
+    const char *key_pem, const char *passphrase, char **error) {
+    if (certificate_pem != NULL && certificate_pem[0] != '\0' &&
+        !apply_certificate_chain(context, certificate_pem, error)) return 0;
+    if (key_pem != NULL && key_pem[0] != '\0') {
+        BIO *key_bio = BIO_new_mem_buf(key_pem, -1);
+        if (key_bio == NULL) {
+            tsonic_tls_set_ssl_error(error, "Unable to read TLS private key");
+            return 0;
+        }
+        ERR_clear_error();
+        EVP_PKEY *key = PEM_read_bio_PrivateKey(key_bio, NULL, key_password, (void *)passphrase);
+        BIO_free(key_bio);
+        int accepted = key != NULL && SSL_CTX_use_PrivateKey(context, key) == 1;
+        EVP_PKEY_free(key);
+        if (!accepted) {
+            tsonic_tls_set_ssl_error(error, "Unable to initialize TLS private key");
+            return 0;
+        }
+    }
+    if (SSL_CTX_get0_certificate(context) != NULL && SSL_CTX_get0_privatekey(context) != NULL &&
+        SSL_CTX_check_private_key(context) != 1) {
+        tsonic_tls_set_ssl_error(error, "TLS certificate and key do not form a valid identity");
+        return 0;
+    }
+    return 1;
 }

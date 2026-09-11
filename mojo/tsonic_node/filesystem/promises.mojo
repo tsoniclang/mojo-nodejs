@@ -38,22 +38,33 @@ from .copy import CopyTraversal
 from tsonic_runtime import create_raising_task
 
 
-async def copy_tree(source: String, destination: String, options: AsyncCopyOptions = AsyncCopyOptions()) raises:
+async def copy_tree(
+    source: String,
+    destination: String,
+    options: AsyncCopyOptions = AsyncCopyOptions(),
+) raises:
     var traversal = CopyTraversal(source, destination, options.controls(), True)
-    while True:
-        var entry = traversal.next()
-        if not entry:
-            return
-        if options.filter:
-            var result = options.filter.value().call((entry.value().source, entry.value().destination))
-            var accepted: Bool
-            if result.isa[Bool]():
-                accepted = result^.unsafe_unwrap[Bool]()
-            else:
-                accepted = await create_raising_task(result^.unsafe_unwrap[CopyFilterFuture]())
-            if not accepted:
-                continue
-        traversal.accept(entry.value())
+    try:
+        while True:
+            var entry = traversal.next()
+            if not entry:
+                return
+            if options.filter:
+                var result = options.filter.value().call(
+                    (entry.value().source, entry.value().destination)
+                )
+                var accepted: Bool
+                if result.isa[Bool]():
+                    accepted = result^.unsafe_unwrap[Bool]()
+                else:
+                    accepted = await create_raising_task(
+                        result^.unsafe_unwrap[CopyFilterFuture]()
+                    )
+                if not accepted:
+                    continue
+            traversal.accept(entry.value())
+    finally:
+        traversal.finish()
 
 
 async def append_file(path: String, value: Buffer) raises:

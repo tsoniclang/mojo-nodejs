@@ -59,10 +59,10 @@ void *tsonic_node_tls_context_create(const char *key_pem, const char *certificat
     }
     int complete = ca_present ? tsonic_tls_apply_ca_text(context, ca_pem, error) :
         SSL_CTX_set_default_verify_paths(context) == 1;
-    if (complete && pfx_present) complete = apply_pfx(context, pfx, pfx_length, passphrase, error);
     if (complete && (key_pem != NULL || certificate_pem != NULL)) {
         complete = tsonic_tls_apply_certificate(context, certificate_pem, key_pem, passphrase, error);
     }
+    if (complete && pfx_present) complete = apply_pfx(context, pfx, pfx_length, passphrase, error);
     if (!complete) {
         if (*error == NULL) tsonic_tls_set_ssl_error(error, "Unable to configure TLS context");
         SSL_CTX_free(context);

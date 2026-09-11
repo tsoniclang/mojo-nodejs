@@ -61,6 +61,14 @@ int main(void) {
     char *key = fixture("tests/fixtures/localhost-key.pem");
     SSL_CTX *server = context(key, certificate, certificate, 3, 4);
     SSL_CTX *client = context(key, certificate, certificate, 3, 4);
+    SSL_CTX *certificate_only = context(NULL, certificate, certificate, 3, 4);
+    SSL_CTX *key_only = context(key, NULL, certificate, 3, 4);
+    assert(SSL_CTX_get0_certificate(certificate_only) != NULL);
+    assert(SSL_CTX_get0_privatekey(certificate_only) == NULL);
+    assert(SSL_CTX_get0_certificate(key_only) == NULL);
+    assert(SSL_CTX_get0_privatekey(key_only) != NULL);
+    SSL_CTX_free(certificate_only);
+    SSL_CTX_free(key_only);
     assert(handshake(server, client, 1, 1));
     assert(handshake(server, client, 1, 1));
     SSL_CTX *anonymous = context(NULL, NULL, certificate, 3, 4);
