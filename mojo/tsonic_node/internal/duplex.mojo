@@ -19,7 +19,7 @@ struct Duplex(ImplicitlyCopyable):
         out self,
         identity: UInt,
         environment: ArcPointer[ErasedCallableEnvironment],
-        read: def(ErasedCallableContext, var Tuple[]) thin raises -> Optional[
+        reader: def(ErasedCallableContext, var Tuple[]) thin raises -> Optional[
             Buffer
         ],
         write: def(
@@ -31,7 +31,7 @@ struct Duplex(ImplicitlyCopyable):
     ):
         self._identity = identity
         self._read = RaisingCallable[Tuple[], Optional[Buffer]](
-            environment, read
+            environment, reader
         )
         self._write = RaisingCallable[Tuple[Buffer], Bool](environment, write)
         self._end = RaisingCallable[Tuple[Optional[Buffer]], NoneType](
@@ -65,7 +65,7 @@ struct Duplex(ImplicitlyCopyable):
 @fieldwise_init
 struct _DuplexAdapter[Stream: ImplicitlyCopyable]:
     var stream: Self.Stream
-    var read: def(mut Self.Stream) thin raises -> Optional[Buffer]
+    var reader: def(mut Self.Stream) thin raises -> Optional[Buffer]
     var write: def(mut Self.Stream, Buffer) thin raises -> Bool
     var end: def(mut Self.Stream, Optional[Buffer]) thin raises -> None
 
@@ -75,8 +75,8 @@ struct _DuplexAdapter[Stream: ImplicitlyCopyable]:
     ) raises -> Optional[Buffer]:
         _ = arguments
         var owner = context.unsafe_bitcast[Self]()
-        var read = owner[].read
-        return read(owner[].stream)
+        var reader = owner[].reader
+        return reader(owner[].stream)
 
     @staticmethod
     def write_value(
@@ -100,13 +100,14 @@ def create_duplex[
 ](
     stream: Stream,
     identity: UInt,
-    read: def(mut Stream) thin raises -> Optional[Buffer],
+    reader: def(mut Stream) thin raises -> Optional[Buffer],
     write: def(mut Stream, Buffer) thin raises -> Bool,
     end: def(mut Stream, Optional[Buffer]) thin raises -> None,
 ) -> Duplex:
     comptime Adapter = _DuplexAdapter[Stream]
     var environment = allocate_callable_environment(
-        Adapter(stream, read, write, end), destroy_callable_environment[Adapter]
+        Adapter(stream, reader, write, end),
+        destroy_callable_environment[Adapter],
     )
     return Duplex(
         identity,

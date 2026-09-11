@@ -1,5 +1,5 @@
 from std.collections import List
-from std.ffi import c_int, c_size_t, external_call
+from std.ffi import c_char, c_int, c_size_t, external_call
 from std.memory import ArcPointer
 from ..buffer import Buffer
 from .native import _join_certificates, _take_error
@@ -81,8 +81,8 @@ def create_secure_context(
         raise Error("TLS identity or passphrase contains a null byte")
     var ca = _join_certificates(options.ca)
     var pfx = options.pfx.value().copy_bytes() if options.pfx else List[Byte]()
-    var key_pointer = OptionalPointer[UInt8, ImmUntrackedOrigin]()
-    var cert_pointer = OptionalPointer[UInt8, ImmUntrackedOrigin]()
+    var key_pointer = OptionalPointer[c_char, ImmutAnyOrigin]()
+    var cert_pointer = OptionalPointer[c_char, ImmutAnyOrigin]()
     if options.key:
         key_pointer = key.as_c_string_slice().ptr().as_unsafe_any_origin()
     if options.cert:

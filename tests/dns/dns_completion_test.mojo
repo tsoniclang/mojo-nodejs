@@ -83,7 +83,7 @@ struct AllCompletion:
         var arguments: Tuple[JsValue, Optional[List[LookupAddress]]],
     ) raises:
         assert_true(arguments[0].is_null())
-        var addresses = arguments[1].value()
+        ref addresses = arguments[1].value()
         assert_equal(len(addresses), 1)
         assert_equal(addresses[0].address, "127.0.0.1")
         assert_equal(addresses[0].family, 4)

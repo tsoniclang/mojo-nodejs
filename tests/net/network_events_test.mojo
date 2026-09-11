@@ -74,9 +74,9 @@ def main() raises:
         RaisingCallable[Tuple[Socket], NoneType](environment, Receiver.invoke)
     )
     var options = ListenOptions()
-    options.port = 0
+    options.port = 0.0
     options.host = "127.0.0.1"
-    options.backlog = 8
+    options.backlog = 8.0
     _ = server.listen_options(options)
     var client = Socket()
     var retained_client = client

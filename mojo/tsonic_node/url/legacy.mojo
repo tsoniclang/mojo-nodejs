@@ -68,10 +68,12 @@ def _valid_scheme(value: String) -> Bool:
 
 
 def _trim_url(var input: String) -> String:
+    comptime markers = ("\u00a0", "\ufeff")
     var changed = True
     while changed and input:
         changed = False
-        for marker in ("\u00a0", "\ufeff"):
+        comptime for marker_index in range(len(markers)):
+            var marker = String(markers[marker_index])
             if input.startswith(marker):
                 input = _slice(input, marker.byte_length(), input.byte_length())
                 changed = True
@@ -128,8 +130,9 @@ def _escape_url(input: String) -> String:
 def _authority(mut result: LegacyUrl, var rest: String) raises -> String:
     rest = rest.replace("\t", "").replace("\n", "").replace("\r", "")
     var end = rest.byte_length()
-    for delimiter in ("/", "?", "#"):
-        var position = rest.find(delimiter)
+    comptime delimiters = ("/", "?", "#")
+    comptime for delimiter_index in range(len(delimiters)):
+        var position = rest.find(delimiters[delimiter_index])
         if position >= 0:
             end = min(end, position)
     var at = _slice(rest, 0, end).rfind("@")
@@ -194,8 +197,9 @@ def parse_legacy(
     var result = LegacyUrl()
     var rest = _trim_url(input)
     var split = rest.byte_length()
-    for delimiter in ("?", "#"):
-        var position = rest.find(delimiter)
+    comptime delimiters = ("?", "#")
+    comptime for delimiter_index in range(len(delimiters)):
+        var position = rest.find(delimiters[delimiter_index])
         if position >= 0:
             split = min(split, position)
     rest = _slice(rest, 0, split).replace("\\", "/") + _slice(

@@ -163,8 +163,8 @@ def main() raises:
         symbolic_link(".", source + "/cycle")
         check_rejected(source, root + "/cycle-copy", options)
         remove_path(source + "/cycle", RmOptions())
-        options.mode = 8
+        options.mode = 8.0
         check_rejected(source + "/kept", root + "/bad-mode", options)
-        create_raising_task(check_async(root)).get()
+        create_raising_task(check_async(root)).wait()
     finally:
         remove_path(root, RmOptions(True, True))

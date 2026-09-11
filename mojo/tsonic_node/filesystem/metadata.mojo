@@ -101,7 +101,7 @@ def _stat(path: String, follow: Bool) raises -> Stats:
     var result = stat_if_present(path, follow)
     if not result:
         raise Error("stat: ENOENT: no such file or directory: ", path)
-    return result.value()
+    return result.take()
 
 
 def stat(path: String) raises -> Stats:

@@ -81,7 +81,7 @@ def main() raises:
     var requests = Location(0)
     var listens = Location(0)
     var server = create_server(request_callback(requests))
-    _ = server.listen(Int32(port), "127.0.0.1", listen_callback(listens))
+    _ = server.listen(Float64(port), "127.0.0.1", listen_callback(listens))
 
     var child = external_call["fork", c_pid_t]()
     if child == 0:

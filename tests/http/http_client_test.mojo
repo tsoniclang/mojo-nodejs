@@ -153,7 +153,7 @@ def large_body() -> Buffer:
 def main() raises:
     var calls = Location(0)
     var server = create_server(handler(calls))
-    _ = server.listen(Int32(18101), "127.0.0.1", listen_callback())
+    _ = server.listen(18101.0, "127.0.0.1", listen_callback())
     var options = RequestOptions()
     options.hostname = Optional("127.0.0.1")
     options.port = Optional(Float64(18101))
