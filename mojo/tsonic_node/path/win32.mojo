@@ -115,7 +115,7 @@ def _resolve(
             var selected_current = drive_current if current else environment(
                 "=" + device
             )
-            if selected_current and selected_current.value():
+            if Bool(selected_current) and Bool(selected_current.value()):
                 part = selected_current.value()
             var bytes = part.as_bytes()
             if (

@@ -296,7 +296,7 @@ def poll_servers() raises -> Bool:
                         options.allow_half_open.value() if options.allow_half_open else False,
                     )
                     if (
-                        options.pause_on_connect
+                        Bool(options.pause_on_connect)
                         and options.pause_on_connect.value()
                     ):
                         _ = socket.pause()

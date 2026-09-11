@@ -97,6 +97,11 @@ struct AllCompletion:
 
 def main() raises:
     var options = LookupOptions()
+    assert_equal(options.selected_order(), 0)
+    options.verbatim = True
+    assert_equal(options.selected_order(), 0)
+    options.verbatim = False
+    assert_equal(options.selected_order(), 4)
     options.family = Variant[Float64, String](String("IPv4"))
     options.all = True
     options.verbatim = False

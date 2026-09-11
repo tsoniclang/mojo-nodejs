@@ -14,7 +14,7 @@ def _text(value: Optional[String]) -> String:
 
 def _path(value: Optional[String]) -> List[String]:
     var result = List[String]()
-    if value and value.value():
+    if Bool(value) and Bool(value.value()):
         for component in value.value().split("/"):
             result.append(String(component))
     return result^
@@ -85,7 +85,11 @@ def resolve(from_url: String, to_url: String) raises -> String:
     result.hash = relative.hash
     if not _text(relative.href):
         return format_legacy(result)
-    if relative.slashes and relative.slashes.value() and not relative.protocol:
+    if (
+        Bool(relative.slashes)
+        and relative.slashes.value()
+        and not relative.protocol
+    ):
         relative.protocol = result.protocol
         if (
             slashed_protocol(_text(relative.protocol))
@@ -94,7 +98,9 @@ def resolve(from_url: String, to_url: String) raises -> String:
         ):
             relative.pathname = "/"
         return format_legacy(relative)
-    if relative.protocol and _text(relative.protocol) != _text(result.protocol):
+    if Bool(relative.protocol) and _text(relative.protocol) != _text(
+        result.protocol
+    ):
         if not slashed_protocol(relative.protocol.value()):
             return format_legacy(relative)
         result.protocol = relative.protocol
@@ -118,8 +124,8 @@ def resolve(from_url: String, to_url: String) raises -> String:
             relative.hostname
         ) else _text(relative.host)
         result.port = relative.port
-        result.slashes = (result.slashes and result.slashes.value()) or (
-            relative.slashes and relative.slashes.value()
+        result.slashes = (Bool(result.slashes) and result.slashes.value()) or (
+            Bool(relative.slashes) and relative.slashes.value()
         )
         return format_legacy(result)
     var relative_absolute = Bool(_text(relative.host)) or _text(
@@ -206,7 +212,7 @@ def resolve(from_url: String, to_url: String) raises -> String:
     ) else Optional[String]()
     if _text(relative.auth):
         result.auth = relative.auth
-    result.slashes = (result.slashes and result.slashes.value()) or (
-        relative.slashes and relative.slashes.value()
+    result.slashes = (Bool(result.slashes) and result.slashes.value()) or (
+        Bool(relative.slashes) and relative.slashes.value()
     )
     return format_legacy(result)

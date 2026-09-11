@@ -56,7 +56,7 @@ struct LookupOptions(Copyable):
             if name == "ipv6first":
                 return 6
             raise Error("Invalid DNS result order")
-        return 4 if self.verbatim and not self.verbatim.value() else 0
+        return 4 if Bool(self.verbatim) and not self.verbatim.value() else 0
 
     def selected_all(self) -> Bool:
         return self.all.value() if self.all else False

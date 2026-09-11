@@ -69,7 +69,7 @@ def create_read_stream(
     ) if options.encoding else Optional[String]()
     var start = _position(options.start, "start")
     var end = _position(options.end, "end")
-    if start and end and start.value() > end.value():
+    if Bool(start) and Bool(end) and start.value() > end.value():
         raise Error("File stream start exceeds end")
     var chunk_size = Int(
         checked_integer(

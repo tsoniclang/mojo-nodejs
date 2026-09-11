@@ -85,7 +85,7 @@ struct CopyTraversal:
     def finish(mut self) raises:
         while len(self._pending):
             var entry = self._pending.pop()
-            if entry.finish_mode and entry.finish_mode.value() >= 0:
+            if Bool(entry.finish_mode) and entry.finish_mode.value() >= 0:
                 chmod(entry.destination, Float64(entry.finish_mode.value()))
 
     def accept(mut self, entry: CopyEntry) raises:
@@ -146,9 +146,9 @@ struct CopyTraversal:
             make_directory(entry.destination)
         elif (
             self._async
-            and self._options.error_on_exist
+            and Bool(self._options.error_on_exist)
             and self._options.error_on_exist.value()
-            and self._options.force
+            and Bool(self._options.force)
             and not self._options.force.value()
         ):
             raise Error("cp: EEXIST: destination directory exists")
@@ -179,7 +179,7 @@ struct CopyTraversal:
             )
             if not force:
                 if (
-                    self._options.error_on_exist
+                    Bool(self._options.error_on_exist)
                     and self._options.error_on_exist.value()
                 ):
                     raise Error("cp: EEXIST: destination exists")
@@ -187,7 +187,7 @@ struct CopyTraversal:
             unlink(entry.destination)
         copy_file(entry.source, entry.destination, self._mode)
         if (
-            self._options.preserve_timestamps
+            Bool(self._options.preserve_timestamps)
             and self._options.preserve_timestamps.value()
         ):
             if (source.mode & 0o200) == 0:

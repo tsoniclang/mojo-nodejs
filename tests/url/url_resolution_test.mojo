@@ -1,8 +1,15 @@
-from std.testing import assert_equal
+from std.testing import assert_equal, assert_false
 from tsonic_node.url import resolve, parse_legacy, format_url
 
 
 def main() raises:
+    var relative = parse_legacy("../c")
+    assert_false(Bool(relative.host))
+    assert_false(Bool(relative.slashes))
+    assert_equal(relative.pathname.value(), "../c")
+    var empty = parse_legacy("")
+    assert_false(Bool(empty.host))
+    assert_false(Bool(empty.pathname))
     assert_equal(
         resolve("http://example.test/a/b", "../c"), "http://example.test/c"
     )

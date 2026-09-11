@@ -218,14 +218,14 @@ def parse_legacy(
     )
     if (
         double_slash
-        and (slashes_denote_host or protocol or auth_authority)
+        and (slashes_denote_host or Bool(protocol) or auth_authority)
         and not hostless
     ):
         result.slashes = True
         rest = _slice(rest, 2, rest.byte_length())
     if not hostless and (
-        (result.slashes and result.slashes.value())
-        or (protocol and not slashed_protocol(protocol))
+        (Bool(result.slashes) and result.slashes.value())
+        or (Bool(protocol) and not slashed_protocol(protocol))
     ):
         rest = _authority(result, rest)
     if not hostless:
@@ -243,11 +243,11 @@ def parse_legacy(
         result.pathname = rest
     elif (
         slashed_protocol(protocol)
-        and result.hostname
-        and result.hostname.value()
+        and Bool(result.hostname)
+        and Bool(result.hostname.value())
     ):
         result.pathname = "/"
-    if result.pathname or result.search:
+    if Bool(result.pathname) or Bool(result.search):
         result.path = (result.pathname.value() if result.pathname else "") + (
             result.search.value() if result.search else ""
         )
@@ -260,22 +260,22 @@ def format_legacy(value: LegacyUrl) raises -> String:
     if protocol and not protocol.endswith(":"):
         protocol += ":"
     var auth = String()
-    if value.auth and value.auth.value():
+    if Bool(value.auth) and Bool(value.auth.value()):
         auth = (
             encode_uri_component_native(value.auth.value()).replace("%3A", ":")
             + "@"
         )
     var host = String()
-    if value.host and value.host.value():
+    if Bool(value.host) and Bool(value.host.value()):
         host = auth + value.host.value()
-    elif value.hostname and value.hostname.value():
+    elif Bool(value.hostname) and Bool(value.hostname.value()):
         var hostname = value.hostname.value()
         if hostname.find(":") >= 0 and not (
             hostname.startswith("[") and hostname.endswith("]")
         ):
             hostname = "[" + hostname + "]"
         host = auth + hostname
-        if value.port and value.port.value():
+        if Bool(value.port) and Bool(value.port.value()):
             host += ":" + value.port.value()
     var pathname = value.pathname.value() if value.pathname else String()
     pathname = pathname.replace("#", "%23").replace("?", "%3F")
