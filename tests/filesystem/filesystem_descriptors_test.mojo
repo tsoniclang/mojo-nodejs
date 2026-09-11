@@ -1,6 +1,7 @@
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.buffer import Buffer
+from tsonic_js.math import math_round
 from tsonic_node.filesystem import (
     RmOptions,
     access,
@@ -67,8 +68,18 @@ def main() raises:
             assert_false(selected.is_symbolic_link())
             assert_true(selected.mtime_ms > 0)
             assert_equal(
-                selected.mtime().get_time(), Float64(Int(selected.mtime_ms))
+                selected.mtime().get_time(), math_round(selected.mtime_ms)
             )
+            var timestamps = selected.copy()
+            timestamps.atime_ms = 1000.25
+            timestamps.mtime_ms = 1000.75
+            timestamps.ctime_ms = -1000.5
+            timestamps.birthtime_ms = -1000.75
+            assert_equal(timestamps.atime().get_time(), 1000)
+            assert_equal(timestamps.mtime().get_time(), 1001)
+            assert_equal(timestamps.ctime().get_time(), -1000)
+            assert_equal(timestamps.birthtime().get_time(), -1001)
+            assert_equal(timestamps.mtime_ms, 1000.75)
             var rejected = False
             try:
                 _ = read_into(descriptor, value, 10, 3, Float64(0))

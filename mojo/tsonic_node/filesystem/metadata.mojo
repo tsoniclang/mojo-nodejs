@@ -1,6 +1,7 @@
 from std.collections import List
 from std.ffi import c_char, c_int, external_call
 from tsonic_js.date import JsDate
+from tsonic_js.math import math_round
 from .validation import checked_integer, checked_path, check_status
 
 
@@ -31,16 +32,16 @@ struct Stats(Copyable):
         return self._symbolic_link
 
     def atime(self) -> JsDate:
-        return JsDate(self.atime_ms)
+        return JsDate(math_round(self.atime_ms))
 
     def mtime(self) -> JsDate:
-        return JsDate(self.mtime_ms)
+        return JsDate(math_round(self.mtime_ms))
 
     def ctime(self) -> JsDate:
-        return JsDate(self.ctime_ms)
+        return JsDate(math_round(self.ctime_ms))
 
     def birthtime(self) -> JsDate:
-        return JsDate(self.birthtime_ms)
+        return JsDate(math_round(self.birthtime_ms))
 
 
 def _snapshot(value: Pointer[NoneType, MutUntrackedOrigin]) -> Stats:

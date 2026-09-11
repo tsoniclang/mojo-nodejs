@@ -1,4 +1,6 @@
 from std.tempfile import mkdtemp
+from std.collections import List
+from std.ffi import external_call
 from std.testing import assert_equal, assert_true, assert_false
 from tsonic_runtime import (
     RaisingCallable,
@@ -101,8 +103,26 @@ def main() raises:
         copy_tree(source + "/kept", root + "/readonly", options)
         assert_equal(stat(root + "/readonly").mode & 0o777, 0o400)
         assert_equal(
-            stat(root + "/readonly").mtime_ms, stat(source + "/kept").mtime_ms
+            stat(root + "/readonly").mtime().get_time(),
+            stat(source + "/kept").mtime().get_time(),
         )
+        chmod(source + "/kept", 0o600)
+        var timestamp_path = source + "/kept"
+        for timestamp in List[Float64](1.00025, 1.00075):
+            assert_equal(
+                external_call["tsonic_node_fs_utimes", Int32](
+                    timestamp_path.as_c_string_slice().ptr(),
+                    timestamp,
+                    timestamp,
+                ),
+                0,
+            )
+            var expected = 1000.0 if timestamp < 1.0005 else 1001.0
+            copy_tree(timestamp_path, root + "/fractional", options)
+            assert_equal(
+                stat(root + "/fractional").mtime().get_time(), expected
+            )
+            assert_equal(stat(timestamp_path).mtime().get_time(), expected)
         symbolic_link(".", source + "/cycle")
         check_rejected(source, root + "/cycle-copy", options)
         remove_path(source + "/cycle", RmOptions())

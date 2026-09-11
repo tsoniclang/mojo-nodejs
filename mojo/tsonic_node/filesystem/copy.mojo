@@ -198,8 +198,8 @@ struct CopyTraversal:
             check_status(
                 external_call["tsonic_node_fs_utimes", Int32](
                     destination_path.as_c_string_slice().ptr(),
-                    updated.atime_ms / 1000,
-                    updated.mtime_ms / 1000,
+                    updated.atime().get_time() / 1000,
+                    updated.mtime().get_time() / 1000,
                 ),
                 "cp.utimes",
             )
