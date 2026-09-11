@@ -26,6 +26,7 @@ struct ReadStreamOptions(Copyable):
 
 @fieldwise_init
 struct WriteStreamOptions(Copyable):
+    var encoding: Optional[String]
     var flags: Optional[String]
     var mode: Optional[Float64]
     var start: Optional[Float64]
@@ -33,6 +34,7 @@ struct WriteStreamOptions(Copyable):
     var flush: Optional[Bool]
 
     def __init__(out self):
+        self.encoding = None
         self.flags = None
         self.mode = None
         self.start = None
@@ -92,6 +94,7 @@ def create_write_stream(path: String) raises -> Writable:
 def create_write_stream(
     path: String, options: WriteStreamOptions
 ) raises -> Writable:
+    var encoding = encoding_name(options.encoding.value()) if options.encoding else String("utf8")
     var start = _position(options.start, "start")
     var high_water_mark = checked_integer(
         options.high_water_mark.value(), 9007199254740991.0, "highWaterMark"
@@ -101,7 +104,7 @@ def create_write_stream(
         options.flags.value() if options.flags else String("w"),
         options.mode,
     )
-    return Writable(
+    var result = Writable(
         descriptor,
         path,
         start,
@@ -109,3 +112,5 @@ def create_write_stream(
         options.flush.value() if options.flush else False,
         high_water_mark,
     )
+    result._state[].encoding = encoding
+    return result

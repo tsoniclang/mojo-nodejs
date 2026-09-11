@@ -3,12 +3,14 @@ import type {
   MojoProviderOperationDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
+import { mojoSourceErrorType } from "@tsonic/target-mojo/provider";
 import {
   booleanType,
   boolCarrier,
   jsValueCarrier,
   nativeString,
   stringType,
+  overloadedFunctionExport,
   targetTypeParameter,
   typeParameter,
   unitCarrier,
@@ -32,6 +34,11 @@ export function assertModule(): MojoProviderModuleDefinition {
       equalityAssertion(strictEqualId, "strictEqual"),
       equalityAssertion(notStrictEqualId, "notStrictEqual"),
       deepEqualityAssertion(),
+      overloadedFunctionExport(moduleSpecifier, "fail", [
+        { parameters: [], returnType: Object.freeze({ kind: "never" }), signatureSuffix: "" },
+        { parameters: [{ name: "message", type: stringType }], returnType: Object.freeze({ kind: "never" }), signatureSuffix: "message" },
+        { parameters: [{ name: "error", type: Object.freeze({ kind: "source-global", name: "Error" }) }], returnType: Object.freeze({ kind: "never" }), signatureSuffix: "error" },
+      ]),
     ]),
   });
 }
@@ -44,6 +51,14 @@ export function assertOperations(): readonly MojoProviderOperationDefinition[] {
     ...equalityAssertionOperations(notStrictEqualId, "not_strict_equal", "not_strict_equal_with_message"),
     callOperation(deepStrictEqualId, `${deepStrictEqualId}(actual,expected)`, "deep_strict_equal", [jsValueCarrier, jsValueCarrier]),
     callOperation(deepStrictEqualId, `${deepStrictEqualId}(actual,expected,message)`, "deep_strict_equal_with_message", [jsValueCarrier, jsValueCarrier, nativeString]),
+    ...([
+      ["", "fail", []],
+      ["message", "fail", [nativeString]],
+      ["error", "fail_error", [mojoSourceErrorType()]],
+    ] as const).map(([signature, target, parameters]) => Object.freeze({
+      ...callOperation(`${moduleSpecifier}::fail`, `${moduleSpecifier}::fail(${signature})`, target, parameters),
+      resultType: Object.freeze({ kind: "never" as const }), errorType: mojoSourceErrorType(),
+    })),
   ]);
 }
 

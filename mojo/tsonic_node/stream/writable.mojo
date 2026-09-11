@@ -34,6 +34,7 @@ struct _WritableState:
     var end_on_pipe: Bool
     var events: WriteEvents
     var need_drain: Bool
+    var encoding: String
 
 
 struct Writable(ImplicitlyCopyable):
@@ -58,6 +59,7 @@ struct Writable(ImplicitlyCopyable):
                 True,
                 WriteEvents(),
                 False,
+                "utf8",
             )
         )
 
@@ -93,6 +95,7 @@ struct Writable(ImplicitlyCopyable):
                 True,
                 WriteEvents(),
                 False,
+                "utf8",
             )
         )
 
@@ -130,7 +133,7 @@ struct Writable(ImplicitlyCopyable):
         return ready and not self._state[].failed
 
     def write_string(mut self, value: String) raises -> Bool:
-        return self.write_buffer(Buffer.from_string(value))
+        return self.write_string_encoded(value)
 
     def write_buffer_callback(
         mut self, value: Buffer, callback: Optional[WriteCallback]
@@ -140,7 +143,7 @@ struct Writable(ImplicitlyCopyable):
     def write_string_callback(
         mut self, value: String, callback: Optional[WriteCallback]
     ) raises -> Bool:
-        return self._write(Buffer.from_string(value), callback)
+        return self.write_string_encoded(value, None, callback)
 
     def write_buffer_encoded(
         mut self,
@@ -158,7 +161,7 @@ struct Writable(ImplicitlyCopyable):
     ) raises -> Bool:
         return self._write(
             Buffer(
-                encode_bytes(value, encoding.value() if encoding else "utf8")
+                encode_bytes(value, encoding.value() if encoding else self._state[].encoding)
             ),
             callback,
         )
@@ -259,7 +262,7 @@ struct Writable(ImplicitlyCopyable):
     ) raises -> Self:
         return self._end_chunk(
             Buffer(
-                encode_bytes(value, encoding.value() if encoding else "utf8")
+                encode_bytes(value, encoding.value() if encoding else self._state[].encoding)
             ),
             callback,
         )

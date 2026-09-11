@@ -3,6 +3,7 @@ from support.stream_events import require_unhandled_stream_error
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.event_loop import run_event_loop
+from tsonic_node.filesystem.contents import read_file
 from tsonic_node import (
     Buffer,
     RmOptions,
@@ -68,6 +69,24 @@ def main() raises:
         var rejected = False
         try:
             _ = create_write_stream(destination, writes)
+        except:
+            rejected = True
+        assert_true(rejected)
+        var encoded_options = WriteStreamOptions()
+        encoded_options.encoding = "utf16le"
+        var encoded = create_write_stream(root + "/encoded", encoded_options)
+        encoded_options.encoding = "utf8"
+        var encoded_alias = encoded
+        _ = encoded.write_string("A")
+        _ = encoded_alias.write_string_encoded("B", "utf8")
+        _ = encoded.write_buffer(Buffer.from_string("C"))
+        _ = encoded.end_string("D")
+        run_event_loop()
+        assert_equal(read_file(root + "/encoded").to_string("hex"), "410042434400")
+        encoded_options.encoding = "not-an-encoding"
+        rejected = False
+        try:
+            _ = create_write_stream(destination, encoded_options)
         except:
             rejected = True
         assert_true(rejected)

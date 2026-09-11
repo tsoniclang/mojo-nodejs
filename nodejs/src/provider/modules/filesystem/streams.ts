@@ -38,7 +38,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
       id, name, kind: "interface" as const,
       members: Object.freeze([
         ...optionFields.map(([field, , type]) => propertyMember(id, field, type, { readonly: false, optional: true })),
-        ...(id === readOptionsId ? [propertyMember(id, "encoding", stringType, { readonly: false, optional: true })] : []),
+        propertyMember(id, "encoding", stringType, { readonly: false, optional: true }),
         propertyMember(id, id === readOptionsId ? "end" : "flush", id === readOptionsId ? numberType : booleanType, { readonly: false, optional: true }),
       ]),
     })),
@@ -101,7 +101,7 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
   }
   for (const [id, carrier] of [[readOptionsId, readOptions], [writeOptionsId, writeOptions]] as const) {
     const fields = [...optionFields,
-      ...(id === readOptionsId ? [["encoding", "encoding", stringType, optionalStringCarrier] as const] : []), id === readOptionsId
+      ["encoding", "encoding", stringType, optionalStringCarrier] as const, id === readOptionsId
       ? ["end", "end", numberType, optionalFloat64Carrier] as const
       : ["flush", "flush", booleanType, optionalBoolCarrier] as const];
     for (const [name, target, , fieldType] of fields) {

@@ -1,6 +1,15 @@
 from tsonic_js.equality import same_value
 from tsonic_js.value import JsValue
 from .deep import deep_value_equal
+from tsonic_runtime import TsError
+
+
+def fail(message: String = "Failed") raises TsError -> Never:
+    raise TsError("AssertionError", message, None)
+
+
+def fail_error(error: TsError) raises TsError -> Never:
+    raise error.copy()
 
 
 def ok(value: Bool) raises:
