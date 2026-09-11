@@ -15,6 +15,7 @@ from ..internal.network_endpoint import (
     network_error,
     poll_network_resolution,
 )
+from ..net.options import ListenOptions
 
 
 comptime RequestArguments = Tuple[IncomingMessage, ServerResponse]
@@ -42,17 +43,28 @@ struct Server(ImplicitlyCopyable):
 
     def listen_default_host(
         self,
-        port: Int32,
-        callback: ListenCallback,
+        port: Float64,
+        callback: Optional[ListenCallback] = None,
     ) raises -> Self:
-        return self.listen(port, "0.0.0.0", callback)
+        return self.listen(port, "", callback)
+
+    def listen_options(self, options: ListenOptions, callback: Optional[ListenCallback] = None) raises -> Self:
+        if not options.port:
+            raise Error("HTTP listen options require a port")
+        return self.listen_host_backlog(options.port.value(), options.host.value() if options.host else "", options.backlog.value() if options.backlog else 511, callback)
+
+    def listen_backlog(self, port: Float64, backlog: Float64, callback: Optional[ListenCallback] = None) raises -> Self:
+        return self.listen_host_backlog(port, "", backlog, callback)
 
     def listen(
         self,
-        port: Int32,
+        port: Float64,
         host: String,
-        callback: ListenCallback,
+        callback: Optional[ListenCallback] = None,
     ) raises -> Self:
+        return self.listen_host_backlog(port, host, 511, callback)
+
+    def listen_host_backlog(self, port: Float64, host: String, backlog: Float64, callback: Optional[ListenCallback] = None) raises -> Self:
         if self._state[].active:
             raise Error("HTTP server is already listening")
         var retained = List[Server]()
@@ -64,8 +76,8 @@ struct Server(ImplicitlyCopyable):
             raise Error("Active HTTP servers exceed the finite runtime limit")
         if host.find("\0") >= 0:
             raise Error("HTTP host contains a null byte")
-        self._state[].endpoint = NetworkEndpoint(host, Float64(port), True)
-        self._state[].listening_callback = Optional(callback)
+        self._state[].endpoint = NetworkEndpoint(host, port, True, backlog)
+        self._state[].listening_callback = callback
         self._state[].listening_callback_pending = True
         self._state[].active = True
         _servers.get()[].append(self)

@@ -33,6 +33,7 @@ import {
 } from "../../model.js";
 import { addressCarrier, addressType } from "../net/records.js";
 import { tlsEventMembers, tlsEventOperations } from "./events.js";
+import { listenOptionsImport, serverListenMember, serverListenOperations } from "../net/listen-contract.js";
 import { tlsConnectionFields, tlsServerFields, tlsOptionDeclaration, tlsOptionOperations } from "./options.js";
 
 const moduleSpecifier = "node:tls";
@@ -61,7 +62,7 @@ export function tlsModule(): MojoProviderModuleDefinition {
       namedImports: Object.freeze([{ exportedName: "Buffer" }]),
     }), Object.freeze({
       moduleSpecifier: "node:net",
-      namedImports: Object.freeze([{ exportedName: "AddressInfo" }]),
+      namedImports: Object.freeze([{ exportedName: "AddressInfo" }, ...listenOptionsImport.namedImports]),
     })]),
     exports: Object.freeze([
       tlsOptionDeclaration(connectOptionsId, "ConnectionOptions", tlsConnectionFields),
@@ -122,27 +123,7 @@ export function tlsModule(): MojoProviderModuleDefinition {
         members: Object.freeze([
           ...tlsEventMembers("Server"),
           methodMember(serverId, "address", [], { kind: "union", types: [addressType, nullType] }),
-          overloadedMethodMember(serverId, "listen", [
-            { parameters: [{ name: "port", type: numberType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port" },
-            { parameters: [{ name: "port", type: numberType }, { name: "host", type: stringType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port,host" },
-            {
-              parameters: [
-                { name: "port", type: numberType },
-                { name: "callback", type: providerCallbackType(`${serverId}.listen(port,callback)`, "callback", []) },
-              ],
-              returnType: providerRef(moduleSpecifier, "Server"),
-              signatureSuffix: "port,callback",
-            },
-            {
-              parameters: [
-                { name: "port", type: numberType },
-                { name: "host", type: stringType },
-                { name: "callback", type: providerCallbackType(`${serverId}.listen(port,host,callback)`, "callback", []) },
-              ],
-              returnType: providerRef(moduleSpecifier, "Server"),
-              signatureSuffix: "port,host,callback",
-            },
-          ]),
+          serverListenMember(moduleSpecifier),
           ...(["close", "ref", "unref"] as const).map((name) => Object.freeze({
             id: `${serverId}.${name}`,
             name,
@@ -248,10 +229,7 @@ export function tlsOperations(): readonly MojoProviderOperationDefinition[] {
     ...socketProperty("destroyed", "closed", boolCarrier),
     functionCall(`${moduleSpecifier}::createServer`, `${moduleSpecifier}::createServer(options)`, "tls", "create_server", [tlsServerOptionsCarrier], tlsServerCarrier, true),
     instanceCall(serverId, `${serverId}.address`, `${serverId}.address()`, "address", tlsServerCarrier, [], mojoOptionalTargetType(addressCarrier), true),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port)`, "listen_default_host", tlsServerCarrier, [float64Carrier], tlsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host)`, "listen", tlsServerCarrier, [float64Carrier, nativeString], tlsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", tlsServerCarrier, [float64Carrier, emptyCallbackCarrier], tlsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host,callback)`, "listen", tlsServerCarrier, [float64Carrier, nativeString, emptyCallbackCarrier], tlsServerCarrier, true, "mut"),
+    ...serverListenOperations(moduleSpecifier, tlsServerCarrier),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", tlsServerCarrier, [], tlsServerCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", tlsServerCarrier, [], tlsServerCarrier, false, "mut"),
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", tlsServerCarrier, [], tlsServerCarrier, false, "mut"),

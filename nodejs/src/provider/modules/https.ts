@@ -6,25 +6,22 @@ import type {
 import {
   booleanType,
   boolCarrier,
-  emptyCallbackCarrier,
-  float64Carrier,
   functionCall,
   httpRequestCallbackCarrier,
   httpsServerCarrier,
   instanceCall,
-  nativeString,
   nodeProviderType,
   propertyMember,
   propertyRead,
   providerCallbackType,
   providerRef,
-  stringType,
   tlsServerOptionsCarrier,
   unitCarrier,
   voidType,
 } from "../model.js";
 import { httpClientExports, httpClientOperations, httpClientTypes } from "./http/client.js";
 import { tlsServerFields, tlsOptionMembers, tlsOptionOperations } from "./tls/options.js";
+import { listenOptionsImport, serverListenMember, serverListenOperations } from "./net/listen-contract.js";
 
 const moduleSpecifier = "node:https";
 const optionsId = `${moduleSpecifier}::ServerOptions`;
@@ -42,7 +39,7 @@ export function httpsModule(): MojoProviderModuleDefinition {
   return Object.freeze({
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.https",
-    imports: Object.freeze([Object.freeze({ moduleSpecifier: "node:buffer", namedImports: Object.freeze([{ exportedName: "Buffer" }]) }), Object.freeze({
+    imports: Object.freeze([listenOptionsImport, Object.freeze({ moduleSpecifier: "node:buffer", namedImports: Object.freeze([{ exportedName: "Buffer" }]) }), Object.freeze({
       moduleSpecifier: "node:http",
       namedImports: Object.freeze([
         { exportedName: "IncomingMessage" },
@@ -62,32 +59,7 @@ export function httpsModule(): MojoProviderModuleDefinition {
         name: "Server",
         kind: "class",
         members: Object.freeze([
-          Object.freeze({
-            id: `${serverId}.listen`,
-            name: "listen",
-            kind: "method",
-            signatures: Object.freeze([
-              Object.freeze({
-                id: `${serverId}.listen(port,callback)`,
-                name: "listen",
-                parameters: Object.freeze([
-                  { name: "port", type: Object.freeze({ kind: "number" }) },
-                  { name: "callback", type: providerCallbackType(`${serverId}.listen(port,callback)`, "callback", []) },
-                ]),
-                returnType: providerRef(moduleSpecifier, "Server"),
-              }),
-              Object.freeze({
-                id: `${serverId}.listen(port,host,callback)`,
-                name: "listen",
-                parameters: Object.freeze([
-                  { name: "port", type: Object.freeze({ kind: "number" }) },
-                  { name: "host", type: stringType },
-                  { name: "callback", type: providerCallbackType(`${serverId}.listen(port,host,callback)`, "callback", []) },
-                ]),
-                returnType: providerRef(moduleSpecifier, "Server"),
-              }),
-            ]),
-          }),
+          serverListenMember(moduleSpecifier),
           ...(["close", "ref", "unref"] as const).map((name) => Object.freeze({
             id: `${serverId}.${name}`,
             name,
@@ -132,8 +104,7 @@ export function httpsOperations(): readonly MojoProviderOperationDefinition[] {
     ...tlsOptionOperations(optionsId, tlsServerOptionsCarrier, tlsServerFields),
     ...httpClientOperations("node:https"),
     functionCall(`${moduleSpecifier}::createServer`, `${moduleSpecifier}::createServer(options,handler)`, "https", "create_server", [tlsServerOptionsCarrier, httpRequestCallbackCarrier], httpsServerCarrier, true),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", httpsServerCarrier, [float64Carrier, emptyCallbackCarrier], httpsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host,callback)`, "listen", httpsServerCarrier, [float64Carrier, nativeString, emptyCallbackCarrier], httpsServerCarrier, true, "mut"),
+    ...serverListenOperations(moduleSpecifier, httpsServerCarrier),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpsServerCarrier, [], unitCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", httpsServerCarrier, [], httpsServerCarrier, false, "mut"),
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", httpsServerCarrier, [], httpsServerCarrier, false, "mut"),

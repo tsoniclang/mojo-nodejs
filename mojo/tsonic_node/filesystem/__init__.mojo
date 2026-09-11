@@ -49,3 +49,5 @@ from .descriptors import (
 )
 from .links import read_link
 from .metadata import fstat
+from .copy_options import CopyOptions, AsyncCopyOptions
+from .copy import copy_tree

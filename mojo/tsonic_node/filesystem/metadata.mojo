@@ -71,7 +71,7 @@ def _snapshot(value: Pointer[NoneType, MutUntrackedOrigin]) -> Stats:
     )
 
 
-def _stat(path: String, follow: Bool) raises -> Stats:
+def stat_if_present(path: String, follow: Bool = True) raises -> Optional[Stats]:
     checked_path(path)
     var status = c_int(0)
     var native_path = path
@@ -86,11 +86,20 @@ def _stat(path: String, follow: Bool) raises -> Stats:
         c_int(follow),
         Pointer(to=status),
     )
+    if external_call["tsonic_node_fs_missing", c_int](status):
+        return None
     check_status(Int32(status), "stat")
     try:
         return _snapshot(value.value())
     finally:
         external_call["tsonic_node_fs_free", NoneType](value.value())
+
+
+def _stat(path: String, follow: Bool) raises -> Stats:
+    var result = stat_if_present(path, follow)
+    if not result:
+        raise Error("stat: ENOENT: no such file or directory: ", path)
+    return result.value()
 
 
 def stat(path: String) raises -> Stats:

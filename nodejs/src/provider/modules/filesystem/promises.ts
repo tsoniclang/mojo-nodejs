@@ -22,6 +22,7 @@ import {
 } from "../../model.js";
 import { filesystemCallExports, filesystemCallOperations } from "./call-records.js";
 import { filesystemContentsExports, filesystemContentsOperations } from "./contents.js";
+import { filesystemCopyExports, filesystemCopyOperations } from "./copy.js";
 
 const moduleSpecifier = "node:fs/promises";
 
@@ -40,12 +41,14 @@ export function filesystemPromisesModule(): MojoProviderModuleDefinition {
           { exportedName: "MakeDirectoryOptions" },
           { exportedName: "RmOptions" },
           { exportedName: "Stats" },
+          { exportedName: "CopyOptions" },
         ]),
       }),
     ]),
     exports: Object.freeze([
       ...filesystemCallExports(true),
       ...filesystemContentsExports(true),
+      ...filesystemCopyExports(true),
       fnExport(moduleSpecifier, "readdir", [{ name: "path", type: stringType }], sourcePromise(stringArrayType)),
       fnExport(moduleSpecifier, "stat", [{ name: "path", type: stringType }], sourcePromise(providerRef("node:fs", "Stats"))),
       overloadedFunctionExport(moduleSpecifier, "mkdir", [
@@ -113,6 +116,7 @@ export function filesystemPromisesOperations(): readonly MojoProviderOperationDe
   return Object.freeze([
     ...filesystemCallOperations(true),
     ...filesystemContentsOperations(true),
+    ...filesystemCopyOperations(true),
     operation("readdir", "path", "read_directory", [nativeString], stringListFutureCarrier),
     operation("stat", "path", "stat", [nativeString], Object.freeze({
       kind: "future",

@@ -20,6 +20,14 @@ void* tsonic_node_fs_stat(const char* path, int descriptor, int follow, int* sta
 }
 
 void tsonic_node_fs_free(void* value) { free(value); }
+int tsonic_node_fs_missing(int status) { return status == UV_ENOENT; }
+
+int tsonic_node_fs_utimes(const char* path, double access_time, double modified_time) {
+  uv_fs_t request;
+  int status = uv_fs_utime(NULL, &request, path, access_time, modified_time, NULL);
+  uv_fs_req_cleanup(&request);
+  return status;
+}
 int64_t tsonic_node_fs_stat_field(void* value, int field) { return fs_stat_field(value, field); }
 double tsonic_node_fs_stat_time(void* value, int field) { return fs_stat_time(value, field); }
 

@@ -10,6 +10,7 @@ from .http.client_options import RequestOptions
 from .http.messages import IncomingMessage, ServerResponse
 from .http.connections import accept_connection
 from .http.transport import HttpTransport
+from .net.options import ListenOptions
 from .tls import (
     EmptyCallback,
     Server as TlsServer,
@@ -47,15 +48,27 @@ struct Server(ImplicitlyCopyable):
         self._server = server
 
     def listen_default_host(
-        self, port: Float64, callback: EmptyCallback
+        self, port: Float64, callback: Optional[EmptyCallback] = None
     ) raises -> Self:
         _ = self._server.listen_default_host(port, callback)
         return self
 
     def listen(
-        self, port: Float64, host: String, callback: EmptyCallback
+        self, port: Float64, host: String, callback: Optional[EmptyCallback] = None
     ) raises -> Self:
         _ = self._server.listen(port, host, callback)
+        return self
+
+    def listen_options(self, options: ListenOptions, callback: Optional[EmptyCallback] = None) raises -> Self:
+        _ = self._server.listen_options(options, callback)
+        return self
+
+    def listen_backlog(self, port: Float64, backlog: Float64, callback: Optional[EmptyCallback] = None) raises -> Self:
+        _ = self._server.listen_backlog(port, backlog, callback)
+        return self
+
+    def listen_host_backlog(self, port: Float64, host: String, backlog: Float64, callback: Optional[EmptyCallback] = None) raises -> Self:
+        _ = self._server.listen_host_backlog(port, host, backlog, callback)
         return self
 
     def close(self) raises:

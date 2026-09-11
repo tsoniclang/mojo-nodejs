@@ -41,6 +41,7 @@ import { filesystemWatchExports, filesystemWatchOperations, filesystemWatchTypes
 import { filesystemStreamExports, filesystemStreamOperations, filesystemStreamTypes } from "./streams.js";
 import { filesystemCallExports, filesystemCallOperations } from "./call-records.js";
 import { filesystemContentsExports, filesystemContentsOperations } from "./contents.js";
+import { filesystemCopyExports, filesystemCopyOperations, filesystemCopyTypes } from "./copy.js";
 
 const moduleSpecifier = "node:fs";
 const statsId = `${moduleSpecifier}::Stats`;
@@ -61,6 +62,7 @@ export function filesystemModule(): MojoProviderModuleDefinition {
     exports: Object.freeze([
       ...filesystemCallExports(),
       ...filesystemContentsExports(),
+      ...filesystemCopyExports(),
       ...filesystemWatchExports(),
       ...filesystemStreamExports(),
       classExport(statsId, "Stats", [
@@ -169,6 +171,7 @@ export function filesystemTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     ...filesystemWatchTypes(),
     ...filesystemStreamTypes(),
+    ...filesystemCopyTypes(),
     nodeProviderType(statsId, statsCarrier, "copyable"),
     nodeProviderType(direntId, direntCarrier, "copyable"),
     nodeProviderType(mkdirOptionsId, mkdirOptionsCarrier, "copyable", {
@@ -203,6 +206,7 @@ export function filesystemOperations(): readonly MojoProviderOperationDefinition
   return Object.freeze([
     ...filesystemCallOperations(),
     ...filesystemContentsOperations(),
+    ...filesystemCopyOperations(),
     ...filesystemWatchOperations(),
     ...filesystemStreamOperations(),
     operation("existsSync", "path", "exists", [nativeString], boolCarrier, false),
