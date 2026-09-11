@@ -157,7 +157,7 @@ struct CopyTraversal:
             CopyEntry(
                 entry.source,
                 entry.destination,
-                source.mode if not destination else -1,
+                (source.mode & 0o7777) if not destination else -1,
             )
         )
         var names = read_directory_names(entry.source)
@@ -186,12 +186,13 @@ struct CopyTraversal:
                 return
             unlink(entry.destination)
         copy_file(entry.source, entry.destination, self._mode)
+        var permissions = source.mode & 0o7777
         if (
             Bool(self._options.preserve_timestamps)
             and self._options.preserve_timestamps.value()
         ):
-            if (source.mode & 0o200) == 0:
-                chmod(entry.destination, Float64(source.mode | 0o200))
+            if (permissions & 0o200) == 0:
+                chmod(entry.destination, Float64(permissions | 0o200))
             var updated = stat(entry.source)
             var destination_path = entry.destination.copy()
             check_status(
@@ -202,7 +203,7 @@ struct CopyTraversal:
                 ),
                 "cp.utimes",
             )
-        chmod(entry.destination, Float64(source.mode))
+        chmod(entry.destination, Float64(permissions))
 
     def _link(self, entry: CopyEntry, destination: Optional[Stats]) raises:
         var target = read_link(entry.source)

@@ -52,6 +52,8 @@ def main() raises:
         make_directory(source + "/skip")
         write_text_file(source + "/kept", "original")
         write_text_file(source + "/skip/hidden", "hidden")
+        chmod(source, 0o1751)
+        chmod(source + "/kept", 0o640)
         var options = CopyOptions()
         options.recursive = True
         var environment = allocate_callable_environment(
@@ -65,6 +67,8 @@ def main() raises:
             read_text_file_encoded(root + "/filtered/kept", "utf8"), "original"
         )
         assert_false(exists(root + "/filtered/skip"))
+        assert_equal(stat(root + "/filtered").mode & 0o7777, 0o1751)
+        assert_equal(stat(root + "/filtered/kept").mode & 0o7777, 0o640)
         check_rejected(source, source + "/child", options)
         check_rejected(source + "/kept", source + "/kept", options)
         check_rejected(source, root + "/without-recursion", CopyOptions())
