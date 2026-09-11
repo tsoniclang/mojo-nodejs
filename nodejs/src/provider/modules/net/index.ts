@@ -29,6 +29,7 @@ import {
   stringType,
 } from "../../model.js";
 import { networkEventMembers, networkEventOperations } from "./events.js";
+import { withDuplexView } from "../stream/duplex.js";
 import { additionalListenSignatures, networkLifecycleOperations, socketConstructor, socketConnectMember } from "./lifecycle.js";
 import {
   addressCarrier, addressType, connectionOptionsCarrier, connectionOptionsType,
@@ -145,7 +146,7 @@ export function netModule(): MojoProviderModuleDefinition {
 export function netTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     ...networkRecordTypes,
-    nodeProviderType(socketId, netSocketCarrier, "implicitly-copyable"),
+    withDuplexView(nodeProviderType(socketId, netSocketCarrier, "implicitly-copyable"), "net"),
     nodeProviderType(serverId, netServerCarrier, "implicitly-copyable"),
   ]);
 }

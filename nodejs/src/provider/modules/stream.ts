@@ -7,6 +7,7 @@ import { writableCallMembers, writableCallOperations } from "./stream/writable-c
 import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
 import { readableReadMember, readableReadOperations } from "./stream/readable-calls.js";
 import { readableEventMembers, readableEventOperations } from "./stream/readable-events.js";
+import { duplexExport, duplexOperations, duplexType } from "./stream/duplex.js";
 import {
   booleanType,
   boolCarrier,
@@ -39,6 +40,7 @@ export function streamModule(): MojoProviderModuleDefinition {
       Object.freeze({ moduleSpecifier: "node:http", namedImports: Object.freeze([{ exportedName: "ServerResponse" }]) }),
     ]),
     exports: Object.freeze([
+      duplexExport,
       Object.freeze({
         id: readableId,
         name: "Readable",
@@ -82,6 +84,7 @@ export function streamModule(): MojoProviderModuleDefinition {
 export function streamTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     nodeProviderType(readableId, readableCarrier, "implicitly-copyable"),
+    duplexType,
     nodeProviderType(writableId, writableCarrier, "implicitly-copyable"),
   ]);
 }
@@ -89,6 +92,7 @@ export function streamTypes(): readonly MojoProviderTypeDefinition[] {
 export function streamOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
     ...readableReadOperations(readableId, readableCarrier),
+    ...duplexOperations,
     ...readableEventOperations(moduleSpecifier, "Readable", readableCarrier),
     instanceCall(readableId, `${readableId}.setEncoding`, `${readableId}.setEncoding(encoding)`, "set_encoding", readableCarrier, [nativeString], readableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(writable)`, "pipe_to", readableCarrier, [writableCarrier], writableCarrier, true, "mut"),

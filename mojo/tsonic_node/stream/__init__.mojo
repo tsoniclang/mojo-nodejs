@@ -1,5 +1,6 @@
 from .readable import Readable
 from .writable import Writable
+from ..internal.duplex import Duplex
 from tsonic_runtime import GlobalCell
 
 

@@ -73,12 +73,12 @@ struct Zlib(ImplicitlyCopyable):
         self._state[].output_bytes = 0
         return Optional(result)
 
-    def end(self) raises:
-        self.end_buffer(Buffer())
+    def end(self) raises -> Self:
+        return self.end_buffer(Buffer())
 
-    def end_buffer(self, input: Buffer) raises:
+    def end_buffer(self, input: Buffer) raises -> Self:
         if self._state[].ended:
-            return
+            return self
         self._require_open()
         self._state[].ended = True
         self._retain(
@@ -87,9 +87,10 @@ struct Zlib(ImplicitlyCopyable):
             )
         )
         self._state[].codec.close()
+        return self
 
-    def end_string(self, input: String) raises:
-        self.end_buffer(Buffer.from_string(input))
+    def end_string(self, input: String) raises -> Self:
+        return self.end_buffer(Buffer.from_string(input))
 
     def flush(self) raises:
         self.flush_kind(3.0 if self._state[].mode < 8 else 1.0)

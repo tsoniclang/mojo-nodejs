@@ -33,6 +33,7 @@ import {
 } from "../../model.js";
 import { addressCarrier, addressType } from "../net/records.js";
 import { tlsEventMembers, tlsEventOperations } from "./events.js";
+import { withDuplexView } from "../stream/duplex.js";
 import { listenOptionsImport, serverListenMember, serverListenOperations } from "../net/listen-contract.js";
 import { tlsConnectionFields, tlsServerFields, tlsOptionDeclaration, tlsOptionOperations } from "./options.js";
 
@@ -191,7 +192,7 @@ export function tlsTypes(): readonly MojoProviderTypeDefinition[] {
     nodeProviderType(serverOptionsId, tlsServerOptionsCarrier, "copyable", {
       objectLiteralConstruction: true,
     }),
-    nodeProviderType(socketId, tlsSocketCarrier, "implicitly-copyable"),
+    withDuplexView(nodeProviderType(socketId, tlsSocketCarrier, "implicitly-copyable"), "tls"),
     nodeProviderType(serverId, tlsServerCarrier, "implicitly-copyable"),
   ]);
 }
