@@ -17,7 +17,7 @@ const records = [false, true].map((asynchronous) => {
   const name = asynchronous ? "CopyOptions" : "CopySyncOptions";
   const id = `node:fs::${name}`;
   const nativeName = asynchronous ? "AsyncCopyOptions" : "CopyOptions";
-  const result = asynchronous ? mojoUnionTargetType([boolCarrier, mojoFutureTargetType(boolCarrier, "native", true)]) : boolCarrier;
+  const result = asynchronous ? mojoUnionTargetType([boolCarrier, Object.freeze({ ...mojoFutureTargetType(boolCarrier, "native", true), captureOrigins: "empty" as const })]) : boolCarrier;
   const filter = Object.freeze({
     kind: "function" as const, id: `${id}.filter`, parameters,
     returnType: asynchronous ? { kind: "union" as const, types: [booleanType, sourcePromise(booleanType)] } : booleanType,

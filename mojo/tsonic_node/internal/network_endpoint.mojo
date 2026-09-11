@@ -33,9 +33,17 @@ struct NetworkEndpoint(ImplicitlyCopyable):
     def __init__(out self):
         self._owner = ArcPointer(_EndpointOwner(None))
 
-    def __init__(out self, host: String, port: Float64, listener: Bool, backlog: Float64 = 511) raises:
+    def __init__(
+        out self,
+        host: String,
+        port: Float64,
+        listener: Bool,
+        backlog: Float64 = 511,
+    ) raises:
         var native_port = Int32(checked_integer(port, 65535, "port"))
-        var native_backlog = Int32(checked_integer(backlog, 2147483647, "backlog"))
+        var native_backlog = Int32(
+            checked_integer(backlog, 2147483647, "backlog")
+        )
         if host.find("\0") >= 0:
             raise Error("Network host contains a null byte")
         var native_host = host

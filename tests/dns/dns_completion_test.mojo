@@ -78,7 +78,10 @@ struct AllCompletion:
     var count: Location[Int]
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[JsValue, Optional[List[LookupAddress]]]) raises:
+    def invoke(
+        context: ErasedCallableContext,
+        var arguments: Tuple[JsValue, Optional[List[LookupAddress]]],
+    ) raises:
         assert_true(arguments[0].is_null())
         var addresses = arguments[1].value()
         assert_equal(len(addresses), 1)
@@ -100,8 +103,14 @@ def main() raises:
     options.order = "ipv6first"
     assert_equal(options.selected_order(), 6)
     var all_count = Location(0)
-    var all_environment = allocate_callable_environment(AllCompletion(all_count), AllCompletion.destroy)
-    lookup_all_callback("127.0.0.1", options, LookupAllCallback(all_environment, AllCompletion.invoke))
+    var all_environment = allocate_callable_environment(
+        AllCompletion(all_count), AllCompletion.destroy
+    )
+    lookup_all_callback(
+        "127.0.0.1",
+        options,
+        LookupAllCallback(all_environment, AllCompletion.invoke),
+    )
     options.all = False
     options.family = Variant[Float64, String](String("not-a-family"))
     assert_equal(all_count.read(), 0)

@@ -21,7 +21,9 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
     var reject = (
         options.reject_unauthorized.value() if options.reject_unauthorized else True
     )
-    var context = options.secure_context.value() if options.secure_context else create_secure_context(options.context_options())
+    var context = options.secure_context.value() if options.secure_context else create_secure_context(
+        options.context_options()
+    )
     var alpn = _alpn_wire(options.alpn_protocols)
     var timeout = timeout_duration(
         options.timeout.value()

@@ -39,7 +39,9 @@ struct LookupOptions(Copyable):
         if not (value >= 0 and value <= 2147483647.0):
             raise Error("DNS hints must be a supported integer mask")
         var selected = Int32(value)
-        var allowed = Int32(addrconfig()) | Int32(v4mapped()) | Int32(all_addresses())
+        var allowed = (
+            Int32(addrconfig()) | Int32(v4mapped()) | Int32(all_addresses())
+        )
         if Float64(selected) != value or selected & ~allowed != 0:
             raise Error("DNS hints must be a supported integer mask")
         return selected
@@ -67,12 +69,18 @@ def family_options(family: Float64) -> LookupOptions:
 
 
 def addrconfig() -> Float64:
-    return Float64(external_call["tsonic_node_dns_lookup_hint", c_int](c_int(0)))
+    return Float64(
+        external_call["tsonic_node_dns_lookup_hint", c_int](c_int(0))
+    )
 
 
 def v4mapped() -> Float64:
-    return Float64(external_call["tsonic_node_dns_lookup_hint", c_int](c_int(1)))
+    return Float64(
+        external_call["tsonic_node_dns_lookup_hint", c_int](c_int(1))
+    )
 
 
 def all_addresses() -> Float64:
-    return Float64(external_call["tsonic_node_dns_lookup_hint", c_int](c_int(2)))
+    return Float64(
+        external_call["tsonic_node_dns_lookup_hint", c_int](c_int(2))
+    )

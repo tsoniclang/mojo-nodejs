@@ -5,7 +5,7 @@ import { createMojoNodejsCapability } from "../../dist/index.js";
 
 for (const moduleSpecifier of ["node:http", "node:https", "node:tls"]) {
   test(`${moduleSpecifier} server listen shares exact options and backlog overloads`, () => {
-    const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+    const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import type { Server } from "${moduleSpecifier}";
 export function start(server: Server): void {
   server.listen({ port: 0, host: "127.0.0.1", backlog: 8 });

@@ -145,6 +145,9 @@ test("every public Node carrier declares its exact Mojo lifecycle", () => {
     ["node:crypto::Hash", implicitlyCopyable],
     ["node:crypto::Hmac", implicitlyCopyable],
     ["node:dns::LookupAddress", copyable],
+    ["node:dns::LookupAllOptions", copyable],
+    ["node:dns::LookupOneOptions", copyable],
+    ["node:dns::LookupOptions", copyable],
     ["node:events::EventEmitter", implicitlyCopyable],
     ["node:fs::FSWatcher", implicitlyCopyable],
     ["node:fs::StatWatcher", implicitlyCopyable],
@@ -154,6 +157,8 @@ test("every public Node carrier declares its exact Mojo lifecycle", () => {
     ["node:fs::WriteStream", implicitlyCopyable],
     ["node:fs::ReadStreamOptions", copyable],
     ["node:fs::WriteStreamOptions", copyable],
+    ["node:fs::CopySyncOptions", copyable],
+    ["node:fs::CopyOptions", copyable],
     ["node:fs::Stats", copyable],
     ["node:fs::Dirent", copyable],
     ["node:fs::MakeDirectoryOptions", copyable],
@@ -174,17 +179,21 @@ test("every public Node carrier declares its exact Mojo lifecycle", () => {
     ["node:net::AddressInfo", implicitlyCopyable],
     ["node:net::ServerOpts", copyable],
     ["node:net::NetConnectOpts", copyable],
+    ["node:net::ListenOptions", copyable],
     ["node:net::Socket", implicitlyCopyable],
     ["node:net::Server", implicitlyCopyable],
     ["node:process::ProcessEnv", copyable],
     ["node:process::MemoryUsage", copyable],
-    ["node:process::ProcessWriteStream", copyable],
+    ["node:process::ProcessWriteStream", implicitlyCopyable],
     ["node:readline::ReadLineOptions", copyable],
     ["node:readline::Interface", implicitlyCopyable],
     ["node:stream::Readable", implicitlyCopyable],
+    ["node:stream::Duplex", implicitlyCopyable],
     ["node:stream::Writable", implicitlyCopyable],
     ["node:timers::Timeout", implicitlyCopyable],
     ["node:tls::ConnectionOptions", copyable],
+    ["node:tls::SecureContext", implicitlyCopyable],
+    ["node:tls::SecureContextOptions", copyable],
     ["node:tls::TlsOptions", copyable],
     ["node:tls::TLSSocket", implicitlyCopyable],
     ["node:tls::Server", implicitlyCopyable],
@@ -274,7 +283,7 @@ test("Node parity rows expose exact closed contracts and omit unsupported open r
   ]) assert.equal(bufferMembers.has(member), true, member);
 
   assert.equal(operations.has("node:util::inspect"), true);
-  assert.equal(operations.has("node:util::format"), false);
+  assert.equal(operations.has("node:util::format"), true);
 });
 
 test("new Node families retain exact declarations and target operations", () => {
@@ -284,14 +293,14 @@ test("new Node families retain exact declarations and target operations", () => 
   const operations = definition.operations;
 
   const expectedExports = new Map([
-    ["node:dns", ["LookupAddress", "lookup", "resolve4", "resolve6", "reverse", "NodeDnsModule"]],
+    ["node:dns", ["LookupAllOptions", "LookupOneOptions", "LookupOptions", "ADDRCONFIG", "V4MAPPED", "ALL", "LookupAddress", "lookup", "resolve4", "resolve6", "reverse", "NodeDnsModule"]],
     ["node:dns/promises", ["lookup", "resolve4", "resolve6", "reverse", "NodeDnsPromisesModule"]],
     ["node:events", ["EventEmitter", "listenerCount"]],
     ["node:https", ["RequestOptions", "ClientRequest", "request", "get", "ServerOptions", "Server", "createServer", "NodeHttpsModule"]],
-    ["node:net", ["AddressInfo", "ServerOpts", "NetConnectOpts", "Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6", "NodeNetModule"]],
+    ["node:net", ["AddressInfo", "ServerOpts", "NetConnectOpts", "ListenOptions", "Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6", "NodeNetModule"]],
     ["node:readline", ["ReadLineOptions", "Interface", "createInterface", "NodeReadlineModule"]],
-    ["node:stream", ["Readable", "Writable"]],
-    ["node:tls", ["ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer", "NodeTlsModule"]],
+    ["node:stream", ["Duplex", "Readable", "Writable"]],
+    ["node:tls", ["SecureContext", "SecureContextOptions", "createSecureContext", "ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer", "NodeTlsModule"]],
     ["node:worker_threads", [
       "MessagePortMessage", "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
       "receiveMessageOnPort", "getEnvironmentData", "setEnvironmentData",

@@ -1,5 +1,11 @@
 from std.collections import List
-from .legacy import LegacyUrl, parse_legacy, format_legacy, slashed_protocol, _slice
+from .legacy import (
+    LegacyUrl,
+    parse_legacy,
+    format_legacy,
+    slashed_protocol,
+    _slice,
+)
 
 
 def _text(value: Optional[String]) -> String:
@@ -34,7 +40,9 @@ def _join(path: List[String]) -> String:
     return result^
 
 
-def _restore_opaque_host(mut result: LegacyUrl, mut path: List[String], absolute: Bool):
+def _restore_opaque_host(
+    mut result: LegacyUrl, mut path: List[String], absolute: Bool
+):
     var host = String() if absolute else _shift(path)
     var at = host.find("@")
     if at > 0:
@@ -44,7 +52,9 @@ def _restore_opaque_host(mut result: LegacyUrl, mut path: List[String], absolute
     result.hostname = host
 
 
-def _remove_dots(path: List[String], rooted: Bool, remove_all: Bool, trailing: Bool) -> List[String]:
+def _remove_dots(
+    path: List[String], rooted: Bool, remove_all: Bool, trailing: Bool
+) -> List[String]:
     var reverse = List[String](capacity=len(path))
     var parents = 0
     for index in range(len(path) - 1, -1, -1):
@@ -77,7 +87,11 @@ def resolve(from_url: String, to_url: String) raises -> String:
         return format_legacy(result)
     if relative.slashes and relative.slashes.value() and not relative.protocol:
         relative.protocol = result.protocol
-        if slashed_protocol(_text(relative.protocol)) and _text(relative.hostname) and not _text(relative.pathname):
+        if (
+            slashed_protocol(_text(relative.protocol))
+            and _text(relative.hostname)
+            and not _text(relative.pathname)
+        ):
             relative.pathname = "/"
         return format_legacy(relative)
     if relative.protocol and _text(relative.protocol) != _text(result.protocol):
@@ -100,16 +114,28 @@ def resolve(from_url: String, to_url: String) raises -> String:
         result.search = relative.search
         result.host = _text(relative.host)
         result.auth = relative.auth
-        result.hostname = _text(relative.hostname) if _text(relative.hostname) else _text(relative.host)
+        result.hostname = _text(relative.hostname) if _text(
+            relative.hostname
+        ) else _text(relative.host)
         result.port = relative.port
-        result.slashes = (result.slashes and result.slashes.value()) or (relative.slashes and relative.slashes.value())
+        result.slashes = (result.slashes and result.slashes.value()) or (
+            relative.slashes and relative.slashes.value()
+        )
         return format_legacy(result)
-    var relative_absolute = Bool(_text(relative.host)) or _text(relative.pathname).startswith("/")
-    var rooted = relative_absolute or _text(result.pathname).startswith("/") or (Bool(_text(result.host)) and Bool(_text(relative.pathname)))
+    var relative_absolute = Bool(_text(relative.host)) or _text(
+        relative.pathname
+    ).startswith("/")
+    var rooted = (
+        relative_absolute
+        or _text(result.pathname).startswith("/")
+        or (Bool(_text(result.host)) and Bool(_text(relative.pathname)))
+    )
     var remove_all = rooted
     var source_path = _path(result.pathname)
     var relative_path = _path(relative.pathname)
-    var opaque = Bool(result.protocol) and not slashed_protocol(_text(result.protocol))
+    var opaque = Bool(result.protocol) and not slashed_protocol(
+        _text(result.protocol)
+    )
     if opaque:
         result.hostname = ""
         result.port = None
@@ -129,7 +155,10 @@ def resolve(from_url: String, to_url: String) raises -> String:
                 else:
                     relative_path.insert(0, relative.host.value())
             relative.host = None
-        rooted = rooted and ((len(relative_path) != 0 and relative_path[0] == "") or (len(source_path) != 0 and source_path[0] == ""))
+        rooted = rooted and (
+            (len(relative_path) != 0 and relative_path[0] == "")
+            or (len(source_path) != 0 and source_path[0] == "")
+        )
     if relative_absolute:
         if relative.host:
             if _text(result.host) != relative.host.value():
@@ -157,7 +186,14 @@ def resolve(from_url: String, to_url: String) raises -> String:
         result.pathname = None
         return format_legacy(result)
     var last = source_path[len(source_path) - 1]
-    var trailing = last == "" or ((Bool(_text(result.host)) or Bool(_text(relative.host)) or len(source_path) > 1) and (last == "." or last == ".."))
+    var trailing = last == "" or (
+        (
+            Bool(_text(result.host))
+            or Bool(_text(relative.host))
+            or len(source_path) > 1
+        )
+        and (last == "." or last == "..")
+    )
     source_path = _remove_dots(source_path, rooted, remove_all, trailing)
     var absolute = len(source_path) != 0 and source_path[0] == ""
     if opaque:
@@ -165,8 +201,12 @@ def resolve(from_url: String, to_url: String) raises -> String:
     rooted = rooted or (Bool(_text(result.host)) and len(source_path) != 0)
     if rooted and not absolute:
         source_path.insert(0, "")
-    result.pathname = Optional(_join(source_path)) if len(source_path) else Optional[String]()
+    result.pathname = Optional(_join(source_path)) if len(
+        source_path
+    ) else Optional[String]()
     if _text(relative.auth):
         result.auth = relative.auth
-    result.slashes = (result.slashes and result.slashes.value()) or (relative.slashes and relative.slashes.value())
+    result.slashes = (result.slashes and result.slashes.value()) or (
+        relative.slashes and relative.slashes.value()
+    )
     return format_legacy(result)

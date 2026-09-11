@@ -4,7 +4,7 @@ import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mo
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("legacy URL resolution is an exact selected provider operation", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { resolve as combine } from "node:url";
 export function main(): string { return combine("http://example.test/a/b", "../c"); }
 ` } });

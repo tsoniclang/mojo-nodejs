@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts as artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("provider struct-default literals preserve omitted fields and authored evaluation order", () => {
@@ -39,7 +39,7 @@ export function main(): void {
   assert.match(emitted, /record_snapshot\.high_water_mark =/u);
   assert.match(emitted, /record_snapshot\.start =/u);
   assert.doesNotMatch(emitted, /record_snapshot\.unrelated =/u);
-  assert.match(emitted, /record_snapshot\.encoding =/u);
+  assert.match(emitted, /record_snapshot_2\.encoding =/u);
 });
 
 test("provider snapshots select exact getter implementations and propagate their errors", () => {
@@ -56,7 +56,7 @@ export function main(): void {
 ` } });
   assert.deepEqual(result.diagnostics, []);
   const emitted = artifactTexts(result).map(({ text }) => text).join("\n");
-  assert.match(emitted, /record_source\.[a-zA-Z_]*highWaterMark\(/u);
+  assert.match(emitted, /record_source\._get_high_water_mark\(/u);
   assert.match(emitted, /record_snapshot\.high_water_mark =/u);
 });
 

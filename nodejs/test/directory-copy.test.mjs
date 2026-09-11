@@ -31,9 +31,8 @@ export async function main(): Promise<void> {
 });
 
 test("sync copy rejects asynchronous filters instead of treating a promise as truthy", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  assert.throws(() => compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { cpSync } from "node:fs";
 export function main(): void { cpSync("source", "destination", { filter: async () => true }); }
-` } });
-  assert.ok(result.diagnostics.some((diagnostic) => diagnostic.category === "error"));
+` } }), /TypeScript diagnostics:/u);
 });

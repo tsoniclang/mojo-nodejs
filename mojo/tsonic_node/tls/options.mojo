@@ -55,8 +55,15 @@ struct ConnectionOptions(Copyable):
         self.secure_context = secure_context
 
     def context_options(self) -> SecureContextOptions:
-        return SecureContextOptions(self.key, self.cert, self.ca.copy(), self.pfx,
-            self.passphrase, self.min_version, self.max_version)
+        return SecureContextOptions(
+            self.key,
+            self.cert,
+            self.ca.copy(),
+            self.pfx,
+            self.passphrase,
+            self.min_version,
+            self.max_version,
+        )
 
 
 struct TlsOptions(Copyable):
@@ -102,5 +109,12 @@ struct TlsOptions(Copyable):
         self.max_version = max_version
 
     def context_options(self) -> SecureContextOptions:
-        return SecureContextOptions(self.key, self.cert, self.ca.copy(), self.pfx,
-            self.passphrase, self.min_version, self.max_version)
+        return SecureContextOptions(
+            self.key,
+            self.cert,
+            self.ca.copy(),
+            self.pfx,
+            self.passphrase,
+            self.min_version,
+            self.max_version,
+        )

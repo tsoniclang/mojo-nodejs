@@ -71,7 +71,9 @@ def _snapshot(value: Pointer[NoneType, MutUntrackedOrigin]) -> Stats:
     )
 
 
-def stat_if_present(path: String, follow: Bool = True) raises -> Optional[Stats]:
+def stat_if_present(
+    path: String, follow: Bool = True
+) raises -> Optional[Stats]:
     checked_path(path)
     var status = c_int(0)
     var native_path = path

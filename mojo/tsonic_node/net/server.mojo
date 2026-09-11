@@ -67,24 +67,45 @@ struct Server(ImplicitlyCopyable):
     def listen_options(mut self, options: ListenOptions) raises -> Self:
         return self._listen_options(options, None)
 
-    def listen_options_callback(mut self, options: ListenOptions, callback: EmptyCallback) raises -> Self:
+    def listen_options_callback(
+        mut self, options: ListenOptions, callback: EmptyCallback
+    ) raises -> Self:
         return self._listen_options(options, callback)
 
-    def _listen_options(mut self, options: ListenOptions, callback: Optional[EmptyCallback]) raises -> Self:
+    def _listen_options(
+        mut self, options: ListenOptions, callback: Optional[EmptyCallback]
+    ) raises -> Self:
         if not options.port:
             raise Error("TCP listen options require a port")
-        return self._listen(options.port.value(), options.host.value() if options.host else "", callback, options.backlog.value() if options.backlog else 511)
+        return self._listen(
+            options.port.value(),
+            options.host.value() if options.host else "",
+            callback,
+            options.backlog.value() if options.backlog else 511,
+        )
 
-    def listen_port_backlog(mut self, port: Float64, backlog: Float64) raises -> Self:
+    def listen_port_backlog(
+        mut self, port: Float64, backlog: Float64
+    ) raises -> Self:
         return self._listen(port, "", None, backlog)
 
-    def listen_port_host_backlog(mut self, port: Float64, host: String, backlog: Float64) raises -> Self:
+    def listen_port_host_backlog(
+        mut self, port: Float64, host: String, backlog: Float64
+    ) raises -> Self:
         return self._listen(port, host, None, backlog)
 
-    def listen_port_backlog_callback(mut self, port: Float64, backlog: Float64, callback: EmptyCallback) raises -> Self:
+    def listen_port_backlog_callback(
+        mut self, port: Float64, backlog: Float64, callback: EmptyCallback
+    ) raises -> Self:
         return self._listen(port, "", callback, backlog)
 
-    def listen_port_host_backlog_callback(mut self, port: Float64, host: String, backlog: Float64, callback: EmptyCallback) raises -> Self:
+    def listen_port_host_backlog_callback(
+        mut self,
+        port: Float64,
+        host: String,
+        backlog: Float64,
+        callback: EmptyCallback,
+    ) raises -> Self:
         return self._listen(port, host, callback, backlog)
 
     def close(mut self) raises -> Self:
@@ -199,7 +220,11 @@ struct Server(ImplicitlyCopyable):
             )
 
     def _listen(
-        mut self, port: Float64, host: String, callback: Optional[EmptyCallback], backlog: Float64 = 511
+        mut self,
+        port: Float64,
+        host: String,
+        callback: Optional[EmptyCallback],
+        backlog: Float64 = 511,
     ) raises -> Self:
         if self._state[].active or self._state[].closing:
             raise Error("Network server is already active")

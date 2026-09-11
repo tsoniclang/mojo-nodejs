@@ -78,15 +78,33 @@ struct Server(ImplicitlyCopyable):
     ) raises -> Self:
         return self.listen_host_backlog(port, host, 511, callback)
 
-    def listen_options(self, options: ListenOptions, callback: Optional[EmptyCallback] = None) raises -> Self:
+    def listen_options(
+        self, options: ListenOptions, callback: Optional[EmptyCallback] = None
+    ) raises -> Self:
         if not options.port:
             raise Error("TLS listen options require a port")
-        return self.listen_host_backlog(options.port.value(), options.host.value() if options.host else "", options.backlog.value() if options.backlog else 511, callback)
+        return self.listen_host_backlog(
+            options.port.value(),
+            options.host.value() if options.host else "",
+            options.backlog.value() if options.backlog else 511,
+            callback,
+        )
 
-    def listen_backlog(self, port: Float64, backlog: Float64, callback: Optional[EmptyCallback] = None) raises -> Self:
+    def listen_backlog(
+        self,
+        port: Float64,
+        backlog: Float64,
+        callback: Optional[EmptyCallback] = None,
+    ) raises -> Self:
         return self.listen_host_backlog(port, "", backlog, callback)
 
-    def listen_host_backlog(self, port: Float64, host: String, backlog: Float64, callback: Optional[EmptyCallback] = None) raises -> Self:
+    def listen_host_backlog(
+        self,
+        port: Float64,
+        host: String,
+        backlog: Float64,
+        callback: Optional[EmptyCallback] = None,
+    ) raises -> Self:
         if self._state[].active:
             raise Error("TLS server is already listening")
         if host.find("\0") >= 0:

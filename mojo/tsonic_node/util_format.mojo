@@ -24,9 +24,14 @@ def format(values: List[JsValue]) raises -> String:
             if specifier == 37:
                 result += template.slice(Float64(segment), Float64(cursor + 1))
             elif argument < len(values) and (
-                specifier == 115 or specifier == 100 or specifier == 105
-                or specifier == 102 or specifier == 106 or specifier == 111
-                or specifier == 79 or specifier == 99
+                specifier == 115
+                or specifier == 100
+                or specifier == 105
+                or specifier == 102
+                or specifier == 106
+                or specifier == 111
+                or specifier == 79
+                or specifier == 99
             ):
                 result += template.slice(Float64(segment), Float64(cursor))
                 result += _substitute(specifier, values[argument])
@@ -41,7 +46,9 @@ def format(values: List[JsValue]) raises -> String:
         if argument:
             result += JsString(" ")
         var value = values[argument]
-        result += value._string_value() if value.is_string() else JsString(inspect_value(value))
+        result += value._string_value() if value.is_string() else JsString(
+            inspect_value(value)
+        )
         argument += 1
     return result.to_native_strict()
 
@@ -92,18 +99,31 @@ def _number(value: JsString) -> Float64:
         return -Float64(FloatLiteral.infinity)
     if len(text) > 2 and text.code_unit_at(0).value() == 48:
         var prefix = text.code_unit_at(1).value()
-        var base = 16 if prefix == 120 or prefix == 88 else 8 if prefix == 111 or prefix == 79 else 2 if prefix == 98 or prefix == 66 else 0
+        var base = (
+            16 if prefix == 120
+            or prefix == 88 else 8 if prefix == 111
+            or prefix == 79 else 2 if prefix == 98
+            or prefix == 66 else 0
+        )
         if base:
             var result = 0.0
             for index in range(2, len(text)):
                 var unit = Int(text.code_unit_at(index).value())
-                var digit = unit - 48 if unit >= 48 and unit <= 57 else unit - 65 + 10 if unit >= 65 and unit <= 70 else unit - 97 + 10 if unit >= 97 and unit <= 102 else -1
+                var digit = (
+                    unit - 48 if unit >= 48
+                    and unit <= 57 else unit - 65 + 10 if unit >= 65
+                    and unit <= 70 else unit - 97 + 10 if unit >= 97
+                    and unit <= 102 else -1
+                )
                 if digit < 0 or digit >= base:
                     return Float64(FloatLiteral.nan)
                 result = result * Float64(base) + Float64(digit)
             return result
     var index = 0
-    if text.code_unit_at(index).value() == 43 or text.code_unit_at(index).value() == 45:
+    if (
+        text.code_unit_at(index).value() == 43
+        or text.code_unit_at(index).value() == 45
+    ):
         index += 1
     var digits = 0
     while index < len(text) and _digit(text, index):
@@ -116,9 +136,15 @@ def _number(value: JsString) -> Float64:
             digits += 1
     if not digits:
         return Float64(FloatLiteral.nan)
-    if index < len(text) and (text.code_unit_at(index).value() == 101 or text.code_unit_at(index).value() == 69):
+    if index < len(text) and (
+        text.code_unit_at(index).value() == 101
+        or text.code_unit_at(index).value() == 69
+    ):
         index += 1
-        if index < len(text) and (text.code_unit_at(index).value() == 43 or text.code_unit_at(index).value() == 45):
+        if index < len(text) and (
+            text.code_unit_at(index).value() == 43
+            or text.code_unit_at(index).value() == 45
+        ):
             index += 1
         var start = index
         while index < len(text) and _digit(text, index):

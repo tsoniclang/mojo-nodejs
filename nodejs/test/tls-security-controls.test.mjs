@@ -4,7 +4,7 @@ import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mo
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("TLS and HTTPS retain explicit context, credentials and independent security controls", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { createSecureContext as makeContext, connect, createServer } from "node:tls";
 import { request, createServer as createHttpsServer } from "node:https";
 import type { Buffer } from "node:buffer";

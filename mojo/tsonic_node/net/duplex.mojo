@@ -19,4 +19,6 @@ def _end(mut stream: Socket, value: Optional[Buffer]) raises:
 
 
 def as_duplex(stream: Socket) -> Duplex:
-    return create_duplex(stream, UInt(Int(stream._state.ptr())), _read, _write, _end)
+    return create_duplex(
+        stream, UInt(Int(stream._state.ptr())), _read, _write, _end
+    )

@@ -94,7 +94,9 @@ def create_write_stream(path: String) raises -> Writable:
 def create_write_stream(
     path: String, options: WriteStreamOptions
 ) raises -> Writable:
-    var encoding = encoding_name(options.encoding.value()) if options.encoding else String("utf8")
+    var encoding = encoding_name(
+        options.encoding.value()
+    ) if options.encoding else String("utf8")
     var start = _position(options.start, "start")
     var high_water_mark = checked_integer(
         options.high_water_mark.value(), 9007199254740991.0, "highWaterMark"

@@ -119,4 +119,8 @@ def fail(state: ArcPointer[SocketState], error: Error):
 
 
 def unsettled(state: ArcPointer[SocketState]) -> Bool:
-    return (state[].started and not state[].destroyed) or state[].close_pending or Bool(state[].error)
+    return (
+        (state[].started and not state[].destroyed)
+        or state[].close_pending
+        or Bool(state[].error)
+    )

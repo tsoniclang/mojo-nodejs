@@ -163,7 +163,10 @@ struct Writable(ImplicitlyCopyable):
     ) raises -> Bool:
         return self._write(
             Buffer(
-                encode_bytes(value, encoding.value() if encoding else self._state[].encoding)
+                encode_bytes(
+                    value,
+                    encoding.value() if encoding else self._state[].encoding,
+                )
             ),
             callback,
         )
@@ -264,7 +267,10 @@ struct Writable(ImplicitlyCopyable):
     ) raises -> Self:
         return self._end_chunk(
             Buffer(
-                encode_bytes(value, encoding.value() if encoding else self._state[].encoding)
+                encode_bytes(
+                    value,
+                    encoding.value() if encoding else self._state[].encoding,
+                )
             ),
             callback,
         )
@@ -336,7 +342,9 @@ struct Writable(ImplicitlyCopyable):
             return self
         self._state[].events.prepare()
         self._state[].events.cancel()
-        var completion_error = error.value().copy() if error else self._failure("Stream destroyed before completion")
+        var completion_error = error.value().copy() if error else self._failure(
+            "Stream destroyed before completion"
+        )
         for request in self._state[].chunks:
             if request.completion:
                 request.completion.value().complete(completion_error.copy())
@@ -359,7 +367,10 @@ struct Writable(ImplicitlyCopyable):
         return self
 
     def destroyed(self) -> Bool:
-        return self._state[].events.state[].closed or self._state[].events.state[].cancelled
+        return (
+            self._state[].events.state[].closed
+            or self._state[].events.state[].cancelled
+        )
 
     def closed(self) -> Bool:
         return self._state[].closed
@@ -371,7 +382,9 @@ struct Writable(ImplicitlyCopyable):
         return self._state[].events.state[].finished
 
     def writable_aborted(self) -> Bool:
-        return (self.destroyed() or self._state[].failed) and not self.writable_finished()
+        return (
+            self.destroyed() or self._state[].failed
+        ) and not self.writable_finished()
 
     def writable_high_water_mark(self) -> Float64:
         return Float64(self._state[].high_water_mark)
@@ -397,7 +410,9 @@ struct Writable(ImplicitlyCopyable):
         return self._state[].ended
 
     def fd(self) -> Int:
-        return Int(self._state[].descriptor.value()._state[].descriptor) if self._state[].descriptor else -1
+        return Int(
+            self._state[].descriptor.value()._state[].descriptor
+        ) if self._state[].descriptor else -1
 
     def is_tty(self) -> Bool:
         return FileDescriptor(self.fd()).isatty()

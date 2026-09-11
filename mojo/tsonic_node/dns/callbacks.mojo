@@ -4,14 +4,20 @@ from tsonic_js import JsValue, js_value_from_null
 from tsonic_runtime import GlobalCell
 from ..internal.callback_queue import CallbackQueue
 from .model import (
-    LookupAddress, LookupCallback, AddressListCallback,
-    LookupAllCallback, LookupAnyCallback, LookupCallbackResult,
+    LookupAddress,
+    LookupCallback,
+    AddressListCallback,
+    LookupAllCallback,
+    LookupAnyCallback,
+    LookupCallbackResult,
 )
 from .native import DnsRequest, poll_native_lookup
 from .options import LookupOptions, family_options
 
 
-comptime DnsCallback = Variant[LookupCallback, AddressListCallback, LookupAllCallback, LookupAnyCallback]
+comptime DnsCallback = Variant[
+    LookupCallback, AddressListCallback, LookupAllCallback, LookupAnyCallback
+]
 comptime REQUEST_LIMIT = 16384
 
 
@@ -36,36 +42,55 @@ comptime _callbacks = GlobalCell[
 ]()
 
 
-def _enqueue(input: String, kind: Int32, callback: DnsCallback, options: LookupOptions = LookupOptions()) raises:
+def _enqueue(
+    input: String,
+    kind: Int32,
+    callback: DnsCallback,
+    options: LookupOptions = LookupOptions(),
+) raises:
     if (
         len(_requests.get()[]) + _callbacks.get()[].pending_count()
         >= REQUEST_LIMIT
     ):
         raise Error("Pending DNS requests exceed the finite runtime limit")
-    _requests.get()[].append(PendingRequest(DnsRequest(input, kind, options), callback, options.selected_all()))
+    _requests.get()[].append(
+        PendingRequest(
+            DnsRequest(input, kind, options), callback, options.selected_all()
+        )
+    )
 
 
 def lookup_callback(hostname: String, callback: LookupCallback) raises:
     _enqueue(hostname, 0, DnsCallback(callback))
 
 
-def lookup_family_callback(hostname: String, family: Float64, callback: LookupCallback) raises:
+def lookup_family_callback(
+    hostname: String, family: Float64, callback: LookupCallback
+) raises:
     _enqueue(hostname, 0, DnsCallback(callback), family_options(family))
 
 
-def lookup_one_callback(hostname: String, options: LookupOptions, callback: LookupCallback) raises:
+def lookup_one_callback(
+    hostname: String, options: LookupOptions, callback: LookupCallback
+) raises:
     if options.selected_all():
-        raise Error("The selected DNS single-address callback requires all=false")
+        raise Error(
+            "The selected DNS single-address callback requires all=false"
+        )
     _enqueue(hostname, 0, DnsCallback(callback), options)
 
 
-def lookup_all_callback(hostname: String, options: LookupOptions, callback: LookupAllCallback) raises:
+def lookup_all_callback(
+    hostname: String, options: LookupOptions, callback: LookupAllCallback
+) raises:
     if not options.selected_all():
         raise Error("The selected DNS address-list callback requires all=true")
     _enqueue(hostname, 0, DnsCallback(callback), options)
 
 
-def lookup_any_callback(hostname: String, options: LookupOptions, callback: LookupAnyCallback) raises:
+def lookup_any_callback(
+    hostname: String, options: LookupOptions, callback: LookupAnyCallback
+) raises:
     _enqueue(hostname, 0, DnsCallback(callback), options)
 
 
@@ -121,7 +146,9 @@ def _publish(pending: PendingRequest) raises:
         var family = Optional[Float64]()
         if not pending.request.failed():
             if pending.all:
-                address = LookupCallbackResult(pending.request.lookup_addresses())
+                address = LookupCallbackResult(
+                    pending.request.lookup_addresses()
+                )
             else:
                 var result = pending.request.lookup_address()
                 address = LookupCallbackResult(result.address_value())

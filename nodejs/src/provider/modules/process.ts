@@ -11,7 +11,6 @@ import {
   functionCall,
   functionValue,
   indexRead,
-  instanceCall,
   methodMember as providerMethodMember,
   nativeIntCarrier,
   nativeString,

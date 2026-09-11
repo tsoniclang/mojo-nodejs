@@ -18,13 +18,17 @@ async def lookup_async(hostname: String) raises -> LookupAddress:
     return request.lookup_address()
 
 
-async def lookup_family_async(hostname: String, family: Float64) raises -> LookupAddress:
+async def lookup_family_async(
+    hostname: String, family: Float64
+) raises -> LookupAddress:
     var request = DnsRequest(hostname, 0, family_options(family))
     _wait(request)
     return request.lookup_address()
 
 
-async def lookup_one_async(hostname: String, options: LookupOptions) raises -> LookupAddress:
+async def lookup_one_async(
+    hostname: String, options: LookupOptions
+) raises -> LookupAddress:
     if options.selected_all():
         raise Error("The selected DNS single-address result requires all=false")
     var request = DnsRequest(hostname, 0, options)
@@ -32,7 +36,9 @@ async def lookup_one_async(hostname: String, options: LookupOptions) raises -> L
     return request.lookup_address()
 
 
-async def lookup_all_async(hostname: String, options: LookupOptions) raises -> List[LookupAddress]:
+async def lookup_all_async(
+    hostname: String, options: LookupOptions
+) raises -> List[LookupAddress]:
     if not options.selected_all():
         raise Error("The selected DNS address-list result requires all=true")
     var request = DnsRequest(hostname, 0, options)
@@ -40,7 +46,9 @@ async def lookup_all_async(hostname: String, options: LookupOptions) raises -> L
     return request.lookup_addresses()
 
 
-async def lookup_any_async(hostname: String, options: LookupOptions) raises -> LookupResult:
+async def lookup_any_async(
+    hostname: String, options: LookupOptions
+) raises -> LookupResult:
     var request = DnsRequest(hostname, 0, options)
     _wait(request)
     if options.selected_all():

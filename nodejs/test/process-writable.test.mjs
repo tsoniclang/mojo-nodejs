@@ -30,10 +30,8 @@ export function main(): void {
 });
 
 test("stream lifecycle source contracts reject fabricated error values", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  assert.throws(() => compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import process from "node:process";
 export function main(): void { process.stdout.destroy("not an Error"); }
-` } });
-  assert.ok(result.diagnostics.length > 0);
-  assert.equal(result.artifacts.length, 0);
+` } }), /TypeScript diagnostics:/u);
 });

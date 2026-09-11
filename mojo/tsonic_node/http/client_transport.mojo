@@ -59,12 +59,16 @@ struct NativeRequest(ImplicitlyCopyable):
             key = certificate_bytes(options.key).copy_bytes()
             if options.pfx:
                 pfx = options.pfx.value().copy_bytes()
-            password = options.passphrase.value() if options.passphrase else String()
+            password = (
+                options.passphrase.value() if options.passphrase else String()
+            )
             if password.find("\0") >= 0:
                 raise Error("TLS passphrase contains a null byte")
             minimum = tls_version(options.min_version)
             maximum = tls_version(options.max_version)
-            if (minimum if minimum != 0 else 3) > (maximum if maximum != 0 else 4):
+            if (minimum if minimum != 0 else 3) > (
+                maximum if maximum != 0 else 4
+            ):
                 raise Error("Minimum TLS version exceeds maximum TLS version")
         if (
             external_call["tsonic_node_http_tls", c_int](

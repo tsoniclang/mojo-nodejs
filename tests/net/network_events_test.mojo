@@ -79,14 +79,16 @@ def main() raises:
     options.backlog = 8
     _ = server.listen_options(options)
     var client = Socket()
-    var alias = client
+    var retained_client = client
     assert_true(client.pending())
     assert_false(client.connecting())
     assert_false(client.remote_address())
     assert_false(client.remote_port())
     var connected = Location(0)
     _ = client.once_empty("connect", notification(connected))
-    _ = alias.connect_options(ConnectionOptions(server.address().value().port, "127.0.0.1"))
+    _ = retained_client.connect_options(
+        ConnectionOptions(server.address().value().port, "127.0.0.1")
+    )
     assert_true(client.connecting())
     var deadline = monotonic_milliseconds() + 5000
     while (
@@ -95,12 +97,14 @@ def main() raises:
         _ = poll_net()
         sleep(0.001)
     assert_equal(connected.read(), 1)
-    assert_false(alias.connecting())
-    assert_equal(alias.remote_address().value(), "127.0.0.1")
-    assert_equal(alias.remote_port().value(), server.address().value().port)
+    assert_false(retained_client.connecting())
+    assert_equal(retained_client.remote_address().value(), "127.0.0.1")
+    assert_equal(
+        retained_client.remote_port().value(), server.address().value().port
+    )
     var duplicate_rejected = False
     try:
-        _ = alias.connect_port(server.address().value().port)
+        _ = retained_client.connect_port(server.address().value().port)
     except:
         duplicate_rejected = True
     assert_true(duplicate_rejected)
@@ -127,5 +131,5 @@ def main() raises:
     _ = server.close()
     _ = poll_net()
     assert_true(client.pending())
-    assert_false(alias.remote_address())
+    assert_false(retained_client.remote_address())
     assert_false(has_active_net())

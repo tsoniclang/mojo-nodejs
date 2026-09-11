@@ -82,7 +82,9 @@ def main() raises:
         _ = encoded.write_buffer(Buffer.from_string("C"))
         _ = encoded.end_string("D")
         run_event_loop()
-        assert_equal(read_file(root + "/encoded").to_string("hex"), "410042434400")
+        assert_equal(
+            read_file(root + "/encoded").to_string("hex"), "410042434400"
+        )
         encoded_options.encoding = "not-an-encoding"
         rejected = False
         try:

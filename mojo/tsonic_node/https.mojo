@@ -54,20 +54,36 @@ struct Server(ImplicitlyCopyable):
         return self
 
     def listen(
-        self, port: Float64, host: String, callback: Optional[EmptyCallback] = None
+        self,
+        port: Float64,
+        host: String,
+        callback: Optional[EmptyCallback] = None,
     ) raises -> Self:
         _ = self._server.listen(port, host, callback)
         return self
 
-    def listen_options(self, options: ListenOptions, callback: Optional[EmptyCallback] = None) raises -> Self:
+    def listen_options(
+        self, options: ListenOptions, callback: Optional[EmptyCallback] = None
+    ) raises -> Self:
         _ = self._server.listen_options(options, callback)
         return self
 
-    def listen_backlog(self, port: Float64, backlog: Float64, callback: Optional[EmptyCallback] = None) raises -> Self:
+    def listen_backlog(
+        self,
+        port: Float64,
+        backlog: Float64,
+        callback: Optional[EmptyCallback] = None,
+    ) raises -> Self:
         _ = self._server.listen_backlog(port, backlog, callback)
         return self
 
-    def listen_host_backlog(self, port: Float64, host: String, backlog: Float64, callback: Optional[EmptyCallback] = None) raises -> Self:
+    def listen_host_backlog(
+        self,
+        port: Float64,
+        host: String,
+        backlog: Float64,
+        callback: Optional[EmptyCallback] = None,
+    ) raises -> Self:
         _ = self._server.listen_host_backlog(port, host, backlog, callback)
         return self
 

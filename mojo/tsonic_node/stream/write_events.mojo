@@ -64,7 +64,11 @@ struct WriteEvents(ImplicitlyCopyable):
         var pending = Dict[String, CallbackReservation]()
         if not self.state[].error_scheduled:
             self._prepare("error", pending)
-        if not self.state[].finish_scheduled and not self.state[].error and not self.state[].cancelled:
+        if (
+            not self.state[].finish_scheduled
+            and not self.state[].error
+            and not self.state[].cancelled
+        ):
             self._prepare("complete", pending)
             self._prepare("finish", pending)
             if not self.state[].drain_scheduled:
@@ -129,7 +133,11 @@ struct WriteEvents(ImplicitlyCopyable):
         self.queue("error", reservation)
 
     def finish(self) raises:
-        if self.state[].finish_scheduled or self.state[].error or self.state[].cancelled:
+        if (
+            self.state[].finish_scheduled
+            or self.state[].error
+            or self.state[].cancelled
+        ):
             return
         var reservation = self.reserve("complete")
         self.state[].finish_scheduled = True
@@ -183,7 +191,11 @@ struct _WriteEvent:
         var events = invocation[].events
         var event = invocation[].event
         if event == "complete":
-            if events.state[].error or events.state[].closed or events.state[].cancelled:
+            if (
+                events.state[].error
+                or events.state[].closed
+                or events.state[].cancelled
+            ):
                 return
             events.state[].finished = True
             events.complete_end(None)
@@ -197,7 +209,11 @@ struct _WriteEvent:
             return
         if event == "drain":
             events.state[].drain_scheduled = False
-            if events.state[].error or events.state[].finish_scheduled or events.state[].cancelled:
+            if (
+                events.state[].error
+                or events.state[].finish_scheduled
+                or events.state[].cancelled
+            ):
                 return
         elif event == "finish":
             if events.state[].error or events.state[].cancelled:

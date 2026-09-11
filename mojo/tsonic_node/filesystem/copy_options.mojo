@@ -1,11 +1,13 @@
 from std.utils import Variant
-from tsonic_runtime import RaisingCallable
+from tsonic_runtime import RaisingCallable, ClosedRaisingCoroutine
 
 
 comptime CopyFilter = RaisingCallable[Tuple[String, String], Bool]
-comptime CopyFilterFuture = RaisingCoroutine[Bool, ...]
+comptime CopyFilterFuture = ClosedRaisingCoroutine[Bool]
 comptime CopyFilterResult = Variant[Bool, CopyFilterFuture]
-comptime AsyncCopyFilter = RaisingCallable[Tuple[String, String], CopyFilterResult]
+comptime AsyncCopyFilter = RaisingCallable[
+    Tuple[String, String], CopyFilterResult
+]
 
 
 struct CopyOptions(Copyable):

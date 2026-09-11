@@ -1,5 +1,9 @@
-from tsonic_js.uri import decode_uri_component_native, encode_uri_component_native
+from tsonic_js.uri import (
+    decode_uri_component_native,
+    encode_uri_component_native,
+)
 from .domain import domain_to_ascii
+
 
 @fieldwise_init
 struct LegacyUrl(Copyable):
@@ -31,20 +35,34 @@ struct LegacyUrl(Copyable):
         self.path = None
 
 
-
 def _slice(value: String, start: Int, end: Int) -> String:
     return String(value[byte=start:end])
 
 
 def slashed_protocol(value: String) -> Bool:
-    return value in ("http:", "https:", "ftp:", "gopher:", "file:", "ws:", "wss:")
+    return value in (
+        "http:",
+        "https:",
+        "ftp:",
+        "gopher:",
+        "file:",
+        "ws:",
+        "wss:",
+    )
 
 
 def _valid_scheme(value: String) -> Bool:
     if not value:
         return False
     for byte in value.as_bytes():
-        if not ((byte >= 65 and byte <= 90) or (byte >= 97 and byte <= 122) or (byte >= 48 and byte <= 57) or byte == 43 or byte == 45 or byte == 46):
+        if not (
+            (byte >= 65 and byte <= 90)
+            or (byte >= 97 and byte <= 122)
+            or (byte >= 48 and byte <= 57)
+            or byte == 43
+            or byte == 45
+            or byte == 46
+        ):
             return False
     return True
 
@@ -58,7 +76,9 @@ def _trim_url(var input: String) -> String:
                 input = _slice(input, marker.byte_length(), input.byte_length())
                 changed = True
             if input.endswith(marker):
-                input = _slice(input, 0, input.byte_length() - marker.byte_length())
+                input = _slice(
+                    input, 0, input.byte_length() - marker.byte_length()
+                )
                 changed = True
         var start = 0
         var end = input.byte_length()
@@ -78,9 +98,28 @@ def _escape_url(input: String) -> String:
     var start = 0
     for index in range(input.byte_length()):
         var byte = UInt8(input.as_bytes()[index])
-        if byte == 9 or byte == 10 or byte == 13 or byte == 32 or byte == 34 or byte == 39 or byte == 60 or byte == 62 or byte == 92 or byte == 94 or byte == 96 or byte == 123 or byte == 124 or byte == 125:
+        if (
+            byte == 9
+            or byte == 10
+            or byte == 13
+            or byte == 32
+            or byte == 34
+            or byte == 39
+            or byte == 60
+            or byte == 62
+            or byte == 92
+            or byte == 94
+            or byte == 96
+            or byte == 123
+            or byte == 124
+            or byte == 125
+        ):
             result += _slice(input, start, index)
-            result += "%" + String(digits[byte=Int(byte >> 4)]) + String(digits[byte=Int(byte & 15)])
+            result += (
+                "%"
+                + String(digits[byte=Int(byte >> 4)])
+                + String(digits[byte=Int(byte & 15)])
+            )
             start = index + 1
     result += _slice(input, start, input.byte_length())
     return result^
@@ -100,7 +139,21 @@ def _authority(mut result: LegacyUrl, var rest: String) raises -> String:
         start = at + 1
     for index in range(start, end):
         var byte = UInt8(rest.as_bytes()[index])
-        if byte == 32 or byte == 34 or byte == 37 or byte == 39 or byte == 59 or byte == 60 or byte == 62 or byte == 92 or byte == 94 or byte == 96 or byte == 123 or byte == 124 or byte == 125:
+        if (
+            byte == 32
+            or byte == 34
+            or byte == 37
+            or byte == 39
+            or byte == 59
+            or byte == 60
+            or byte == 62
+            or byte == 92
+            or byte == 94
+            or byte == 96
+            or byte == 123
+            or byte == 124
+            or byte == 125
+        ):
             end = index
             break
     var host = _slice(rest, start, end)
@@ -133,7 +186,9 @@ def _authority(mut result: LegacyUrl, var rest: String) raises -> String:
     return rest^
 
 
-def parse_legacy(input: String, slashes_denote_host: Bool = False) raises -> LegacyUrl:
+def parse_legacy(
+    input: String, slashes_denote_host: Bool = False
+) raises -> LegacyUrl:
     if input.find("\0") >= 0:
         raise Error("URL input contains a null character")
     var result = LegacyUrl()
@@ -143,7 +198,9 @@ def parse_legacy(input: String, slashes_denote_host: Bool = False) raises -> Leg
         var position = rest.find(delimiter)
         if position >= 0:
             split = min(split, position)
-    rest = _slice(rest, 0, split).replace("\\", "/") + _slice(rest, split, rest.byte_length())
+    rest = _slice(rest, 0, split).replace("\\", "/") + _slice(
+        rest, split, rest.byte_length()
+    )
     var colon = rest.find(":")
     var protocol = String()
     if colon > 0 and _valid_scheme(_slice(rest, 0, colon)):
@@ -152,11 +209,20 @@ def parse_legacy(input: String, slashes_denote_host: Bool = False) raises -> Leg
         rest = _slice(rest, colon + 1, rest.byte_length())
     var hostless = protocol == "javascript:"
     var double_slash = rest.startswith("//")
-    var auth_authority = double_slash and _slice(rest, 2, rest.byte_length()).find("@") >= 0
-    if double_slash and (slashes_denote_host or protocol or auth_authority) and not hostless:
+    var auth_authority = (
+        double_slash and _slice(rest, 2, rest.byte_length()).find("@") >= 0
+    )
+    if (
+        double_slash
+        and (slashes_denote_host or protocol or auth_authority)
+        and not hostless
+    ):
         result.slashes = True
         rest = _slice(rest, 2, rest.byte_length())
-    if not hostless and ((result.slashes and result.slashes.value()) or (protocol and not slashed_protocol(protocol))):
+    if not hostless and (
+        (result.slashes and result.slashes.value())
+        or (protocol and not slashed_protocol(protocol))
+    ):
         rest = _authority(result, rest)
     if not hostless:
         rest = _escape_url(rest)
@@ -171,10 +237,16 @@ def parse_legacy(input: String, slashes_denote_host: Bool = False) raises -> Leg
         rest = _slice(rest, 0, query_at)
     if rest:
         result.pathname = rest
-    elif slashed_protocol(protocol) and result.hostname and result.hostname.value():
+    elif (
+        slashed_protocol(protocol)
+        and result.hostname
+        and result.hostname.value()
+    ):
         result.pathname = "/"
     if result.pathname or result.search:
-        result.path = (result.pathname.value() if result.pathname else "") + (result.search.value() if result.search else "")
+        result.path = (result.pathname.value() if result.pathname else "") + (
+            result.search.value() if result.search else ""
+        )
     result.href = format_legacy(result)
     return result^
 
@@ -185,13 +257,18 @@ def format_legacy(value: LegacyUrl) raises -> String:
         protocol += ":"
     var auth = String()
     if value.auth and value.auth.value():
-        auth = encode_uri_component_native(value.auth.value()).replace("%3A", ":") + "@"
+        auth = (
+            encode_uri_component_native(value.auth.value()).replace("%3A", ":")
+            + "@"
+        )
     var host = String()
     if value.host and value.host.value():
         host = auth + value.host.value()
     elif value.hostname and value.hostname.value():
         var hostname = value.hostname.value()
-        if hostname.find(":") >= 0 and not (hostname.startswith("[") and hostname.endswith("]")):
+        if hostname.find(":") >= 0 and not (
+            hostname.startswith("[") and hostname.endswith("]")
+        ):
             hostname = "[" + hostname + "]"
         host = auth + hostname
         if value.port and value.port.value():
