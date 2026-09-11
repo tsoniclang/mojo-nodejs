@@ -27,7 +27,7 @@ struct Duplex(ImplicitlyCopyable):
         ) thin raises -> Bool,
         end: def(
             ErasedCallableContext, var Tuple[Optional[Buffer]]
-        ) thin raises -> None,
+        ) thin raises -> NoneType,
     ):
         self._identity = identity
         self._read = RaisingCallable[Tuple[], Optional[Buffer]](
@@ -63,7 +63,7 @@ struct Duplex(ImplicitlyCopyable):
 
 
 @fieldwise_init
-struct _DuplexAdapter[Stream: ImplicitlyCopyable]:
+struct _DuplexAdapter[Stream: ImplicitlyCopyable & Deinitable]:
     var stream: Self.Stream
     var reader: def(mut Self.Stream) thin raises -> Optional[Buffer]
     var write: def(mut Self.Stream, Buffer) thin raises -> Bool
@@ -96,7 +96,7 @@ struct _DuplexAdapter[Stream: ImplicitlyCopyable]:
 
 
 def create_duplex[
-    Stream: ImplicitlyCopyable
+    Stream: ImplicitlyCopyable & Deinitable
 ](
     stream: Stream,
     identity: UInt,

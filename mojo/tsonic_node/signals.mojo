@@ -3,7 +3,7 @@ from std.ffi import c_int, external_call
 
 def signal_number(name: String) raises -> Int:
     var selected = name.upper()
-    if selected.contains("\x00"):
+    if selected.find("\x00") >= 0:
         raise Error("Unknown signal: ", name)
     var number = external_call["tsonic_node_signal_number", c_int](
         selected.as_c_string_slice().ptr()
