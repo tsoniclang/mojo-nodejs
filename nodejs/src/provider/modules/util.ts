@@ -21,6 +21,7 @@ import {
   providerRef,
   stringType,
   textDecoderCarrier,
+  variadicFunctionCall,
 } from "../model.js";
 
 const moduleSpecifier = "node:util";
@@ -81,6 +82,7 @@ export function utilModule(): MojoProviderModuleDefinition {
       fnExport(moduleSpecifier, "getSystemErrorName", [{ name: "code", type: numberType }], stringType),
       fnExport(moduleSpecifier, "getSystemErrorMessage", [{ name: "code", type: numberType }], stringType),
       fnExport(moduleSpecifier, "inspect", [{ name: "value", type: Object.freeze({ kind: "any" }) }], stringType),
+      fnExport(moduleSpecifier, "convertProcessSignalToExitCode", [{ name: "signal", type: stringType }], numberType),
       fnExport(moduleSpecifier, "format", [Object.freeze({
         name: "values",
         type: Object.freeze({ kind: "array", elementType: Object.freeze({ kind: "any" }) }),
@@ -111,6 +113,8 @@ export function utilOperations(): readonly MojoProviderOperationDefinition[] {
     functionCall(`${moduleSpecifier}::getSystemErrorName`, `${moduleSpecifier}::getSystemErrorName(code)`, "system_errors", "get_system_error_name", [float64Carrier], nativeString, true),
     functionCall(`${moduleSpecifier}::getSystemErrorMessage`, `${moduleSpecifier}::getSystemErrorMessage(code)`, "system_errors", "get_system_error_message", [float64Carrier], nativeString, true),
     functionCall(`${moduleSpecifier}::inspect`, `${moduleSpecifier}::inspect(value)`, "util", "inspect", [jsValueCarrier], nativeString),
+    variadicFunctionCall(`${moduleSpecifier}::format`, `${moduleSpecifier}::format(values)`, "util_format", "format", jsValueCarrier, nativeString, true),
+    functionCall(`${moduleSpecifier}::convertProcessSignalToExitCode`, `${moduleSpecifier}::convertProcessSignalToExitCode(signal)`, "signals", "convert_process_signal_to_exit_code", [nativeString], float64Carrier, true),
   ]);
 }
 

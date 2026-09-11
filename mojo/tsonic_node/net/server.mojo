@@ -7,7 +7,7 @@ from ..internal.network_endpoint import (
     network_error,
 )
 from ..internal.typed_listeners import TypedListeners
-from .options import ServerOptions
+from .options import ListenOptions, ServerOptions
 from .socket import Socket
 
 
@@ -63,6 +63,29 @@ struct Server(ImplicitlyCopyable):
         mut self, port: Float64, host: String, callback: EmptyCallback
     ) raises -> Self:
         return self._listen(port, host, callback)
+
+    def listen_options(mut self, options: ListenOptions) raises -> Self:
+        return self._listen_options(options, None)
+
+    def listen_options_callback(mut self, options: ListenOptions, callback: EmptyCallback) raises -> Self:
+        return self._listen_options(options, callback)
+
+    def _listen_options(mut self, options: ListenOptions, callback: Optional[EmptyCallback]) raises -> Self:
+        if not options.port:
+            raise Error("TCP listen options require a port")
+        return self._listen(options.port.value(), options.host.value() if options.host else "", callback, options.backlog.value() if options.backlog else 511)
+
+    def listen_port_backlog(mut self, port: Float64, backlog: Float64) raises -> Self:
+        return self._listen(port, "", None, backlog)
+
+    def listen_port_host_backlog(mut self, port: Float64, host: String, backlog: Float64) raises -> Self:
+        return self._listen(port, host, None, backlog)
+
+    def listen_port_backlog_callback(mut self, port: Float64, backlog: Float64, callback: EmptyCallback) raises -> Self:
+        return self._listen(port, "", callback, backlog)
+
+    def listen_port_host_backlog_callback(mut self, port: Float64, host: String, backlog: Float64, callback: EmptyCallback) raises -> Self:
+        return self._listen(port, host, callback, backlog)
 
     def close(mut self) raises -> Self:
         if not self._state[].active and not self._state[].closing:
@@ -176,14 +199,14 @@ struct Server(ImplicitlyCopyable):
             )
 
     def _listen(
-        mut self, port: Float64, host: String, callback: Optional[EmptyCallback]
+        mut self, port: Float64, host: String, callback: Optional[EmptyCallback], backlog: Float64 = 511
     ) raises -> Self:
         if self._state[].active or self._state[].closing:
             raise Error("Network server is already active")
         _prune_servers()
         if len(_servers.get()[]) >= 1024:
             raise Error("Network servers exceed the finite runtime limit")
-        var endpoint = NetworkEndpoint(host, port, True)
+        var endpoint = NetworkEndpoint(host, port, True, backlog)
         if callback:
             self._state[].listeners.add(callback.value(), True)
         self._state[].endpoint = endpoint

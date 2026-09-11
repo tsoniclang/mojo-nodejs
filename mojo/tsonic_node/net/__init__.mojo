@@ -1,8 +1,9 @@
 from ..internal.network_endpoint import AddressInfo
-from .options import ConnectionOptions, ServerOptions
+from .options import ConnectionOptions, ListenOptions, ServerOptions
 from .server import ConnectionCallback, EmptyCallback, Server
 from .socket import Socket
 from .factories import (
+    socket_new,
     create_connection,
     create_connection_host,
     create_connection_callback,

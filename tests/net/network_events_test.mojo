@@ -11,8 +11,8 @@ from tsonic_runtime import (
 from tsonic_node.internal.network_endpoint import monotonic_milliseconds
 from tsonic_node.net import (
     ConnectionOptions,
+    ListenOptions,
     Socket,
-    create_connection_options,
     create_server,
     create_server_callback,
     poll_net,
@@ -73,12 +73,21 @@ def main() raises:
     var server = create_server_callback(
         RaisingCallable[Tuple[Socket], NoneType](environment, Receiver.invoke)
     )
-    _ = server.listen_port_host(0, "127.0.0.1")
-    var client = create_connection_options(
-        ConnectionOptions(server.address().value().port, "127.0.0.1")
-    )
+    var options = ListenOptions()
+    options.port = 0
+    options.host = "127.0.0.1"
+    options.backlog = 8
+    _ = server.listen_options(options)
+    var client = Socket()
+    var alias = client
+    assert_true(client.pending())
+    assert_false(client.connecting())
+    assert_false(client.remote_address())
+    assert_false(client.remote_port())
     var connected = Location(0)
     _ = client.once_empty("connect", notification(connected))
+    _ = alias.connect_options(ConnectionOptions(server.address().value().port, "127.0.0.1"))
+    assert_true(client.connecting())
     var deadline = monotonic_milliseconds() + 5000
     while (
         connected.read() == 0 or not peer.read()
@@ -86,6 +95,15 @@ def main() raises:
         _ = poll_net()
         sleep(0.001)
     assert_equal(connected.read(), 1)
+    assert_false(alias.connecting())
+    assert_equal(alias.remote_address().value(), "127.0.0.1")
+    assert_equal(alias.remote_port().value(), server.address().value().port)
+    var duplicate_rejected = False
+    try:
+        _ = alias.connect_port(server.address().value().port)
+    except:
+        duplicate_rejected = True
+    assert_true(duplicate_rejected)
     assert_true(Bool(peer.read()))
     var timeouts = Location(0)
     var timed_out = notification(timeouts)
@@ -109,4 +127,5 @@ def main() raises:
     _ = server.close()
     _ = poll_net()
     assert_true(client.pending())
+    assert_false(alias.remote_address())
     assert_false(has_active_net())

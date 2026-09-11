@@ -2,6 +2,7 @@
 #include <uv.h>
 #include <errno.h>
 #include <stdint.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,4 +37,71 @@ const char* tsonic_node_system_error(int code, int message) {
 #undef ERROR_TEXT
     default: return NULL;
   }
+}
+
+int tsonic_node_signal_number(const char* name) {
+  static const struct { const char* name; int number; } signals[] = {
+#define SIGNAL_ENTRY(name) {#name, name}
+    SIGNAL_ENTRY(SIGHUP), SIGNAL_ENTRY(SIGINT), SIGNAL_ENTRY(SIGQUIT),
+    SIGNAL_ENTRY(SIGILL), SIGNAL_ENTRY(SIGABRT), SIGNAL_ENTRY(SIGFPE),
+    SIGNAL_ENTRY(SIGKILL), SIGNAL_ENTRY(SIGSEGV), SIGNAL_ENTRY(SIGPIPE),
+    SIGNAL_ENTRY(SIGALRM), SIGNAL_ENTRY(SIGTERM),
+#ifdef SIGTRAP
+    SIGNAL_ENTRY(SIGTRAP),
+#endif
+#ifdef SIGIOT
+    SIGNAL_ENTRY(SIGIOT),
+#endif
+#ifdef SIGBUS
+    SIGNAL_ENTRY(SIGBUS),
+#endif
+#ifdef SIGUSR1
+    SIGNAL_ENTRY(SIGUSR1), SIGNAL_ENTRY(SIGUSR2),
+#endif
+#ifdef SIGCHLD
+    SIGNAL_ENTRY(SIGCHLD),
+#endif
+#ifdef SIGCONT
+    SIGNAL_ENTRY(SIGCONT), SIGNAL_ENTRY(SIGSTOP), SIGNAL_ENTRY(SIGTSTP),
+    SIGNAL_ENTRY(SIGTTIN), SIGNAL_ENTRY(SIGTTOU),
+#endif
+#ifdef SIGURG
+    SIGNAL_ENTRY(SIGURG),
+#endif
+#ifdef SIGXCPU
+    SIGNAL_ENTRY(SIGXCPU), SIGNAL_ENTRY(SIGXFSZ),
+#endif
+#ifdef SIGVTALRM
+    SIGNAL_ENTRY(SIGVTALRM), SIGNAL_ENTRY(SIGPROF),
+#endif
+#ifdef SIGWINCH
+    SIGNAL_ENTRY(SIGWINCH),
+#endif
+#ifdef SIGIO
+    SIGNAL_ENTRY(SIGIO),
+#endif
+#ifdef SIGPOLL
+    SIGNAL_ENTRY(SIGPOLL),
+#endif
+#ifdef SIGPWR
+    SIGNAL_ENTRY(SIGPWR),
+#endif
+#ifdef SIGSYS
+    SIGNAL_ENTRY(SIGSYS),
+#endif
+#ifdef SIGSTKFLT
+    SIGNAL_ENTRY(SIGSTKFLT),
+#endif
+#ifdef SIGINFO
+    SIGNAL_ENTRY(SIGINFO),
+#endif
+#ifdef SIGBREAK
+    SIGNAL_ENTRY(SIGBREAK),
+#endif
+#undef SIGNAL_ENTRY
+  };
+  for (size_t index = 0; index < sizeof(signals) / sizeof(signals[0]); ++index) {
+    if (strcmp(name, signals[index].name) == 0) return signals[index].number;
+  }
+  return -1;
 }

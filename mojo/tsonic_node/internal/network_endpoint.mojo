@@ -30,8 +30,12 @@ struct _EndpointOwner(Movable):
 struct NetworkEndpoint(ImplicitlyCopyable):
     var _owner: ArcPointer[_EndpointOwner]
 
-    def __init__(out self, host: String, port: Float64, listener: Bool) raises:
+    def __init__(out self):
+        self._owner = ArcPointer(_EndpointOwner(None))
+
+    def __init__(out self, host: String, port: Float64, listener: Bool, backlog: Float64 = 511) raises:
         var native_port = Int32(checked_integer(port, 65535, "port"))
+        var native_backlog = Int32(checked_integer(backlog, 2147483647, "backlog"))
         if host.find("\0") >= 0:
             raise Error("Network host contains a null byte")
         var native_host = host
@@ -42,6 +46,7 @@ struct NetworkEndpoint(ImplicitlyCopyable):
             native_host.as_c_string_slice().ptr().as_unsafe_any_origin(),
             native_port,
             c_int(listener),
+            native_backlog,
         )
         if not handle:
             raise Error("Unable to allocate network endpoint")
@@ -53,16 +58,22 @@ struct NetworkEndpoint(ImplicitlyCopyable):
         self._owner = ArcPointer(_EndpointOwner(handle))
 
     def close(self):
+        if not self._owner[].handle:
+            return
         external_call["tsonic_node_net_endpoint_close", NoneType](
             self._owner[].handle.value()
         )
 
     def progress(self) -> Int32:
+        if not self._owner[].handle:
+            return 0
         return external_call["tsonic_node_net_endpoint_progress", c_int](
             self._owner[].handle.value()
         )
 
     def descriptor(self) -> Int32:
+        if not self._owner[].handle:
+            return -1
         return external_call["tsonic_node_net_endpoint_descriptor", c_int](
             self._owner[].handle.value()
         )

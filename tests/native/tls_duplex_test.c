@@ -52,7 +52,7 @@ static Pair connect_pair(const char *certificate, const char *key) {
     Pair pair = {0};
     pair.context = tsonic_node_tls_server_create(key, certificate, "", NULL, 0u, 0, 1, &error);
     assert(pair.context != NULL && error == NULL);
-    TsonicNetEndpoint *listener = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1);
+    TsonicNetEndpoint *listener = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1, 511);
     assert(listener != NULL && tsonic_node_net_endpoint_progress(listener) == 1);
     char address[46];
     int port = 0;

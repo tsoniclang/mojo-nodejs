@@ -21,9 +21,14 @@ const records = [
     { name: "noDelay", target: "no_delay", source: booleanType, carrier: boolCarrier, optional: true },
     { name: "timeout", target: "timeout", source: numberType, carrier: float64Carrier, optional: true },
   ] },
+  { name: "ListenOptions", immutable: false, fields: [
+    { name: "port", target: "port", source: numberType, carrier: float64Carrier, optional: true },
+    { name: "host", target: "host", source: stringType, carrier: nativeString, optional: true },
+    { name: "backlog", target: "backlog", source: numberType, carrier: float64Carrier, optional: true },
+  ] },
 ] as const;
 
-const targetNames = { AddressInfo: "AddressInfo", ServerOpts: "ServerOptions", NetConnectOpts: "ConnectionOptions" } as const;
+const targetNames = { AddressInfo: "AddressInfo", ServerOpts: "ServerOptions", NetConnectOpts: "ConnectionOptions", ListenOptions: "ListenOptions" } as const;
 const carriers = Object.freeze(Object.fromEntries(records.map(({ name }) => [name,
   mojoNamedTargetType(`tsonic.mojo.node.net.${targetNames[name]}`, ["tsonic_node", "net"], targetNames[name]),
 ])));
@@ -31,9 +36,11 @@ const carriers = Object.freeze(Object.fromEntries(records.map(({ name }) => [nam
 export const addressCarrier = carriers.AddressInfo!;
 export const connectionOptionsCarrier = carriers.NetConnectOpts!;
 export const serverOptionsCarrier = carriers.ServerOpts!;
+export const listenOptionsCarrier = carriers.ListenOptions!;
 export const addressType = providerRef("node:net", "AddressInfo");
 export const connectionOptionsType = providerRef("node:net", "NetConnectOpts");
 export const serverOptionsType = providerRef("node:net", "ServerOpts");
+export const listenOptionsType = providerRef("node:net", "ListenOptions");
 
 export const networkRecordExports = Object.freeze(records.map((record) => Object.freeze({
   id: `node:net::${record.name}`, name: record.name, kind: "interface" as const,

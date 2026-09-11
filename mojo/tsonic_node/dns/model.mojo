@@ -1,4 +1,5 @@
 from std.collections import List
+from std.utils import Variant
 from tsonic_js import JsValue
 from tsonic_runtime import RaisingCallable
 
@@ -21,3 +22,13 @@ struct LookupAddress(Copyable):
 
     def family_value(self) -> Float64:
         return Float64(self.family)
+
+
+comptime LookupResult = Variant[LookupAddress, List[LookupAddress]]
+comptime LookupCallbackResult = Variant[String, List[LookupAddress]]
+comptime LookupAllCallback = RaisingCallable[
+    Tuple[JsValue, Optional[List[LookupAddress]]], NoneType
+]
+comptime LookupAnyCallback = RaisingCallable[
+    Tuple[JsValue, Optional[LookupCallbackResult], Optional[Float64]], NoneType
+]

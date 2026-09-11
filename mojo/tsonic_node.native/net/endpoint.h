@@ -6,7 +6,7 @@
 
 typedef struct TsonicNetEndpoint TsonicNetEndpoint;
 
-TsonicNetEndpoint *tsonic_node_net_endpoint_new(const char *host, int port, int listener);
+TsonicNetEndpoint *tsonic_node_net_endpoint_new(const char *host, int port, int listener, int backlog);
 TsonicNetEndpoint *tsonic_node_net_endpoint_adopt(int descriptor, int *status);
 TsonicNetEndpoint *tsonic_node_net_endpoint_accept(TsonicNetEndpoint *listener, int *status);
 void tsonic_node_net_endpoint_close(TsonicNetEndpoint *endpoint);

@@ -80,9 +80,9 @@ export const pathPartsCarrier = mojoNamedTargetType(
 );
 
 export const processWriteStreamCarrier = mojoNamedTargetType(
-  "tsonic.mojo.node.ProcessWriteStream",
-  ["tsonic_node", "process"],
-  "ProcessWriteStream",
+  "tsonic.mojo.node.stream.Writable",
+  ["tsonic_node", "stream"],
+  "Writable",
 );
 
 export const processEnvCarrier = mojoNamedTargetType(

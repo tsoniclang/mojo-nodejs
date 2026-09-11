@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { createMojoNodejsCapability } from "../../dist/index.js";
+
+test("process outputs use the canonical writable source and native contract", () => {
+  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+import process from "node:process";
+import type { Writable } from "node:stream";
+function write(output: Writable): void { output.write("hello", "utf8", (error) => { error; }); }
+export function main(): void {
+  const output = process.stdout;
+  const same = process.stdout;
+  output.cork();
+  write(same);
+  output.uncork();
+  output.once("finish", () => {});
+  output.writableEnded; output.writableCorked; output.fd; output.isTTY;
+}
+` } });
+  assert.deepEqual(result.diagnostics, []);
+  const emitted = artifactTexts(result).map(({ text }) => text).join("\n");
+  assert.match(emitted, /Writable/u);
+  assert.doesNotMatch(emitted, /ProcessWriteStream/u);
+});

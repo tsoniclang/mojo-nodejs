@@ -87,6 +87,7 @@ for test_file in tests/native/*.c; do
     "${NATIVE_BUILD}/tls_server.o" "${NATIVE_BUILD}/tls_io.o" "${NATIVE_BUILD}/tls_lifecycle.o" \
     "${NATIVE_BUILD}/worker_channel.o" "${NATIVE_BUILD}/worker_spawn.o" \
     "${NATIVE_BUILD}/stream_read.o" \
+    "${NATIVE_BUILD}/os_bridge.o" \
     "${NATIVE_BUILD}/dns_request.o" "${NATIVE_BUILD}/dns_lookup.o" "${NATIVE_BUILD}/dns_resolver.o" "${NATIVE_BUILD}/dns_records.o" \
     -L"$("${PIXI_BIN}" run printenv CONDA_PREFIX)/lib" -lssl -lcrypto -luv -lcares -lpthread \
     -o "${NATIVE_BUILD}/${test_name}" && timeout "$RUN_TIMEOUT" "${NATIVE_BUILD}/${test_name}"; then

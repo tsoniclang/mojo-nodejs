@@ -29,6 +29,7 @@ import {
   stringType,
 } from "../../model.js";
 import { networkEventMembers, networkEventOperations } from "./events.js";
+import { additionalListenSignatures, networkLifecycleOperations, socketConstructor, socketConnectMember } from "./lifecycle.js";
 import {
   addressCarrier, addressType, connectionOptionsCarrier, connectionOptionsType,
   networkRecordExports, networkRecordTypes, networkRecordOperations,
@@ -58,6 +59,8 @@ export function netModule(): MojoProviderModuleDefinition {
         name: "Socket",
         kind: "class",
         members: Object.freeze([
+          socketConstructor,
+          socketConnectMember,
           ...networkEventMembers("Socket"),
           methodMember(socketId, "address", [], nullableAddressType),
           methodMember(socketId, "isPaused", [], booleanType),
@@ -85,6 +88,9 @@ export function netModule(): MojoProviderModuleDefinition {
           propertyMember(socketId, "bytesWritten", numberType),
           propertyMember(socketId, "destroyed", booleanType),
           propertyMember(socketId, "pending", booleanType),
+          propertyMember(socketId, "connecting", booleanType),
+          propertyMember(socketId, "remoteAddress", stringType, { optional: true }),
+          propertyMember(socketId, "remotePort", numberType, { optional: true }),
         ]),
       }),
       Object.freeze({
@@ -95,6 +101,7 @@ export function netModule(): MojoProviderModuleDefinition {
           ...networkEventMembers("Server"),
           methodMember(serverId, "address", [], nullableAddressType),
           overloadedMethodMember(serverId, "listen", [
+            ...additionalListenSignatures,
             { parameters: [{ name: "port", type: numberType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port" },
             { parameters: [{ name: "port", type: numberType }, { name: "host", type: stringType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port,host" },
             { parameters: [{ name: "port", type: numberType }, { name: "callback", type: emptyCallback(`${serverId}.listen(port,callback)`) }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port,callback" },
@@ -145,6 +152,7 @@ export function netTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function netOperations(): readonly MojoProviderOperationDefinition[] {
   const rows: MojoProviderOperationDefinition[] = [
+    ...networkLifecycleOperations,
     ...networkRecordOperations,
     ...networkEventOperations("Socket", netSocketCarrier),
     ...networkEventOperations("Server", netServerCarrier),
@@ -166,7 +174,7 @@ export function netOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(socketId, `${socketId}.end`, `${socketId}.end()`, "end", netSocketCarrier, [], netSocketCarrier, true, "mut"),
     instanceCall(socketId, `${socketId}.end`, `${socketId}.end(buffer)`, "end_buffer", netSocketCarrier, [bufferCarrier], netSocketCarrier, true, "mut"),
     instanceCall(socketId, `${socketId}.end`, `${socketId}.end(string)`, "end_string", netSocketCarrier, [nativeString], netSocketCarrier, true, "mut"),
-    instanceCall(socketId, `${socketId}.destroy`, `${socketId}.destroy()`, "destroy", netSocketCarrier, [], netSocketCarrier, false, "mut"),
+    instanceCall(socketId, `${socketId}.destroy`, `${socketId}.destroy()`, "destroy", netSocketCarrier, [], netSocketCarrier, true, "mut"),
     ...(["ref", "unref", "pause", "resume"] as const).map((name) =>
       instanceCall(socketId, `${socketId}.${name}`, `${socketId}.${name}()`, name, netSocketCarrier, [], netSocketCarrier, false, "mut")),
     instanceCall(socketId, `${socketId}.setNoDelay`, `${socketId}.setNoDelay(value)`, "set_no_delay", netSocketCarrier, [boolCarrier], netSocketCarrier, true, "mut"),
@@ -176,6 +184,9 @@ export function netOperations(): readonly MojoProviderOperationDefinition[] {
     propertyRead(socketId, `${socketId}.bytesWritten`, "bytes_written", netSocketCarrier, float64Carrier, "method"),
     propertyRead(socketId, `${socketId}.destroyed`, "destroyed", netSocketCarrier, boolCarrier, "method"),
     propertyRead(socketId, `${socketId}.pending`, "pending", netSocketCarrier, boolCarrier, "method"),
+    propertyRead(socketId, `${socketId}.connecting`, "connecting", netSocketCarrier, boolCarrier, "method"),
+    { ...propertyRead(socketId, `${socketId}.remoteAddress`, "remote_address", netSocketCarrier, mojoOptionalTargetType(nativeString), "method"), raises: true },
+    { ...propertyRead(socketId, `${socketId}.remotePort`, "remote_port", netSocketCarrier, mojoOptionalTargetType(float64Carrier), "method"), raises: true },
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", netServerCarrier, [], netServerCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", netServerCarrier, [], netServerCarrier, false, "mut"),
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", netServerCarrier, [], netServerCarrier, false, "mut"),

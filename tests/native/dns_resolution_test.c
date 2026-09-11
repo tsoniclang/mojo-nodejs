@@ -175,15 +175,30 @@ int main(void) {
     tsonic_node_dns_request_free(records);
     close(descriptor);
 
-    records = tsonic_node_dns_lookup_start("127.0.0.1");
+    records = tsonic_node_dns_lookup_start("127.0.0.1", 0, 0, 0, 0);
     wait_ready(records);
-    assert(tsonic_node_dns_request_family(records) == 4);
+    assert(tsonic_node_dns_request_family(records, 0) == 4);
     assert(strcmp(tsonic_node_dns_request_value(records, 0), "127.0.0.1") == 0);
     tsonic_node_dns_request_free(records);
-    records = tsonic_node_dns_lookup_start("localhost");
+    records = tsonic_node_dns_lookup_start("localhost", 0, 0, 0, 0);
     wait_ready(records);
     assert(!tsonic_node_dns_request_failed(records));
-    assert(tsonic_node_dns_request_family(records) == 4 || tsonic_node_dns_request_family(records) == 6);
+    assert(tsonic_node_dns_request_family(records, 0) == 4 || tsonic_node_dns_request_family(records, 0) == 6);
+    tsonic_node_dns_request_free(records);
+    records = tsonic_node_dns_lookup_start("localhost", 0, 0, 1, 4);
+    wait_ready(records);
+    assert(!tsonic_node_dns_request_failed(records));
+    int saw_ipv6 = 0;
+    for (size_t index = 0; index < tsonic_node_dns_request_count(records); ++index) {
+        int family = tsonic_node_dns_request_family(records, index);
+        assert(family == 4 || family == 6);
+        if (family == 6) saw_ipv6 = 1;
+        if (family == 4) assert(!saw_ipv6);
+    }
+    tsonic_node_dns_request_free(records);
+    records = tsonic_node_dns_lookup_start("localhost", 3, 0, 1, 0);
+    assert(tsonic_node_dns_request_failed(records));
+    assert(strcmp(tsonic_node_dns_request_code(records), "EINVAL") == 0);
     tsonic_node_dns_request_free(records);
     return 0;
 }

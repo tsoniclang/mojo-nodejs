@@ -20,6 +20,17 @@ struct ServerOptions(Copyable):
         self.pause_on_connect = pause_on_connect
 
 
+struct ListenOptions(Copyable):
+    var port: Optional[Float64]
+    var host: Optional[String]
+    var backlog: Optional[Float64]
+
+    def __init__(out self):
+        self.port = None
+        self.host = None
+        self.backlog = None
+
+
 struct ConnectionOptions(Copyable):
     var port: Float64
     var host: Optional[String]
@@ -29,7 +40,7 @@ struct ConnectionOptions(Copyable):
 
     def __init__(
         out self,
-        port: Float64,
+        port: Float64 = 0,
         host: Optional[String] = None,
         allow_half_open: Optional[Bool] = None,
         no_delay: Optional[Bool] = None,

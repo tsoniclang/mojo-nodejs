@@ -18,6 +18,10 @@ from tsonic_node.dns import (
     has_pending_dns,
 )
 from tsonic_node.dns.native import DnsRequest, poll_native_lookup
+from tsonic_node.dns.options import LookupOptions
+from tsonic_node.dns.model import LookupAddress, LookupAllCallback
+from tsonic_node.dns.callbacks import lookup_all_callback
+from std.utils import Variant
 
 
 @fieldwise_init
@@ -69,7 +73,46 @@ struct FailureCompletion:
         destroy_callable_environment[FailureCompletion](context)
 
 
+@fieldwise_init
+struct AllCompletion:
+    var count: Location[Int]
+
+    @staticmethod
+    def invoke(context: ErasedCallableContext, var arguments: Tuple[JsValue, Optional[List[LookupAddress]]]) raises:
+        assert_true(arguments[0].is_null())
+        var addresses = arguments[1].value()
+        assert_equal(len(addresses), 1)
+        assert_equal(addresses[0].address, "127.0.0.1")
+        assert_equal(addresses[0].family, 4)
+        var count = context.unsafe_bitcast[AllCompletion]()[].count
+        count.write(count.read() + 1)
+
+    @staticmethod
+    def destroy(context: ErasedCallableContext):
+        destroy_callable_environment[AllCompletion](context)
+
+
 def main() raises:
+    var options = LookupOptions()
+    options.family = Variant[Float64, String](String("IPv4"))
+    options.all = True
+    options.verbatim = False
+    options.order = "ipv6first"
+    assert_equal(options.selected_order(), 6)
+    var all_count = Location(0)
+    var all_environment = allocate_callable_environment(AllCompletion(all_count), AllCompletion.destroy)
+    lookup_all_callback("127.0.0.1", options, LookupAllCallback(all_environment, AllCompletion.invoke))
+    options.all = False
+    options.family = Variant[Float64, String](String("not-a-family"))
+    assert_equal(all_count.read(), 0)
+    _ = poll_dns()
+    assert_equal(all_count.read(), 1)
+    var invalid = False
+    try:
+        _ = DnsRequest("localhost", 0, options)
+    except:
+        invalid = True
+    assert_true(invalid)
     var input = String("127.0.0.1")
     var request = DnsRequest(input, 0)
     assert_equal(input, "127.0.0.1")

@@ -6,7 +6,6 @@ import type {
 import {
   dnsAddressArrayCallbackCarrier,
   dnsLookupAddressCarrier,
-  dnsLookupCallbackCarrier,
   float64Carrier,
   functionCall,
   nativeString,
@@ -14,7 +13,6 @@ import {
   propertyMember,
   propertyRead,
   providerCallbackType,
-  providerRef,
   sourcePromise,
   stringArrayType,
   stringListCarrier,
@@ -23,25 +21,18 @@ import {
   undefinedType,
   voidType,
 } from "../model.js";
+import {
+  lookupCallOperations, lookupConstantExports, lookupConstantOperations, lookupExport,
+  lookupOptionOperations, lookupOptionTypes, lookupRecordExports,
+} from "./dns/lookup-contract.js";
 
 const moduleSpecifier = "node:dns";
 const promisesSpecifier = "node:dns/promises";
 const lookupAddressId = `${moduleSpecifier}::LookupAddress`;
 const anyType = Object.freeze({ kind: "any" as const });
-const optionalString = Object.freeze({ kind: "union" as const, types: Object.freeze([stringType, undefinedType]) });
-const optionalFamily = Object.freeze({ kind: "union" as const, types: Object.freeze([Object.freeze({ kind: "number" as const }), undefinedType]) });
 const optionalAddresses = Object.freeze({ kind: "union" as const, types: Object.freeze([stringArrayType, undefinedType]) });
 
 export function dnsModule(): MojoProviderModuleDefinition {
-  const lookupCallback = providerCallbackType(
-    `${moduleSpecifier}::lookup(hostname,callback)`,
-    "callback",
-    [
-      { name: "error", type: anyType },
-      { name: "address", type: optionalString },
-      { name: "family", type: optionalFamily },
-    ],
-  );
   const addressesCallback = (signatureId: string) => providerCallbackType(
     signatureId,
     "callback",
@@ -54,6 +45,8 @@ export function dnsModule(): MojoProviderModuleDefinition {
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.dns",
     exports: Object.freeze([
+      ...lookupRecordExports,
+      ...lookupConstantExports,
       Object.freeze({
         id: lookupAddressId,
         name: "LookupAddress",
@@ -63,20 +56,7 @@ export function dnsModule(): MojoProviderModuleDefinition {
           propertyMember(lookupAddressId, "family", Object.freeze({ kind: "number" })),
         ]),
       }),
-      Object.freeze({
-        id: `${moduleSpecifier}::lookup`,
-        name: "lookup",
-        kind: "function",
-        signatures: Object.freeze([Object.freeze({
-          id: `${moduleSpecifier}::lookup(hostname,callback)`,
-          name: "lookup",
-          parameters: Object.freeze([
-            { name: "hostname", type: stringType },
-            { name: "callback", type: lookupCallback },
-          ]),
-          returnType: voidType,
-        })]),
-      }),
+      lookupExport(false),
       ...(["resolve4", "resolve6", "reverse"] as const).map((name) => {
         const signatureId = `${moduleSpecifier}::${name}(${name === "reverse" ? "address" : "hostname"},callback)`;
         return Object.freeze({
@@ -104,20 +84,10 @@ export function dnsPromisesModule(): MojoProviderModuleDefinition {
     providerModuleId: "tsonic.mojo.node.dns-promises",
     imports: Object.freeze([Object.freeze({
       moduleSpecifier,
-      namedImports: Object.freeze([{ exportedName: "LookupAddress" }]),
+      namedImports: Object.freeze(["LookupAddress", "LookupOptions", "LookupAllOptions", "LookupOneOptions"].map((exportedName) => ({ exportedName }))),
     })]),
     exports: Object.freeze([
-      Object.freeze({
-        id: `${promisesSpecifier}::lookup`,
-        name: "lookup",
-        kind: "function",
-        signatures: Object.freeze([Object.freeze({
-          id: `${promisesSpecifier}::lookup(hostname)`,
-          name: "lookup",
-          parameters: Object.freeze([{ name: "hostname", type: stringType }]),
-          returnType: sourcePromise(providerRef(moduleSpecifier, "LookupAddress")),
-        })]),
-      }),
+      lookupExport(true),
       ...(["resolve4", "resolve6", "reverse"] as const).map((name) => Object.freeze({
         id: `${promisesSpecifier}::${name}`,
         name,
@@ -138,6 +108,7 @@ export function dnsPromisesModule(): MojoProviderModuleDefinition {
 export function dnsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     nodeProviderType(lookupAddressId, dnsLookupAddressCarrier, "copyable"),
+    ...lookupOptionTypes,
   ]);
 }
 
@@ -149,13 +120,14 @@ export function dnsOperations(): readonly MojoProviderOperationDefinition[] {
     raises: true,
   });
   return Object.freeze([
-    functionCall(`${moduleSpecifier}::lookup`, `${moduleSpecifier}::lookup(hostname,callback)`, "dns", "lookup_callback", [nativeString, dnsLookupCallbackCarrier], unitCarrier, true),
+    ...lookupCallOperations,
+    ...lookupOptionOperations,
+    ...lookupConstantOperations,
     functionCall(`${moduleSpecifier}::resolve4`, `${moduleSpecifier}::resolve4(hostname,callback)`, "dns", "resolve4_callback", [nativeString, dnsAddressArrayCallbackCarrier], unitCarrier, true),
     functionCall(`${moduleSpecifier}::resolve6`, `${moduleSpecifier}::resolve6(hostname,callback)`, "dns", "resolve6_callback", [nativeString, dnsAddressArrayCallbackCarrier], unitCarrier, true),
     functionCall(`${moduleSpecifier}::reverse`, `${moduleSpecifier}::reverse(address,callback)`, "dns", "reverse_callback", [nativeString, dnsAddressArrayCallbackCarrier], unitCarrier, true),
     propertyRead(lookupAddressId, `${lookupAddressId}.address`, "address_value", dnsLookupAddressCarrier, nativeString, "method"),
     propertyRead(lookupAddressId, `${lookupAddressId}.family`, "family_value", dnsLookupAddressCarrier, float64Carrier, "method"),
-    functionCall(`${promisesSpecifier}::lookup`, `${promisesSpecifier}::lookup(hostname)`, "dns", "lookup_async", [nativeString], Object.freeze({ kind: "future", domain: "native", output: dnsLookupAddressCarrier, raises: true }), true),
     functionCall(`${promisesSpecifier}::resolve4`, `${promisesSpecifier}::resolve4(hostname)`, "dns", "resolve4_async", [nativeString], stringListFuture, true),
     functionCall(`${promisesSpecifier}::resolve6`, `${promisesSpecifier}::resolve6(hostname)`, "dns", "resolve6_async", [nativeString], stringListFuture, true),
     functionCall(`${promisesSpecifier}::reverse`, `${promisesSpecifier}::reverse(address)`, "dns", "reverse_async", [nativeString], stringListFuture, true),

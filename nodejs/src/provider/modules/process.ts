@@ -6,7 +6,6 @@ import type {
 import {
   booleanType,
   boolCarrier,
-  bufferCarrier,
   float64Carrier,
   fnExport,
   functionCall,
@@ -41,6 +40,9 @@ import {
   valueExport,
   voidType,
 } from "../model.js";
+import { processSignalSignatures } from "./process-signals.js";
+import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
+import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
 
 const moduleSpecifier = "node:process";
 const defaultId = "node:process.default";
@@ -64,10 +66,11 @@ export function processModule(): MojoProviderModuleDefinition {
       namedImports: Object.freeze([{ exportedName: "Buffer" }]),
     }), Object.freeze({
       moduleSpecifier: "node:stream",
-      namedImports: Object.freeze([{ exportedName: "Readable" }]),
+      namedImports: Object.freeze([{ exportedName: "Readable" }, { exportedName: "Writable" }]),
     })]),
     exports: Object.freeze([
       fnExport(moduleSpecifier, "cwd", [], stringType),
+      overloadedFunctionExport(moduleSpecifier, "kill", processSignalSignatures),
       fnExport(moduleSpecifier, "availableMemory", [], numberType),
       fnExport(moduleSpecifier, "constrainedMemory", [], numberType),
       fnExport(moduleSpecifier, "chdir", [{ name: "directory", type: stringType }], voidType),
@@ -111,18 +114,12 @@ export function processModule(): MojoProviderModuleDefinition {
         propertyMember(memoryUsageId, "arrayBuffers", numberType),
       ]),
       classExport(writeStreamId, "ProcessWriteStream", [
-        overloadedMethodMember(writeStreamId, "write", [
-          {
-            parameters: [{ name: "chunk", type: stringType }],
-            returnType: booleanType,
-            signatureSuffix: "string",
-          },
-          {
-            parameters: [{ name: "chunk", type: providerRef("node:buffer", "Buffer") }],
-            returnType: booleanType,
-            signatureSuffix: "buffer",
-          },
-        ]),
+        ...writableCallMembers(writeStreamId, providerRef(moduleSpecifier, "ProcessWriteStream")),
+        ...writableEventMembers(moduleSpecifier, "ProcessWriteStream"),
+        ...["cork", "uncork"].map((name) => providerMethodMember(writeStreamId, name, [], voidType)),
+        propertyMember(writeStreamId, "writableCorked", numberType),
+        propertyMember(writeStreamId, "writable", booleanType),
+        propertyMember(writeStreamId, "writableEnded", booleanType),
         propertyMember(writeStreamId, "isTTY", booleanType),
         propertyMember(writeStreamId, "fd", numberType),
       ]),
@@ -148,12 +145,17 @@ export function processTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     nodeProviderType(envId, processEnvCarrier, "copyable"),
     nodeProviderType(memoryUsageId, processMemoryUsageCarrier, "copyable"),
-    nodeProviderType(writeStreamId, processWriteStreamCarrier, "copyable"),
+    nodeProviderType(writeStreamId, processWriteStreamCarrier, "implicitly-copyable"),
   ]);
 }
 
 export function processOperations(): readonly MojoProviderOperationDefinition[] {
   const operations: MojoProviderOperationDefinition[] = [
+    ...processSignalSignatures.map((signature) => functionCall(
+      `${moduleSpecifier}::kill`, `${moduleSpecifier}::kill(${signature.signatureSuffix})`,
+      "signals", signature.targetName,
+      signature.parameters.map((parameter) => parameter.type.kind === "string" ? nativeString : float64Carrier), boolCarrier, true,
+    )),
     functionCall(`${moduleSpecifier}::cwd`, `${moduleSpecifier}::cwd()`, "process", "current_directory", [], nativeString, true),
     functionCall(`${moduleSpecifier}::chdir`, `${moduleSpecifier}::chdir(directory)`, "process", "change_directory", [nativeString], unitCarrier, true),
     functionCall(`${moduleSpecifier}::exit`, `${moduleSpecifier}::exit()`, "process", "exit_default", [], unitCarrier),
@@ -187,10 +189,15 @@ export function processOperations(): readonly MojoProviderOperationDefinition[] 
       optionalStringCarrier,
     ),
     ...memoryUsageProperties(),
-    instanceCall(writeStreamId, `${writeStreamId}.write`, `${writeStreamId}.write(string)`, "write_string", processWriteStreamCarrier, [nativeString], boolCarrier, true, "mut"),
-    instanceCall(writeStreamId, `${writeStreamId}.write`, `${writeStreamId}.write(buffer)`, "write_buffer", processWriteStreamCarrier, [bufferCarrier], boolCarrier, true, "mut"),
+    ...writableCallOperations(writeStreamId, processWriteStreamCarrier),
+    ...writableEventOperations(moduleSpecifier, "ProcessWriteStream", processWriteStreamCarrier),
+    instanceCall(writeStreamId, `${writeStreamId}.cork`, `${writeStreamId}.cork()`, "cork", processWriteStreamCarrier, [], unitCarrier, false, "mut"),
+    instanceCall(writeStreamId, `${writeStreamId}.uncork`, `${writeStreamId}.uncork()`, "uncork", processWriteStreamCarrier, [], unitCarrier, true, "mut"),
+    propertyRead(writeStreamId, `${writeStreamId}.writableCorked`, "writable_corked", processWriteStreamCarrier, float64Carrier, "method"),
+    propertyRead(writeStreamId, `${writeStreamId}.writable`, "writable", processWriteStreamCarrier, boolCarrier, "method"),
+    propertyRead(writeStreamId, `${writeStreamId}.writableEnded`, "writable_ended", processWriteStreamCarrier, boolCarrier, "method"),
     propertyRead(writeStreamId, `${writeStreamId}.isTTY`, "is_tty", processWriteStreamCarrier, boolCarrier, "method"),
-    propertyRead(writeStreamId, `${writeStreamId}.fd`, "fd", processWriteStreamCarrier, nativeIntCarrier),
+    propertyRead(writeStreamId, `${writeStreamId}.fd`, "fd", processWriteStreamCarrier, nativeIntCarrier, "method"),
     ...defaultProcessOperations(),
   ];
   return Object.freeze(operations);
@@ -204,6 +211,7 @@ function defaultProcessExport(): MojoProviderModuleDefinition["exports"][number]
     kind: "class",
     members: Object.freeze([
       providerMethodMember(defaultId, "cwd", [], stringType, { static: true }),
+      overloadedMethodMember(defaultId, "kill", processSignalSignatures, { static: true }),
       providerMethodMember(defaultId, "chdir", [{ name: "directory", type: stringType }], voidType, { static: true }),
       overloadedMethodMember(defaultId, "hrtime", [
         { parameters: [], returnType: numberArrayType, signatureSuffix: "" },
@@ -247,6 +255,11 @@ function defaultProcessExport(): MojoProviderModuleDefinition["exports"][number]
 
 function defaultProcessOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
+    ...processSignalSignatures.map((signature) => staticCall(
+      defaultId, `${defaultId}.kill`, `${defaultId}.kill(${signature.signatureSuffix})`,
+      "signals", signature.targetName,
+      signature.parameters.map((parameter) => parameter.type.kind === "string" ? nativeString : float64Carrier), boolCarrier, true,
+    )),
     staticCall(defaultId, `${defaultId}.availableMemory`, `${defaultId}.availableMemory()`, "process", "available_memory", [], float64Carrier),
     staticCall(defaultId, `${defaultId}.constrainedMemory`, `${defaultId}.constrainedMemory()`, "process", "constrained_memory", [], float64Carrier),
     staticCall(defaultId, `${defaultId}.cwd`, `${defaultId}.cwd()`, "process", "current_directory", [], nativeString, true),

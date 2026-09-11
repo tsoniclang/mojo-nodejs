@@ -16,6 +16,7 @@
 struct TsonicNetEndpoint {
     int descriptor;
     int listener;
+    int backlog;
     int status;
     int resolving;
     int closed;
@@ -54,7 +55,7 @@ static void attempt_address(TsonicNetEndpoint *endpoint, int family, int protoco
     if (endpoint->listener) {
         int enabled = 1;
         if (setsockopt(descriptor, SOL_SOCKET, SO_REUSEADDR, &enabled, sizeof(enabled)) == 0 &&
-            bind(descriptor, address, length) == 0 && listen(descriptor, 511) == 0) {
+            bind(descriptor, address, length) == 0 && listen(descriptor, endpoint->backlog) == 0) {
             endpoint->descriptor = descriptor;
             endpoint->status = 1;
             return;
@@ -114,12 +115,13 @@ static void resolved(uv_getaddrinfo_t *request, int status, struct addrinfo *add
     next_address(endpoint);
 }
 
-TsonicNetEndpoint *tsonic_node_net_endpoint_new(const char *host, int port, int listener) {
+TsonicNetEndpoint *tsonic_node_net_endpoint_new(const char *host, int port, int listener, int backlog) {
     TsonicNetEndpoint *endpoint = calloc(1, sizeof(*endpoint));
     if (endpoint == NULL) return NULL;
     endpoint->descriptor = -1;
     endpoint->listener = listener != 0;
-    if (host == NULL || port < 0 || port > 65535) {
+    endpoint->backlog = backlog == 0 ? 511 : backlog;
+    if (host == NULL || port < 0 || port > 65535 || backlog < 0) {
         endpoint->status = UV_EINVAL;
         return endpoint;
     }

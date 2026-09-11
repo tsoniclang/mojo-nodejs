@@ -21,6 +21,7 @@ struct SocketState(Movable):
     var bytes_written: Int64
     var destroyed: Bool
     var connected: Bool
+    var started: Bool
     var referenced: Bool
     var paused: Bool
     var flowing: Bool
@@ -63,6 +64,7 @@ struct SocketState(Movable):
         self.bytes_written = 0
         self.destroyed = False
         self.connected = connected
+        self.started = True
         self.referenced = True
         self.paused = False
         self.flowing = False
@@ -117,4 +119,4 @@ def fail(state: ArcPointer[SocketState], error: Error):
 
 
 def unsettled(state: ArcPointer[SocketState]) -> Bool:
-    return not state[].destroyed or state[].close_pending or Bool(state[].error)
+    return (state[].started and not state[].destroyed) or state[].close_pending or Bool(state[].error)

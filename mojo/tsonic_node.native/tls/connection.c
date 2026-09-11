@@ -31,7 +31,7 @@ void *tsonic_node_tls_connect(
         SSL_CTX_free(context);
         return NULL;
     }
-    TsonicNetEndpoint *endpoint = tsonic_node_net_endpoint_new(host, port, 0);
+    TsonicNetEndpoint *endpoint = tsonic_node_net_endpoint_new(host, port, 0, 511);
     if (endpoint == NULL) {
         tsonic_tls_set_error(error, "Unable to allocate TLS connection endpoint");
         SSL_CTX_free(context);

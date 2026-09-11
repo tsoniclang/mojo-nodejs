@@ -1,5 +1,6 @@
 from std.collections import List
 from std.memory import ArcPointer
+from std.io import FileDescriptor
 from tsonic_runtime import RaisingCallable, TsError, error_new
 from ..buffer import Buffer
 from ..buffer.codec import encode_bytes
@@ -338,6 +339,12 @@ struct Writable(ImplicitlyCopyable):
 
     def writable_ended(self) -> Bool:
         return self._state[].ended
+
+    def fd(self) -> Int:
+        return Int(self._state[].descriptor.value()._state[].descriptor) if self._state[].descriptor else -1
+
+    def is_tty(self) -> Bool:
+        return FileDescriptor(self.fd()).isatty()
 
     def pipe_needs_drain(self) -> Bool:
         return (

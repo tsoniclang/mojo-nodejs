@@ -3,6 +3,7 @@ from std.ffi import c_int, c_size_t, external_call
 from std.memory import ArcPointer
 from tsonic_js import JsString, JsValue, js_value_from_object_entries
 from .model import LookupAddress
+from .options import LookupOptions
 
 
 struct RequestOwner(Movable):
@@ -23,7 +24,7 @@ struct RequestOwner(Movable):
 struct DnsRequest(ImplicitlyCopyable):
     var _owner: ArcPointer[RequestOwner]
 
-    def __init__(out self, input: String, kind: Int32) raises:
+    def __init__(out self, input: String, kind: Int32, options: LookupOptions = LookupOptions()) raises:
         if input.find("\0") >= 0 or input.byte_length() > 4096:
             raise Error(
                 "DNS input contains a null byte or exceeds its length limit"
@@ -36,6 +37,8 @@ struct DnsRequest(ImplicitlyCopyable):
                 OptionalPointer[NoneType, MutUntrackedOrigin],
             ](
                 native_input.as_c_string_slice().ptr().as_unsafe_any_origin(),
+                c_int(options.selected_family()), c_int(options.selected_hints()),
+                c_int(options.selected_all()), c_int(options.selected_order()),
             )
         else:
             handle = external_call[
@@ -113,11 +116,23 @@ struct DnsRequest(ImplicitlyCopyable):
     def lookup_address(self) raises -> LookupAddress:
         var values = self.values()
         var family = external_call["tsonic_node_dns_request_family", c_int](
-            self._owner[].handle.value()
+            self._owner[].handle.value(), c_size_t(0)
         )
         if len(values) != 1 or (family != 4 and family != 6):
             raise Error("OS lookup returned an invalid address/family result")
         return LookupAddress(values[0], family)
+
+    def lookup_addresses(self) raises -> List[LookupAddress]:
+        var values = self.values()
+        var result = List[LookupAddress](capacity=len(values))
+        for index in range(len(values)):
+            var family = external_call["tsonic_node_dns_request_family", c_int](
+                self._owner[].handle.value(), c_size_t(index)
+            )
+            if family != 4 and family != 6:
+                raise Error("OS lookup lost an exact address family")
+            result.append(LookupAddress(values[index], family))
+        return result^
 
     def _require_success(self) raises:
         if not self.ready():

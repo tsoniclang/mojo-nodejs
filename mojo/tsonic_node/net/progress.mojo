@@ -8,7 +8,7 @@ from .transport import flush, read, socket_error
 
 def progress(state: ArcPointer[SocketState]) raises -> Bool:
     var worked = False
-    if not state[].destroyed and not state[].connected:
+    if state[].started and not state[].destroyed and not state[].connected:
         var status = state[].endpoint.progress()
         if status < 0:
             fail(state, network_error(status))

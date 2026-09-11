@@ -7,11 +7,15 @@ from ..internal.typed_listeners import TypedListeners
 from .state import SocketState, activity, destroy, unsettled
 from .transport import end, enqueue, read
 from .progress import progress
-from .options import timeout_duration
+from .options import ConnectionOptions, timeout_duration
 
 
 struct Socket(ImplicitlyCopyable):
     var _state: ArcPointer[SocketState]
+
+    def __init__(out self):
+        self._state = ArcPointer(SocketState(NetworkEndpoint(), False, False))
+        self._state[].started = False
 
     def __init__(
         out self,
@@ -27,6 +31,56 @@ struct Socket(ImplicitlyCopyable):
         if len(_sockets.get()[]) >= 1048576:
             raise Error("Network sockets exceed the finite runtime limit")
         _sockets.get()[].append(self)
+
+    def connect_port(mut self, port: Float64) raises -> Self:
+        return self.connect_options(ConnectionOptions(port))
+
+    def connect_port_host(mut self, port: Float64, host: String) raises -> Self:
+        return self.connect_options(ConnectionOptions(port, host))
+
+    def connect_port_callback(mut self, port: Float64, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+        return self.connect_options_callback(ConnectionOptions(port), callback)
+
+    def connect_port_host_callback(mut self, port: Float64, host: String, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+        return self.connect_options_callback(ConnectionOptions(port, host), callback)
+
+    def connect_options_callback(mut self, options: ConnectionOptions, callback: RaisingCallable[Tuple[], NoneType]) raises -> Self:
+        _ = self.connect_options(options)
+        return self.once_empty("connect", callback)
+
+    def connect_options(mut self, options: ConnectionOptions) raises -> Self:
+        if self._state[].started and (not self._state[].destroyed or self._state[].close_pending or self._state[].error):
+            raise Error("Socket connection is active or awaiting close completion")
+        var timeout = timeout_duration(options.timeout.value()) if options.timeout else self._state[].timeout
+        _prune_sockets()
+        if len(_sockets.get()[]) >= 1048576:
+            raise Error("Network sockets exceed the finite runtime limit")
+        var endpoint = NetworkEndpoint(options.host.value() if options.host else "localhost", options.port, False)
+        if self._state[].destroyed:
+            var replacement = SocketState(endpoint, False, self._state[].allow_half_open)
+            replacement.referenced = self._state[].referenced
+            replacement.no_delay = self._state[].no_delay
+            replacement.data = self._state[].data
+            replacement.errors = self._state[].errors
+            replacement.connects = self._state[].connects
+            replacement.ends = self._state[].ends
+            replacement.finishes = self._state[].finishes
+            replacement.drains = self._state[].drains
+            replacement.timeouts = self._state[].timeouts
+            replacement.readable = self._state[].readable
+            replacement.closes = self._state[].closes
+            self._state[] = replacement^
+        else:
+            self._state[].endpoint = endpoint
+        self._state[].started = True
+        self._state[].timeout = timeout
+        if options.allow_half_open:
+            self._state[].allow_half_open = options.allow_half_open.value()
+        if options.no_delay:
+            self._state[].no_delay = options.no_delay
+        activity(self._state)
+        _sockets.get()[].append(self)
+        return self
 
     def write_buffer(mut self, value: Buffer) raises -> Bool:
         return enqueue(self._state, value)
@@ -49,7 +103,13 @@ struct Socket(ImplicitlyCopyable):
         _ = self.write_string(value)
         return self.end()
 
-    def destroy(mut self) -> Self:
+    def destroy(mut self) raises -> Self:
+        if not self._state[].started and not self._state[].destroyed:
+            _prune_sockets()
+            if len(_sockets.get()[]) >= 1048576:
+                raise Error("Network sockets exceed the finite runtime limit")
+            self._state[].started = True
+            _sockets.get()[].append(self)
         destroy(self._state)
         return self
 
@@ -109,6 +169,21 @@ struct Socket(ImplicitlyCopyable):
 
     def pending(self) -> Bool:
         return not self._state[].connected or self._state[].destroyed
+
+    def connecting(self) -> Bool:
+        return self._state[].started and not self._state[].connected and not self._state[].destroyed
+
+    def remote_address(self) raises -> Optional[String]:
+        if not self._state[].connected or self._state[].destroyed:
+            return None
+        var address = self._state[].endpoint.address(True)
+        return address.value().address if address else Optional[String]()
+
+    def remote_port(self) raises -> Optional[Float64]:
+        if not self._state[].connected or self._state[].destroyed:
+            return None
+        var address = self._state[].endpoint.address(True)
+        return address.value().port if address else Optional[Float64]()
 
     def address(self) raises -> Optional[AddressInfo]:
         return self._state[].endpoint.address()
@@ -257,7 +332,7 @@ def has_active_sockets() -> Bool:
     for socket in _sockets.get()[]:
         if socket._state[].close_pending or socket._state[].error:
             return True
-        if not socket.destroyed() and socket._state[].referenced:
+        if socket._state[].started and not socket.destroyed() and socket._state[].referenced:
             return True
     return False
 
