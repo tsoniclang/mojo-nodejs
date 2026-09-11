@@ -3,7 +3,7 @@ from std.memory import ArcPointer
 from std.io import FileDescriptor
 from tsonic_runtime import RaisingCallable, TsError, error_new
 from ..buffer import Buffer
-from ..buffer.codec import encode_bytes
+from ..buffer.codec import encode_bytes, encoding_name
 from ..internal.callback_queue import Notification
 from .completion import StreamCompletion, WriteCallback
 from .descriptor import StreamDescriptor
@@ -120,7 +120,8 @@ struct Writable(ImplicitlyCopyable):
             )
             if completion:
                 completion.value().complete(error.copy())
-            self._fail(error)
+            if not self.destroyed():
+                self._fail(error)
             return False
         self._state[].chunks.append(_WriteRequest(value, completion))
         self._state[].buffered_bytes += Int64(len(value))
@@ -200,7 +201,7 @@ struct Writable(ImplicitlyCopyable):
             self._state[].events.retain_end(callback.value())
 
     def _finish(mut self) raises -> Self:
-        if self._state[].failed:
+        if self._state[].failed or self.destroyed():
             return self
         if self._state[].ended:
             return self
@@ -330,11 +331,66 @@ struct Writable(ImplicitlyCopyable):
         if self._state[].descriptor:
             self._state[].descriptor.value().close()
 
+    def destroy(mut self, error: Optional[TsError] = None) raises -> Self:
+        if self.destroyed():
+            return self
+        self._state[].events.prepare()
+        self._state[].events.cancel()
+        var completion_error = error.value().copy() if error else self._failure("Stream destroyed before completion")
+        for request in self._state[].chunks:
+            if request.completion:
+                request.completion.value().complete(completion_error.copy())
+        self._state[].chunks.clear()
+        self._state[].buffered_bytes = 0
+        self._state[].need_drain = False
+        self._state[].corked = 0
+        self._state[].events.complete_end(completion_error.copy())
+        if error:
+            self._state[].events.fail(error.value().copy())
+        try:
+            self._close_descriptor()
+        except failure:
+            self._state[].events.fail(error_new(String(failure)))
+        self._state[].events.close()
+        return self
+
+    def set_default_encoding(mut self, encoding: String) raises -> Self:
+        self._state[].encoding = encoding_name(encoding)
+        return self
+
+    def destroyed(self) -> Bool:
+        return self._state[].events.state[].closed or self._state[].events.state[].cancelled
+
+    def closed(self) -> Bool:
+        return self._state[].closed
+
+    def errored(self) -> Optional[TsError]:
+        return self._state[].events.state[].error.copy()
+
+    def writable_finished(self) -> Bool:
+        return self._state[].events.state[].finished
+
+    def writable_aborted(self) -> Bool:
+        return (self.destroyed() or self._state[].failed) and not self.writable_finished()
+
+    def writable_high_water_mark(self) -> Float64:
+        return Float64(self._state[].high_water_mark)
+
+    def writable_length(self) -> Float64:
+        return Float64(self._state[].buffered_bytes)
+
+    def writable_need_drain(self) -> Bool:
+        return self._state[].need_drain
+
+    def writable_object_mode(self) -> Bool:
+        return False
+
     def writable(self) -> Bool:
         return (
             not self._state[].ended
             and not self._state[].closed
             and not self._state[].failed
+            and not self._state[].events.state[].cancelled
         )
 
     def writable_ended(self) -> Bool:

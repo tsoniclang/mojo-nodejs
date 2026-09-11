@@ -43,6 +43,7 @@ import {
 import { processSignalSignatures } from "./process-signals.js";
 import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
 import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
+import { writableLifecycleMembers, writableLifecycleOperations } from "./stream/writable-lifecycle.js";
 
 const moduleSpecifier = "node:process";
 const defaultId = "node:process.default";
@@ -116,10 +117,7 @@ export function processModule(): MojoProviderModuleDefinition {
       classExport(writeStreamId, "ProcessWriteStream", [
         ...writableCallMembers(writeStreamId, providerRef(moduleSpecifier, "ProcessWriteStream")),
         ...writableEventMembers(moduleSpecifier, "ProcessWriteStream"),
-        ...["cork", "uncork"].map((name) => providerMethodMember(writeStreamId, name, [], voidType)),
-        propertyMember(writeStreamId, "writableCorked", numberType),
-        propertyMember(writeStreamId, "writable", booleanType),
-        propertyMember(writeStreamId, "writableEnded", booleanType),
+        ...writableLifecycleMembers(writeStreamId, providerRef(moduleSpecifier, "ProcessWriteStream")),
         propertyMember(writeStreamId, "isTTY", booleanType),
         propertyMember(writeStreamId, "fd", numberType),
       ]),
@@ -191,11 +189,7 @@ export function processOperations(): readonly MojoProviderOperationDefinition[] 
     ...memoryUsageProperties(),
     ...writableCallOperations(writeStreamId, processWriteStreamCarrier),
     ...writableEventOperations(moduleSpecifier, "ProcessWriteStream", processWriteStreamCarrier),
-    instanceCall(writeStreamId, `${writeStreamId}.cork`, `${writeStreamId}.cork()`, "cork", processWriteStreamCarrier, [], unitCarrier, false, "mut"),
-    instanceCall(writeStreamId, `${writeStreamId}.uncork`, `${writeStreamId}.uncork()`, "uncork", processWriteStreamCarrier, [], unitCarrier, true, "mut"),
-    propertyRead(writeStreamId, `${writeStreamId}.writableCorked`, "writable_corked", processWriteStreamCarrier, float64Carrier, "method"),
-    propertyRead(writeStreamId, `${writeStreamId}.writable`, "writable", processWriteStreamCarrier, boolCarrier, "method"),
-    propertyRead(writeStreamId, `${writeStreamId}.writableEnded`, "writable_ended", processWriteStreamCarrier, boolCarrier, "method"),
+    ...writableLifecycleOperations(writeStreamId, processWriteStreamCarrier),
     propertyRead(writeStreamId, `${writeStreamId}.isTTY`, "is_tty", processWriteStreamCarrier, boolCarrier, "method"),
     propertyRead(writeStreamId, `${writeStreamId}.fd`, "fd", processWriteStreamCarrier, nativeIntCarrier, "method"),
     ...defaultProcessOperations(),

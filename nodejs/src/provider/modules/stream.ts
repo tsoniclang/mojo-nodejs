@@ -5,25 +5,23 @@ import type {
 } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
 import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
+import { writableLifecycleMembers, writableLifecycleOperations } from "./stream/writable-lifecycle.js";
 import { readableReadMember, readableReadOperations } from "./stream/readable-calls.js";
 import { readableEventMembers, readableEventOperations } from "./stream/readable-events.js";
 import { duplexExport, duplexOperations, duplexType } from "./stream/duplex.js";
 import {
   booleanType,
   boolCarrier,
-  float64Carrier,
   httpServerResponseCarrier,
   instanceCall,
   methodMember,
   nativeString,
   nodeProviderType,
-  numberType,
   propertyMember,
   propertyRead,
   providerRef,
   readableCarrier,
   stringType,
-  unitCarrier,
   writableCarrier,
 } from "../model.js";
 
@@ -70,11 +68,7 @@ export function streamModule(): MojoProviderModuleDefinition {
         members: Object.freeze([
           ...writableCallMembers(writableId, providerRef(moduleSpecifier, "Writable")),
           ...writableEventMembers(moduleSpecifier, "Writable"),
-          methodMember(writableId, "cork", [], Object.freeze({ kind: "void" })),
-          methodMember(writableId, "uncork", [], Object.freeze({ kind: "void" })),
-          propertyMember(writableId, "writableCorked", numberType),
-          propertyMember(writableId, "writable", booleanType),
-          propertyMember(writableId, "writableEnded", booleanType),
+          ...writableLifecycleMembers(writableId, providerRef(moduleSpecifier, "Writable")),
         ]),
       }),
     ]),
@@ -102,14 +96,10 @@ export function streamOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(readableId, `${readableId}.isPaused`, `${readableId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier),
     ...writableCallOperations(writableId, writableCarrier),
     ...writableEventOperations(moduleSpecifier, "Writable", writableCarrier),
-    instanceCall(writableId, `${writableId}.cork`, `${writableId}.cork()`, "cork", writableCarrier, [], unitCarrier, false, "mut"),
-    instanceCall(writableId, `${writableId}.uncork`, `${writableId}.uncork()`, "uncork", writableCarrier, [], unitCarrier, true, "mut"),
-    propertyRead(writableId, `${writableId}.writableCorked`, "writable_corked", writableCarrier, float64Carrier, "method"),
+    ...writableLifecycleOperations(writableId, writableCarrier),
     ...([
       [readableId, readableCarrier, "readable", "readable"],
       [readableId, readableCarrier, "readableEnded", "readable_ended"],
-      [writableId, writableCarrier, "writable", "writable"],
-      [writableId, writableCarrier, "writableEnded", "writable_ended"],
     ] as const).map(([id, carrier, name, target]) =>
       propertyRead(id, `${id}.${name}`, target, carrier, boolCarrier, "method")),
   ]);

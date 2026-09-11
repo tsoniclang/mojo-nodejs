@@ -4,6 +4,7 @@ import type {
 import { mojoNamedTargetType } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "../stream/writable-calls.js";
 import { writableEventMembers, writableEventOperations } from "../stream/writable-events.js";
+import { writableLifecycleMembers, writableLifecycleOperations } from "../stream/writable-lifecycle.js";
 import { readableReadMember, readableReadOperations } from "../stream/readable-calls.js";
 import { readableEventMembers, readableEventOperations } from "../stream/readable-events.js";
 import {
@@ -64,8 +65,7 @@ export function filesystemStreamExports(): MojoProviderModuleDefinition["exports
       ...writableCallMembers(writeId, writeType),
       ...writableEventMembers(moduleSpecifier, "WriteStream"),
       methodMember(writeId, "close", [], voidType),
-      methodMember(writeId, "cork", [], voidType),
-      methodMember(writeId, "uncork", [], voidType),
+      ...writableLifecycleMembers(writeId, writeType),
       propertyMember(writeId, "path", stringType),
       propertyMember(writeId, "bytesWritten", numberType),
     ]) }),
@@ -128,6 +128,6 @@ export function filesystemStreamOperations(): readonly MojoProviderOperationDefi
   operations.push(instanceCall(readId, `${readId}.isPaused`, `${readId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier));
   operations.push(...writableCallOperations(writeId, writableCarrier));
   operations.push(...writableEventOperations(moduleSpecifier, "WriteStream", writableCarrier));
-  for (const name of ["cork", "uncork"] as const) operations.push(instanceCall(writeId, `${writeId}.${name}`, `${writeId}.${name}()`, name, writableCarrier, [], unitCarrier, name === "uncork", "mut"));
+  operations.push(...writableLifecycleOperations(writeId, writableCarrier));
   return Object.freeze(operations);
 }

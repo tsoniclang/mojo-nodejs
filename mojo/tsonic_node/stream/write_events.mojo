@@ -26,6 +26,7 @@ struct _WriteEventState:
     var drain_scheduled: Bool
     var reservations: Dict[String, CallbackReservation]
     var end_completions: List[StreamCompletion]
+    var cancelled: Bool
 
 
 struct WriteEvents(ImplicitlyCopyable):
@@ -46,6 +47,7 @@ struct WriteEvents(ImplicitlyCopyable):
                 False,
                 Dict[String, CallbackReservation](),
                 List[StreamCompletion](),
+                False,
             )
         )
 
@@ -62,7 +64,7 @@ struct WriteEvents(ImplicitlyCopyable):
         var pending = Dict[String, CallbackReservation]()
         if not self.state[].error_scheduled:
             self._prepare("error", pending)
-        if not self.state[].finish_scheduled and not self.state[].error:
+        if not self.state[].finish_scheduled and not self.state[].error and not self.state[].cancelled:
             self._prepare("complete", pending)
             self._prepare("finish", pending)
             if not self.state[].drain_scheduled:
@@ -100,6 +102,8 @@ struct WriteEvents(ImplicitlyCopyable):
         var completion = StreamCompletion(callback)
         if self.state[].error:
             completion.complete(self.state[].error.value().copy())
+        elif self.state[].cancelled or self.state[].closed:
+            completion.complete(error_new("Cannot end a destroyed stream"))
         elif self.state[].finished:
             completion.complete(
                 error_new("Cannot call end after the stream finished")
@@ -125,7 +129,7 @@ struct WriteEvents(ImplicitlyCopyable):
         self.queue("error", reservation)
 
     def finish(self) raises:
-        if self.state[].finish_scheduled or self.state[].error:
+        if self.state[].finish_scheduled or self.state[].error or self.state[].cancelled:
             return
         var reservation = self.reserve("complete")
         self.state[].finish_scheduled = True
@@ -138,6 +142,7 @@ struct WriteEvents(ImplicitlyCopyable):
             not self.state[].finish_scheduled
             or self.state[].finished
             or self.state[].error
+            or self.state[].cancelled
         ):
             self.queue_close()
 
@@ -153,11 +158,18 @@ struct WriteEvents(ImplicitlyCopyable):
             self.state[].drain_scheduled
             or self.state[].finish_scheduled
             or self.state[].error
+            or self.state[].cancelled
         ):
             return
         var reservation = self.reserve("drain")
         self.state[].drain_scheduled = True
         self.queue("drain", reservation)
+
+    def cancel(self) raises:
+        self.state[].cancelled = True
+        self.discard("complete")
+        self.discard("finish")
+        self.discard("drain")
 
 
 @fieldwise_init
@@ -171,7 +183,7 @@ struct _WriteEvent:
         var events = invocation[].events
         var event = invocation[].event
         if event == "complete":
-            if events.state[].error or events.state[].closed:
+            if events.state[].error or events.state[].closed or events.state[].cancelled:
                 return
             events.state[].finished = True
             events.complete_end(None)
@@ -185,10 +197,10 @@ struct _WriteEvent:
             return
         if event == "drain":
             events.state[].drain_scheduled = False
-            if events.state[].error or events.state[].finish_scheduled:
+            if events.state[].error or events.state[].finish_scheduled or events.state[].cancelled:
                 return
         elif event == "finish":
-            if events.state[].error:
+            if events.state[].error or events.state[].cancelled:
                 return
             events.state[].finished = True
         elif event == "close":

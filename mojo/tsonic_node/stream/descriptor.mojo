@@ -44,7 +44,7 @@ struct StreamDescriptor(ImplicitlyCopyable):
             return
         var descriptor = self._state[].descriptor
         self._state[].descriptor = -1
-        if external_call["close", c_int](c_int(descriptor)) != 0:
+        if self._state[].owned and external_call["close", c_int](c_int(descriptor)) != 0:
             raise Error("Unable to close stream: ", get_errno())
 
     def flush(self) raises:
