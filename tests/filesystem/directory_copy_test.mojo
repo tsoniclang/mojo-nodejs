@@ -108,7 +108,8 @@ def main() raises:
         )
         chmod(source + "/kept", 0o600)
         var timestamp_path = source + "/kept"
-        for timestamp in List[Float64](1.00025, 1.00075):
+        var timestamps: List[Float64] = [1.00025, 1.00075]
+        for timestamp in timestamps:
             assert_equal(
                 external_call["tsonic_node_fs_utimes", Int32](
                     timestamp_path.as_c_string_slice().ptr(),
