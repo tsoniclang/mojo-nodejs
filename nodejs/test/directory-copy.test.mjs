@@ -18,9 +18,13 @@ export function main(): void {
 test("asynchronous copy admits native asynchronous and synchronous predicates", () => {
   const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { cp } from "node:fs/promises";
+const retained = async (source: string, destination: string): Promise<boolean> => source !== destination;
+const synchronous = (source: string, destination: string): boolean => source !== destination;
 export async function main(): Promise<void> {
   await cp("source", "first", { recursive: true, filter: async (source: string, destination: string) => source !== destination });
   await cp("source", "second", { filter: (source: string, destination: string) => source !== destination });
+  await cp("source", "third", { filter: retained });
+  await cp("source", "fourth", { filter: synchronous });
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
