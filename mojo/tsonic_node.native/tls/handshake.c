@@ -2,15 +2,12 @@
 #include "model.h"
 
 TsonicTlsSocket *tsonic_tls_socket_from_ssl(
-    SSL_CTX *context,
     SSL *ssl,
     TsonicNetEndpoint *endpoint,
-    const char *servername,
-    int context_owned
+    const char *servername
 ) {
     TsonicTlsSocket *socket = (TsonicTlsSocket *)calloc(1u, sizeof(*socket));
     if (socket == NULL) return NULL;
-    socket->context = context_owned ? context : NULL;
     socket->ssl = ssl;
     socket->endpoint = endpoint;
     socket->descriptor = tsonic_node_net_endpoint_descriptor(endpoint);
@@ -22,6 +19,7 @@ TsonicTlsSocket *tsonic_tls_socket_from_ssl(
     }
     SSL_set_mode(ssl, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
     SSL_set_options(ssl, SSL_OP_NO_RENEGOTIATION);
+    SSL_set_app_data(ssl, socket);
     return socket;
 }
 

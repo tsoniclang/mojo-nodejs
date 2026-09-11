@@ -6,10 +6,10 @@ void tsonic_node_tls_socket_free(void *value) {
     if (socket == NULL) return;
     if (socket->ssl != NULL) SSL_free(socket->ssl);
     tsonic_node_net_endpoint_free(socket->endpoint);
-    if (socket->context != NULL) SSL_CTX_free(socket->context);
     free(socket->authorization_error);
     free(socket->servername);
     free(socket->alpn);
+    free(socket->offered_alpn);
     free(socket->output);
     free(socket);
 }

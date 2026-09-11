@@ -2,9 +2,12 @@
 #include <curl/curl.h>
 #include <uv.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <openssl/ssl.h>
+#include "tls/api.h"
 
 typedef struct {
   CURL* easy;
@@ -17,6 +20,7 @@ typedef struct {
   long status;
   int active;
   int complete;
+  void* tls_context;
   char error[CURL_ERROR_SIZE];
 } HttpRequest;
 
@@ -99,20 +103,53 @@ int tsonic_node_http_header(void* value, const char* header) {
   return 1;
 }
 
-int tsonic_node_http_tls(void* value, int verify, int minimum, int maximum,
+static CURLcode apply_tls_context(CURL* handle, void* context, void* data) {
+  (void)handle;
+  HttpRequest* request = data;
+  if (request->tls_context == NULL) {
+    X509_STORE* empty = X509_STORE_new();
+    if (empty == NULL) return CURLE_OUT_OF_MEMORY;
+    SSL_CTX_set_cert_store(context, empty);
+    return CURLE_OK;
+  }
+  char* error = NULL;
+  if (tsonic_node_tls_context_apply(request->tls_context, context, &error)) return CURLE_OK;
+  if (error != NULL) {
+    snprintf(request->error, sizeof(request->error), "%s", error);
+    free(error);
+  }
+  return CURLE_SSL_CERTPROBLEM;
+}
+
+int tsonic_node_http_tls(void* value, int verify, int minimum, int maximum, void* context, int ca_present,
     const void* ca, size_t ca_length, const void* cert, size_t cert_length,
     const void* key, size_t key_length, const void* pfx, size_t pfx_length,
     const char* password) {
   HttpRequest* request = value;
   if (request->active || request->complete) return 0;
-  long versions[] = { CURL_SSLVERSION_DEFAULT, CURL_SSLVERSION_TLSv1,
+  long versions[] = { CURL_SSLVERSION_TLSv1_2, CURL_SSLVERSION_TLSv1,
     CURL_SSLVERSION_TLSv1_1, CURL_SSLVERSION_TLSv1_2, CURL_SSLVERSION_TLSv1_3 };
-  long maxima[] = { CURL_SSLVERSION_MAX_DEFAULT, CURL_SSLVERSION_MAX_TLSv1_0,
+  long maxima[] = { CURL_SSLVERSION_MAX_TLSv1_3, CURL_SSLVERSION_MAX_TLSv1_0,
     CURL_SSLVERSION_MAX_TLSv1_1, CURL_SSLVERSION_MAX_TLSv1_2, CURL_SSLVERSION_MAX_TLSv1_3 };
-  if (minimum < 0 || minimum > 4 || maximum < 0 || maximum > 4) return 0;
+  if (minimum < 0 || minimum > 4 || maximum < 0 || maximum > 4 ||
+      (minimum == 0 ? 3 : minimum) > (maximum == 0 ? 4 : maximum)) return 0;
   if (!selected(request, curl_easy_setopt(request->easy, CURLOPT_SSL_VERIFYPEER, verify ? 1L : 0L)) ||
       !selected(request, curl_easy_setopt(request->easy, CURLOPT_SSL_VERIFYHOST, verify ? 2L : 0L)) ||
       !selected(request, curl_easy_setopt(request->easy, CURLOPT_SSLVERSION, versions[minimum] | maxima[maximum]))) return 0;
+  if (context != NULL || (ca_present && ca_length == 0u)) {
+    const curl_version_info_data* info = curl_version_info(CURLVERSION_NOW);
+    if (info->ssl_version == NULL || strncmp(info->ssl_version, "OpenSSL/", 8u) != 0) {
+      return selected(request, CURLE_NOT_BUILT_IN);
+    }
+    if (context != NULL && !tsonic_node_tls_context_retain(context)) return selected(request, CURLE_OUT_OF_MEMORY);
+    tsonic_node_tls_context_free(request->tls_context);
+    request->tls_context = context;
+    if (!selected(request, curl_easy_setopt(request->easy, CURLOPT_SSL_CTX_FUNCTION, apply_tls_context)) ||
+        !selected(request, curl_easy_setopt(request->easy, CURLOPT_SSL_CTX_DATA, request)) ||
+        !selected(request, curl_easy_setopt(request->easy, CURLOPT_FRESH_CONNECT, 1L)) ||
+        !selected(request, curl_easy_setopt(request->easy, CURLOPT_FORBID_REUSE, 1L))) return 0;
+    if (context != NULL) return 1;
+  }
   if (ca_length) {
     struct curl_blob blob = { (void*)ca, ca_length, CURL_BLOB_COPY };
     if (!selected(request, curl_easy_setopt(request->easy, CURLOPT_CAINFO_BLOB, &blob))) return 0;
@@ -217,6 +254,7 @@ void tsonic_node_http_free(void* value) {
   uv_mutex_lock(&lock);
   if (request->active) curl_multi_remove_handle(multi, request->easy);
   curl_easy_cleanup(request->easy);
+  tsonic_node_tls_context_free(request->tls_context);
   uv_mutex_unlock(&lock);
   curl_slist_free_all(request->headers);
   free(request->body);

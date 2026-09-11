@@ -3,6 +3,7 @@ from std.utils import Variant
 from ..buffer import Buffer
 from ..url import URL
 from ..validation import checked_integer
+from ..tls.secure_context import SecureContext
 
 comptime Certificate = Variant[String, Buffer]
 comptime Authorities = Variant[String, Buffer, List[String]]
@@ -23,6 +24,7 @@ struct RequestOptions(Copyable):
     var min_version: Optional[String]
     var max_version: Optional[String]
     var reject_unauthorized: Optional[Bool]
+    var secure_context: Optional[SecureContext]
 
     def __init__(out self):
         self.hostname = None
@@ -39,6 +41,7 @@ struct RequestOptions(Copyable):
         self.min_version = None
         self.max_version = None
         self.reject_unauthorized = None
+        self.secure_context = None
 
 
 def request_url(options: RequestOptions, scheme: String) raises -> URL:
@@ -93,21 +96,6 @@ def authority_bytes(value: Optional[Authorities]) -> Buffer:
     for authority in selected.unsafe_get[List[String]]():
         text += authority + "\n"
     return Buffer.from_string(text)
-
-
-def tls_version(value: Optional[String]) raises -> Int32:
-    if not value:
-        return 0
-    var name = value.value()
-    if name == "TLSv1":
-        return 1
-    if name == "TLSv1.1":
-        return 2
-    if name == "TLSv1.2":
-        return 3
-    if name == "TLSv1.3":
-        return 4
-    raise Error("Unsupported TLS protocol version: ", name)
 
 
 def check_token(value: String, role: String) raises:

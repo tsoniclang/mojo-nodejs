@@ -39,7 +39,7 @@ export function httpsModule(): MojoProviderModuleDefinition {
   return Object.freeze({
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.https",
-    imports: Object.freeze([listenOptionsImport, Object.freeze({ moduleSpecifier: "node:buffer", namedImports: Object.freeze([{ exportedName: "Buffer" }]) }), Object.freeze({
+    imports: Object.freeze([Object.freeze({ moduleSpecifier: "node:tls", namedImports: Object.freeze([{ exportedName: "SecureContext" }]) }), listenOptionsImport, Object.freeze({ moduleSpecifier: "node:buffer", namedImports: Object.freeze([{ exportedName: "Buffer" }]) }), Object.freeze({
       moduleSpecifier: "node:http",
       namedImports: Object.freeze([
         { exportedName: "IncomingMessage" },

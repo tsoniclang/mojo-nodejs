@@ -50,7 +50,10 @@ static void progress(Pair pair) {
 static Pair connect_pair(const char *certificate, const char *key) {
     char *error = NULL;
     Pair pair = {0};
-    pair.context = tsonic_node_tls_server_create(key, certificate, "", NULL, 0u, 0, 1, &error);
+    void *server_context = tsonic_node_tls_context_create(key, certificate, "", 1, NULL, 0u, 0, "", 0, 0, &error);
+    assert(server_context != NULL && error == NULL);
+    pair.context = tsonic_node_tls_server_create(server_context, NULL, 0u, 0, 1, &error);
+    tsonic_node_tls_context_free(server_context);
     assert(pair.context != NULL && error == NULL);
     TsonicNetEndpoint *listener = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1, 511);
     assert(listener != NULL && tsonic_node_net_endpoint_progress(listener) == 1);
@@ -58,7 +61,10 @@ static Pair connect_pair(const char *certificate, const char *key) {
     int port = 0;
     int family = 0;
     assert(tsonic_node_net_endpoint_address(listener, 0, address, sizeof(address), &port, &family) == 0);
-    pair.client = tsonic_node_tls_connect("127.0.0.1", "localhost", "", port, 1, certificate, 1, NULL, 0u, &error);
+    void *client_context = tsonic_node_tls_context_create(NULL, NULL, certificate, 1, NULL, 0u, 0, "", 0, 0, &error);
+    assert(client_context != NULL && error == NULL);
+    pair.client = tsonic_node_tls_connect(client_context, "127.0.0.1", "localhost", "", port, 1, NULL, 0u, &error);
+    tsonic_node_tls_context_free(client_context);
     assert(pair.client != NULL && error == NULL);
     uint64_t deadline = uv_hrtime() + 5000000000u;
     while ((pair.peer == NULL || !tsonic_node_tls_ready(pair.client) || !tsonic_node_tls_ready(pair.peer)) && uv_hrtime() < deadline) {

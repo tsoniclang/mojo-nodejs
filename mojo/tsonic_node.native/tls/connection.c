@@ -2,39 +2,23 @@
 #include "model.h"
 
 void *tsonic_node_tls_connect(
+    void *context_value,
     const char *host,
     const char *verification_name,
     const char *servername,
     int32_t port,
     int32_t reject_unauthorized,
-    const char *ca_pem,
-    int32_t ca_present,
     const unsigned char *alpn,
     size_t alpn_length,
     char **error
 ) {
-    if (error == NULL || host == NULL || servername == NULL || verification_name == NULL ||
+    if (error == NULL || context_value == NULL || host == NULL || servername == NULL || verification_name == NULL ||
         alpn_length > UINT_MAX || (alpn_length != 0u && alpn == NULL)) return NULL;
     *error = NULL;
-    SSL_CTX *context = SSL_CTX_new(TLS_client_method());
-    if (context == NULL) {
-        tsonic_tls_set_ssl_error(error, "Unable to create TLS client context");
-        return NULL;
-    }
-    SSL_CTX_set_verify(context, SSL_VERIFY_PEER, reject_unauthorized ? NULL : tsonic_tls_allow_unverified);
-    if (!ca_present && SSL_CTX_set_default_verify_paths(context) != 1) {
-        tsonic_tls_set_ssl_error(error, "Unable to load default TLS trust roots");
-        SSL_CTX_free(context);
-        return NULL;
-    }
-    if (!tsonic_tls_apply_ca_text(context, ca_pem, error)) {
-        SSL_CTX_free(context);
-        return NULL;
-    }
+    SSL_CTX *context = context_value;
     TsonicNetEndpoint *endpoint = tsonic_node_net_endpoint_new(host, port, 0, 511);
     if (endpoint == NULL) {
         tsonic_tls_set_error(error, "Unable to allocate TLS connection endpoint");
-        SSL_CTX_free(context);
         return NULL;
     }
     SSL *ssl = SSL_new(context);
@@ -47,16 +31,15 @@ void *tsonic_node_tls_connect(
         tsonic_tls_set_ssl_error(error, "TLS handshake failed");
         SSL_free(ssl);
         tsonic_node_net_endpoint_free(endpoint);
-        SSL_CTX_free(context);
         return NULL;
     }
+    SSL_set_verify(ssl, SSL_VERIFY_PEER, reject_unauthorized ? NULL : tsonic_tls_allow_unverified);
     SSL_set_connect_state(ssl);
-    TsonicTlsSocket *socket = tsonic_tls_socket_from_ssl(context, ssl, endpoint, servername, 1);
+    TsonicTlsSocket *socket = tsonic_tls_socket_from_ssl(ssl, endpoint, servername);
     if (socket == NULL) {
         tsonic_tls_set_error(error, "Unable to allocate TLS socket state");
         SSL_free(ssl);
         tsonic_node_net_endpoint_free(endpoint);
-        SSL_CTX_free(context);
     } else {
         socket->connecting = 1;
     }

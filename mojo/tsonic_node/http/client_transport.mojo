@@ -7,8 +7,8 @@ from .client_options import (
     RequestOptions,
     authority_bytes,
     certificate_bytes,
-    tls_version,
 )
+from ..tls.secure_context import tls_version
 
 comptime MAX_MESSAGE_BYTES = 268_435_456
 
@@ -43,21 +43,29 @@ struct NativeRequest(ImplicitlyCopyable):
         if not handle:
             raise Error("Unable to allocate HTTP transport")
         self._state = ArcPointer(_NativeRequestState(handle))
-        var ca = authority_bytes(options.ca).copy_bytes()
-        var cert = certificate_bytes(options.cert).copy_bytes()
-        var key = certificate_bytes(options.key).copy_bytes()
-        var pfx = options.pfx.value().copy_bytes() if options.pfx else List[
-            Byte
-        ]()
-        var password = (
-            options.passphrase.value() if options.passphrase else String()
-        )
-        if password.find("\0") >= 0:
-            raise Error("TLS passphrase contains a null byte")
-        var minimum = tls_version(options.min_version)
-        var maximum = tls_version(options.max_version)
-        if minimum != 0 and maximum != 0 and minimum > maximum:
-            raise Error("Minimum TLS version exceeds maximum TLS version")
+        var context = OptionalPointer[NoneType, MutUntrackedOrigin]()
+        var ca = List[Byte]()
+        var cert = List[Byte]()
+        var key = List[Byte]()
+        var pfx = List[Byte]()
+        var password = String()
+        var minimum = Int32(0)
+        var maximum = Int32(0)
+        if options.secure_context:
+            context = options.secure_context.value()._state[].handle
+        else:
+            ca = authority_bytes(options.ca).copy_bytes()
+            cert = certificate_bytes(options.cert).copy_bytes()
+            key = certificate_bytes(options.key).copy_bytes()
+            if options.pfx:
+                pfx = options.pfx.value().copy_bytes()
+            password = options.passphrase.value() if options.passphrase else String()
+            if password.find("\0") >= 0:
+                raise Error("TLS passphrase contains a null byte")
+            minimum = tls_version(options.min_version)
+            maximum = tls_version(options.max_version)
+            if (minimum if minimum != 0 else 3) > (maximum if maximum != 0 else 4):
+                raise Error("Minimum TLS version exceeds maximum TLS version")
         if (
             external_call["tsonic_node_http_tls", c_int](
                 handle.value(),
@@ -66,6 +74,8 @@ struct NativeRequest(ImplicitlyCopyable):
                 ),
                 minimum,
                 maximum,
+                context,
+                c_int(Bool(options.ca)),
                 ca.unsafe_ptr(),
                 c_size_t(len(ca)),
                 cert.unsafe_ptr(),

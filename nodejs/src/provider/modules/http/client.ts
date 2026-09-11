@@ -7,6 +7,7 @@ import {
   propertyMember, propertyRead, propertyWrite, providerCallbackType, providerRef,
   stringArrayType, stringListCarrier, stringType, unitCarrier, voidType,
 } from "../../model.js";
+import { secureContextCarrier } from "../tls/secure-context.js";
 
 type SourceType = Parameters<typeof propertyMember>[2];
 type ModuleSpecifier = "node:http" | "node:https";
@@ -24,6 +25,7 @@ const commonFields: readonly OptionField[] = Object.freeze([
   ["timeout", "timeout", numberType, optionalFloat64Carrier],
 ]);
 const tlsFields: readonly OptionField[] = Object.freeze([
+  ["secureContext", "secure_context", providerRef("node:tls", "SecureContext"), mojoOptionalTargetType(secureContextCarrier)],
   ["ca", "ca", authoritiesType, mojoOptionalTargetType(mojoUnionTargetType([nativeString, bufferCarrier, stringListCarrier]))],
   ["cert", "cert", certificateType, mojoOptionalTargetType(mojoUnionTargetType([nativeString, bufferCarrier]))],
   ["key", "key", certificateType, mojoOptionalTargetType(mojoUnionTargetType([nativeString, bufferCarrier]))],

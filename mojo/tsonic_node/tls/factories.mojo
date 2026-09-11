@@ -4,7 +4,8 @@ from .options import ConnectionOptions, TlsOptions
 from .socket import EmptyCallback, SocketCallback, TLSSocket
 from .server import Server
 from .state import _TlsServerNativeState
-from .native import _alpn_wire, _join_certificates, _port, _take_error
+from .native import _alpn_wire, _port, _take_error
+from .secure_context import create_secure_context
 from ..net.options import timeout_duration
 
 
@@ -20,7 +21,7 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
     var reject = (
         options.reject_unauthorized.value() if options.reject_unauthorized else True
     )
-    var ca = _join_certificates(options.ca)
+    var context = options.secure_context.value() if options.secure_context else create_secure_context(options.context_options())
     var alpn = _alpn_wire(options.alpn_protocols)
     var timeout = timeout_duration(
         options.timeout.value()
@@ -30,13 +31,12 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
         "tsonic_node_tls_connect",
         OptionalPointer[NoneType, MutUntrackedOrigin],
     ](
+        context._state[].handle,
         host.as_c_string_slice().ptr().as_unsafe_any_origin(),
         verification_name.as_c_string_slice().ptr().as_unsafe_any_origin(),
         servername.as_c_string_slice().ptr().as_unsafe_any_origin(),
         c_int(port),
         c_int(reject),
-        ca.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        c_int(Bool(options.ca)),
         alpn.unsafe_ptr(),
         c_size_t(len(alpn)),
         Pointer(to=error),
@@ -62,25 +62,17 @@ def connect_callback(
 def create_server(
     options: TlsOptions, callback: Optional[SocketCallback] = None
 ) raises -> Server:
-    if not options.key or not options.cert:
-        raise Error("TLS server requires key and cert options")
     var handshake_timeout = timeout_duration(
         options.handshake_timeout.value()
     ) if options.handshake_timeout else 120000.0
-    var ca = _join_certificates(options.ca)
+    var context = create_secure_context(options.context_options())
     var alpn = _alpn_wire(options.alpn_protocols)
-    var key = String(options.key.value())
-    var certificate = String(options.cert.value())
-    if key.find("\0") >= 0 or certificate.find("\0") >= 0:
-        raise Error("TLS identity contains a null byte")
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var handle = external_call[
         "tsonic_node_tls_server_create",
         OptionalPointer[NoneType, MutUntrackedOrigin],
     ](
-        key.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        certificate.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        ca.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        context._state[].handle,
         alpn.unsafe_ptr(),
         c_size_t(len(alpn)),
         c_int(options.request_cert.value() if options.request_cert else False),

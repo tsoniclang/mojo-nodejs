@@ -42,12 +42,13 @@ static int certificate_input_finished(char **error) {
     return 0;
 }
 
-static int reject_key_password(char *buffer, int size, int writing, void *context) {
-    (void)buffer;
-    (void)size;
+static int key_password(char *buffer, int size, int writing, void *context) {
     (void)writing;
-    (void)context;
-    return 0;
+    const char *password = context;
+    size_t length = password == NULL ? 0u : strlen(password);
+    if (size < 0 || length > (size_t)size) return 0;
+    if (length != 0u) memcpy(buffer, password, length);
+    return (int)length;
 }
 
 int tsonic_tls_apply_ca_text(SSL_CTX *context, const char *pem, char **error) {
@@ -91,11 +92,12 @@ int tsonic_tls_apply_certificate(
     SSL_CTX *context,
     const char *certificate_pem,
     const char *key_pem,
+    const char *passphrase,
     char **error
 ) {
     if (certificate_pem == NULL || key_pem == NULL ||
         certificate_pem[0] == '\0' || key_pem[0] == '\0') {
-        tsonic_tls_set_error(error, "TLS server requires non-empty cert and key values");
+        tsonic_tls_set_error(error, "TLS identity requires non-empty cert and key values");
         return 0;
     }
     BIO *certificate_bio = BIO_new_mem_buf(certificate_pem, -1);
@@ -108,7 +110,7 @@ int tsonic_tls_apply_certificate(
     }
     ERR_clear_error();
     X509 *certificate = PEM_read_bio_X509_AUX(certificate_bio, NULL, NULL, NULL);
-    EVP_PKEY *key = PEM_read_bio_PrivateKey(key_bio, NULL, reject_key_password, NULL);
+    EVP_PKEY *key = PEM_read_bio_PrivateKey(key_bio, NULL, key_password, (void *)passphrase);
     BIO_free(key_bio);
     if (certificate == NULL || key == NULL ||
         SSL_CTX_use_certificate(context, certificate) != 1 ||

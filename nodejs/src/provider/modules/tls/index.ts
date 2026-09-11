@@ -18,6 +18,7 @@ import {
   numberType,
   nullType,
   overloadedMethodMember,
+  overloadedFunctionExport,
   methodMember,
   propertyMember,
   propertyRead,
@@ -36,6 +37,7 @@ import { tlsEventMembers, tlsEventOperations } from "./events.js";
 import { withDuplexView } from "../stream/duplex.js";
 import { listenOptionsImport, serverListenMember, serverListenOperations } from "../net/listen-contract.js";
 import { tlsConnectionFields, tlsServerFields, tlsOptionDeclaration, tlsOptionOperations } from "./options.js";
+import { secureContextCarrier, secureContextFields, secureContextOptionsCarrier } from "./secure-context.js";
 
 const moduleSpecifier = "node:tls";
 const connectOptionsId = `${moduleSpecifier}::ConnectionOptions`;
@@ -66,6 +68,12 @@ export function tlsModule(): MojoProviderModuleDefinition {
       namedImports: Object.freeze([{ exportedName: "AddressInfo" }, ...listenOptionsImport.namedImports]),
     })]),
     exports: Object.freeze([
+      Object.freeze({ id: "node:tls::SecureContext", name: "SecureContext", kind: "interface", members: Object.freeze([]) }),
+      tlsOptionDeclaration("node:tls::SecureContextOptions", "SecureContextOptions", secureContextFields),
+      overloadedFunctionExport(moduleSpecifier, "createSecureContext", [
+        { parameters: [], returnType: providerRef(moduleSpecifier, "SecureContext") },
+        { parameters: [{ name: "options", type: providerRef(moduleSpecifier, "SecureContextOptions") }], returnType: providerRef(moduleSpecifier, "SecureContext") },
+      ]),
       tlsOptionDeclaration(connectOptionsId, "ConnectionOptions", tlsConnectionFields),
       tlsOptionDeclaration(serverOptionsId, "TlsOptions", tlsServerFields),
       Object.freeze({
@@ -186,6 +194,8 @@ export function tlsModule(): MojoProviderModuleDefinition {
 
 export function tlsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
+    nodeProviderType("node:tls::SecureContext", secureContextCarrier, "implicitly-copyable"),
+    nodeProviderType("node:tls::SecureContextOptions", secureContextOptionsCarrier, "copyable", { objectLiteralConstruction: true }),
     nodeProviderType(connectOptionsId, tlsConnectOptionsCarrier, "copyable", {
       objectLiteralConstruction: true,
     }),
@@ -199,6 +209,9 @@ export function tlsTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function tlsOperations(): readonly MojoProviderOperationDefinition[] {
   const rows: MojoProviderOperationDefinition[] = [
+    ...tlsOptionOperations("node:tls::SecureContextOptions", secureContextOptionsCarrier, secureContextFields),
+    functionCall("node:tls::createSecureContext", "node:tls::createSecureContext()", "tls", "create_secure_context", [], secureContextCarrier, true),
+    functionCall("node:tls::createSecureContext", "node:tls::createSecureContext(options)", "tls", "create_secure_context", [secureContextOptionsCarrier], secureContextCarrier, true),
     ...tlsEventOperations("TLSSocket", tlsSocketCarrier),
     ...tlsEventOperations("Server", tlsServerCarrier),
     ...tlsOptionOperations(connectOptionsId, tlsConnectOptionsCarrier, tlsConnectionFields),

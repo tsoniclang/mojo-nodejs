@@ -28,7 +28,7 @@ from tsonic_node.https import (
     create_server as create_https_server,
     request as https_request,
 )
-from tsonic_node.tls import TlsOptions, poll_tls
+from tsonic_node.tls import TlsOptions, poll_tls, create_secure_context, SecureContextOptions
 
 
 @fieldwise_init
@@ -231,6 +231,16 @@ def main() raises:
     ).end_buffer(expected)
     pump()
     assert_equal(completed.read(), 3)
+    assert_equal(status.read(), 201)
+    assert_equal(received.read().copy_bytes(), expected.copy_bytes())
+    var authorities = List[String]()
+    authorities.append(secure_options.cert.value())
+    var context_options = SecureContextOptions(ca=Optional(authorities^), min_version="TLSv1.2", max_version="TLSv1.3")
+    options.secure_context = Optional(create_secure_context(context_options))
+    options.min_version = Optional("not-selected-with-an-explicit-context")
+    _ = https_request(options, completion(completed, received, status)).end_buffer(expected)
+    pump()
+    assert_equal(completed.read(), 4)
     assert_equal(status.read(), 201)
     assert_equal(received.read().copy_bytes(), expected.copy_bytes())
     secure.close()
