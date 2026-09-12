@@ -1,11 +1,15 @@
 from std.tempfile import mkdtemp
 from std.testing import assert_equal, assert_true, assert_false
 from tsonic_runtime import (
-    RaisingCallable,
+    ClosedRaisingCoroutine,
     ErasedCallableContext,
     allocate_callable_environment,
     destroy_callable_environment,
     create_raising_task,
+    make_async_callable,
+    take_async_invocation,
+    adapt_callable_result,
+    widen_callable,
 )
 from tsonic_node.filesystem import (
     AsyncCopyOptions,
@@ -25,28 +29,42 @@ from tsonic_node.filesystem.copy_options import CopyFilterResult
 @fieldwise_init
 struct FilterState:
     @staticmethod
-    def asynchronous(
-        context: ErasedCallableContext, var arguments: Tuple[String, String]
-    ) raises -> CopyFilterResult:
-        _ = context
-        return CopyFilterResult(FilterState.decide(arguments[0]))
+    def selected_result(
+        var future: ClosedRaisingCoroutine[Bool],
+    ) -> CopyFilterResult:
+        return CopyFilterResult(future^)
 
     @staticmethod
-    async def decide(path: String) raises -> Bool:
-        return not path.endswith("skip")
+    def asynchronous(
+        context: ErasedCallableContext,
+    ) -> ClosedRaisingCoroutine[Bool]:
+        return FilterState.decide(context)
+
+    @staticmethod
+    async def decide(context: ErasedCallableContext) raises -> Bool:
+        var invocation = take_async_invocation[Tuple[String, String]](context)
+        ref arguments = invocation[1]
+        try:
+            return not arguments[0].endswith("skip")
+        finally:
+            _ = invocation
 
     @staticmethod
     def throwing(
-        context: ErasedCallableContext, var arguments: Tuple[String, String]
-    ) raises -> CopyFilterResult:
-        _ = context
-        return CopyFilterResult(FilterState.fail_child(arguments[0]))
+        context: ErasedCallableContext,
+    ) -> ClosedRaisingCoroutine[Bool]:
+        return FilterState.fail_child(context)
 
     @staticmethod
-    async def fail_child(path: String) raises -> Bool:
-        if not path.endswith("source"):
-            raise Error("copy filter rejected child")
-        return True
+    async def fail_child(context: ErasedCallableContext) raises -> Bool:
+        var invocation = take_async_invocation[Tuple[String, String]](context)
+        ref arguments = invocation[1]
+        try:
+            if not arguments[0].endswith("source"):
+                raise Error("copy filter rejected child")
+            return True
+        finally:
+            _ = invocation
 
 
 async def check_async(root: String) raises:
@@ -55,8 +73,13 @@ async def check_async(root: String) raises:
     var environment = allocate_callable_environment(
         FilterState(), destroy_callable_environment[FilterState]
     )
-    options.filter = RaisingCallable[Tuple[String, String], CopyFilterResult](
-        environment, FilterState.asynchronous
+    options.filter = widen_callable(
+        adapt_callable_result(
+            make_async_callable[Tuple[String, String], Bool](
+                environment, FilterState.asynchronous
+            ),
+            FilterState.selected_result,
+        )
     )
     await create_raising_task(
         promises.copy_tree(root + "/source", root + "/async", options)
@@ -66,8 +89,13 @@ async def check_async(root: String) raises:
     )
     assert_false(exists(root + "/async/skip"))
     chmod(root + "/source", 0o751)
-    options.filter = RaisingCallable[Tuple[String, String], CopyFilterResult](
-        environment, FilterState.throwing
+    options.filter = widen_callable(
+        adapt_callable_result(
+            make_async_callable[Tuple[String, String], Bool](
+                environment, FilterState.throwing
+            ),
+            FilterState.selected_result,
+        )
     )
     var rejected = False
     try:
