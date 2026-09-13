@@ -10,7 +10,8 @@ RUN_TIMEOUT="${MOJO_TEST_RUN_TIMEOUT:-60s}"
 git diff --exit-code -- mojo tests
 
 mkdir -p "${NATIVE_BUILD}"
-native_object="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
+native_output="$("${PIXI_BIN}" run bash ../mojo-runtime/scripts/build-native.sh)"
+mapfile -t native_arguments <<<"$native_output"
 js_native_output="$("${PIXI_BIN}" run bash ../mojo-js/scripts/build-native.sh)"
 mapfile -t js_native_arguments <<<"${js_native_output}"
 for source in crypto_bridge crypto_catalog node_bridge dns/request dns/lookup dns/resolver dns/records worker/channel worker/spawn net/endpoint compression/codec compression/constants tls/context tls/secure_context tls/handshake tls/connection tls/server tls/io tls/lifecycle tls_bio fs_watch_bridge fs_stream_bridge stream/read fs_bridge os_bridge http_client_bridge http_parser_bridge socket_io_bridge vendor/llhttp/src/llhttp vendor/llhttp/src/api vendor/llhttp/src/http; do
@@ -29,8 +30,7 @@ for source in url_bridge vendor/ada/ada; do
 done
 
 link_arguments=(
-  -Xlinker "$native_object"
-  -Xlinker -lstdc++
+  "${native_arguments[@]}"
   -Xlinker "${NATIVE_BUILD}/crypto_bridge.o"
   -Xlinker "${NATIVE_BUILD}/crypto_catalog.o"
   -Xlinker "${NATIVE_BUILD}/node_bridge.o"
