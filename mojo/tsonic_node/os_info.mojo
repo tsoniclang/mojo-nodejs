@@ -28,11 +28,13 @@ def platform() -> String:
 def arch() -> String:
     comptime if CompilationTarget.is_x86():
         return "x64" if bit_width_of[DType.int]() == 64 else "ia32"
-    elif CompilationTarget.is_arm():
+    elif CompilationTarget._is_arch["arm"]() or CompilationTarget._is_arch[
+        "aarch64"
+    ]():
         return "arm64" if bit_width_of[DType.int]() == 64 else "arm"
-    elif CompilationTarget.is_rv64():
+    elif CompilationTarget._is_arch["riscv64"]():
         return "riscv64"
-    elif CompilationTarget.is_rv32():
+    elif CompilationTarget._is_arch["riscv32"]():
         return "riscv32"
     else:
         return "unknown"

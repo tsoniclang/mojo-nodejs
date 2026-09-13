@@ -70,7 +70,7 @@ struct TextQueue(Movable):
             remaining -= count
             if remaining == 0:
                 break
-        var output = String(capacity_bytes=output_bytes)
+        var output = String(capacity=output_bytes)
         remaining = size
         while remaining:
             var chunk = self._chunks.popleft()

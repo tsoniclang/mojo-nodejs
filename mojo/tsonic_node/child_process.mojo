@@ -5,7 +5,6 @@ from std.os import abort, remove, rmdir
 from std.pathlib import Path
 from std.sys._libc import (
     close,
-    dup2,
     fcntl,
     FcntlCommands,
     FcntlFDFlags,
@@ -66,8 +65,14 @@ def spawn_sync(
     if process_id == 0:
         _ = close(control[0])
         if (
-            dup2(c_int(stdout_file._get_raw_fd()), c_int(1)) < 0
-            or dup2(c_int(stderr_file._get_raw_fd()), c_int(2)) < 0
+            external_call["dup2", c_int](
+                c_int(stdout_file._get_raw_fd()), c_int(1)
+            )
+            < 0
+            or external_call["dup2", c_int](
+                c_int(stderr_file._get_raw_fd()), c_int(2)
+            )
+            < 0
         ):
             _report_exec_failure(control[1])
         stdout_file.close()

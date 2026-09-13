@@ -125,7 +125,7 @@ def decode_bytes(bytes: List[Byte], encoding: String) raises -> String:
         return text
     if name == "hex":
         comptime digits = "0123456789abcdef"
-        var result = String(capacity_bytes=len(bytes) * 2)
+        var result = String(capacity=len(bytes) * 2)
         for byte in bytes:
             result += String(digits[byte=Int(UInt8(byte) >> 4)])
             result += String(digits[byte=Int(UInt8(byte) & 15)])
