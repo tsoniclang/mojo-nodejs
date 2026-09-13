@@ -3,7 +3,7 @@ import type {
   MojoProviderOperationDefinition,
 } from "@tsonic/target-mojo/provider";
 import type { ProviderMemberDeclaration } from "../../model/types.js";
-import { booleanType, boolCarrier, targetTypeParameter, typeParameter } from "../../model.js";
+import { booleanType, boolCarrier, bufferCarrier, targetTypeParameter, typeParameter } from "../../model.js";
 
 const bufferId = "node:buffer::Buffer";
 const memberId = `${bufferId}.isBuffer#static`;
@@ -46,9 +46,14 @@ export function bufferPredicateOperations(): readonly MojoProviderOperationDefin
       signatureId: signature(staticMember ? memberId : functionId).id,
       operationKind: "call",
       target: Object.freeze({
-        kind: "function-call",
-        modulePath: Object.freeze(["tsonic_node", "buffer"]),
-        name: "buffer_is_buffer",
+        kind: "value-predicate",
+        predicate: Object.freeze({
+          acceptedType: bufferCarrier,
+          boxed: Object.freeze({
+            modulePath: Object.freeze(["tsonic_node", "buffer"]),
+            name: "buffer_is_buffer",
+          }),
+        }),
         genericParameters: Object.freeze([Object.freeze({
           kind: "type",
           name: "T",

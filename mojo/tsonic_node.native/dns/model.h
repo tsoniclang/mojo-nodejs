@@ -15,11 +15,12 @@ struct TsonicDnsRequest {
     atomic_int ready;
     int failed;
     int kind;
-    int family;
+    int lookup_all;
+    int lookup_order;
     size_t count;
     size_t capacity;
     size_t bytes;
-    char **values;
+    struct TsonicDnsResult { char *value; int family; } *values;
     char *input;
     char error[256];
     char code[32];

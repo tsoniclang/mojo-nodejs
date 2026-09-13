@@ -40,6 +40,7 @@ const records: readonly CallRecord[] = Object.freeze([
   { name: "writeSync", native: "write_from", minimum: 2, parameters: [descriptor, buffer, offset, ["length", numberType, optionalFloat64Carrier], position], result: numberResult },
   { name: "writeSync", native: "write_string", minimum: 2, parameters: [descriptor, ["value", stringType, nativeString], position, ["encoding", stringType, nativeString]], result: numberResult },
   { name: "readlinkSync", native: "read_link", minimum: 1, parameters: [path], result: stringResult, promise: "readlink" },
+  { name: "rmdirSync", native: "remove_directory", minimum: 1, parameters: [path], result: emptyResult, promise: "rmdir" },
   { name: "truncateSync", native: "truncate_file", minimum: 1, parameters: [path, length], result: emptyResult, promise: "truncate" },
 ]);
 

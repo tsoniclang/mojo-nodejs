@@ -1,4 +1,5 @@
 from ..validation import checked_integer
+from ..system_errors import get_system_error_name, get_system_error_message
 
 
 def checked_path(value: String) raises:
@@ -8,6 +9,10 @@ def checked_path(value: String) raises:
 
 def check_status(status: Int32, operation: String) raises:
     if status < 0:
-        from ..system_errors import get_system_error_name, get_system_error_message
-        raise Error(operation, ": ", get_system_error_name(Float64(status)), ": ",
-                    get_system_error_message(Float64(status)))
+        raise Error(
+            operation,
+            ": ",
+            get_system_error_name(Float64(status)),
+            ": ",
+            get_system_error_message(Float64(status)),
+        )

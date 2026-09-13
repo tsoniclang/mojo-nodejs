@@ -110,8 +110,11 @@ def can_parse(input: String, base: URL) raises -> Bool:
 def _can_parse(input: String, base: Optional[String]) raises -> Bool:
     var base_text = base.value() if base else String()
     var result = external_call["tsonic_node_url_can_parse", c_int](
-        input.as_bytes().unsafe_ptr(), c_size_t(input.byte_length()),
-        base_text.as_bytes().unsafe_ptr(), c_size_t(base_text.byte_length()), c_int(Bool(base)),
+        input.as_bytes().unsafe_ptr(),
+        c_size_t(input.byte_length()),
+        base_text.as_bytes().unsafe_ptr(),
+        c_size_t(base_text.byte_length()),
+        c_int(Bool(base)),
     )
     if result < 0:
         raise Error("Unable to validate URL: ", get_errno())

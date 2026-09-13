@@ -1,12 +1,13 @@
 import { mojoNamedTargetType, mojoOptionalTargetType, mojoUnionTargetType } from "@tsonic/target-mojo/provider";
 import type { MojoProviderModuleDefinition, MojoProviderOperationDefinition, MojoProviderTypeDefinition, MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
 import {
-  booleanType, boolCarrier, bufferCarrier, float64Carrier, functionCall, httpResponseCallbackCarrier,
+  booleanType, boolCarrier, bufferCarrier, functionCall, httpResponseCallbackCarrier,
   instanceCall, methodMember, nativeString, nodeProviderType, numberType, optionalBoolCarrier,
   optionalFloat64Carrier, optionalStringCarrier, overloadedFunctionExport, overloadedMethodMember,
   propertyMember, propertyRead, propertyWrite, providerCallbackType, providerRef,
   stringArrayType, stringListCarrier, stringType, unitCarrier, voidType,
 } from "../../model.js";
+import { secureContextCarrier } from "../tls/secure-context.js";
 
 type SourceType = Parameters<typeof propertyMember>[2];
 type ModuleSpecifier = "node:http" | "node:https";
@@ -24,6 +25,7 @@ const commonFields: readonly OptionField[] = Object.freeze([
   ["timeout", "timeout", numberType, optionalFloat64Carrier],
 ]);
 const tlsFields: readonly OptionField[] = Object.freeze([
+  ["secureContext", "secure_context", providerRef("node:tls", "SecureContext"), mojoOptionalTargetType(secureContextCarrier)],
   ["ca", "ca", authoritiesType, mojoOptionalTargetType(mojoUnionTargetType([nativeString, bufferCarrier, stringListCarrier]))],
   ["cert", "cert", certificateType, mojoOptionalTargetType(mojoUnionTargetType([nativeString, bufferCarrier]))],
   ["key", "key", certificateType, mojoOptionalTargetType(mojoUnionTargetType([nativeString, bufferCarrier]))],

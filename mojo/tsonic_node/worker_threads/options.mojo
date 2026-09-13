@@ -8,9 +8,15 @@ struct WorkerOptions(Copyable):
     var env: JsValue
     var worker_data: JsValue
 
-    def __init__(out self, name: Optional[String] = None, argv: Optional[List[String]] = None, env: JsValue = JsValue.undefined(), worker_data: JsValue = JsValue.undefined()):
+    def __init__(
+        out self,
+        name: Optional[String] = None,
+        var argv: Optional[List[String]] = None,
+        env: JsValue = JsValue.undefined(),
+        worker_data: JsValue = JsValue.undefined(),
+    ):
         self.name = name
-        self.argv = argv
+        self.argv = argv^
         self.env = env
         self.worker_data = worker_data
 
@@ -35,7 +41,9 @@ def packed_environment(options: WorkerOptions) raises -> String:
         var key = options.env.object_key(index).to_native_strict()
         var item = options.env.object_value(index)
         if item.is_symbol():
-            raise Error("Worker environment symbols cannot be converted to strings")
+            raise Error(
+                "Worker environment symbols cannot be converted to strings"
+            )
         var value = js_value_to_string(item).to_native_strict()
         _without_null(key)
         _without_null(value)

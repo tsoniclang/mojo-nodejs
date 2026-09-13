@@ -7,7 +7,9 @@ from .state import SocketState, WriteChunk, activity, destroy, fail
 
 
 def socket_error() -> Error:
-    return network_error(external_call["uv_translate_sys_error", c_int](get_errno()))
+    return network_error(
+        external_call["uv_translate_sys_error", c_int](get_errno())
+    )
 
 
 def read(state: ArcPointer[SocketState]) -> Optional[Buffer]:
@@ -17,7 +19,9 @@ def read(state: ArcPointer[SocketState]) -> Optional[Buffer]:
     for _ in range(65536):
         bytes.append(0)
     var count = external_call["tsonic_node_socket_read", Int64](
-        state[].endpoint.descriptor(), bytes.unsafe_ptr(), c_size_t(len(bytes)),
+        state[].endpoint.descriptor(),
+        bytes.unsafe_ptr(),
+        c_size_t(len(bytes)),
     )
     if count == -2:
         return None
@@ -43,7 +47,7 @@ def enqueue(state: ArcPointer[SocketState], value: Buffer) raises -> Bool:
     if len(value) != 0:
         state[].writes.append(Optional(WriteChunk(value.copy_bytes(), 0)))
         state[].queued_bytes += len(value)
-        state[].bytes_written += len(value)
+        state[].bytes_written += Int64(len(value))
     _ = flush(state)
     var accepted = state[].queued_bytes < 65536 and not state[].destroyed
     if not accepted:
@@ -60,13 +64,18 @@ def flush(state: ArcPointer[SocketState]) -> Bool:
         ref chunk = state[].writes[state[].write_index].value()
         var capacity = min(budget, len(chunk.bytes) - chunk.offset)
         var count = external_call["tsonic_node_socket_write", Int64](
-            state[].endpoint.descriptor(), chunk.bytes.unsafe_ptr().unsafe_offset(chunk.offset),
+            state[].endpoint.descriptor(),
+            chunk.bytes.unsafe_ptr().unsafe_offset(chunk.offset),
             c_size_t(capacity),
         )
         if count == -2:
             return progressed
         if count <= 0:
-            fail(state, socket_error() if count < 0 else Error("Network write made no progress"))
+            fail(
+                state,
+                socket_error() if count
+                < 0 else Error("Network write made no progress"),
+            )
             return True
         chunk.offset += Int(count)
         var complete = chunk.offset == len(chunk.bytes)
@@ -80,13 +89,19 @@ def flush(state: ArcPointer[SocketState]) -> Bool:
     if state[].write_index == len(state[].writes):
         state[].writes = List[Optional[WriteChunk]]()
         state[].write_index = 0
-    elif state[].write_index >= 64 and state[].write_index * 2 >= len(state[].writes):
+    elif state[].write_index >= 64 and state[].write_index * 2 >= len(
+        state[].writes
+    ):
         var retained = List[Optional[WriteChunk]]()
         for index in range(state[].write_index, len(state[].writes)):
             retained.append(Optional(state[].writes[index].take()))
         state[].writes = retained^
         state[].write_index = 0
-    if state[].write_ending and not state[].write_ended and state[].queued_bytes == 0:
+    if (
+        state[].write_ending
+        and not state[].write_ended
+        and state[].queued_bytes == 0
+    ):
         try:
             state[].endpoint.shutdown()
         except error:

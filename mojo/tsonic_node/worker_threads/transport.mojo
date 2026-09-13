@@ -31,7 +31,9 @@ struct LocalInbox:
         self.messages[self.head] = JsValue.undefined()
         self.head += 1
         if self.head >= 1024 and self.head * 2 >= len(self.messages):
-            var retained = List[JsValue](capacity=len(self.messages) - self.head)
+            var retained = List[JsValue](
+                capacity=len(self.messages) - self.head
+            )
             for index in range(self.head, len(self.messages)):
                 retained.append(self.messages[index])
             self.messages = retained^
@@ -68,7 +70,9 @@ struct PortTransport(ImplicitlyCopyable):
     def closed(self) -> Bool:
         if self._local:
             var local = self._local.value()
-            return local.inbox[].closed or (local.peer[].closed and local.inbox[].empty())
+            return local.inbox[].closed or (
+                local.peer[].closed and local.inbox[].empty()
+            )
         return self._remote.value().closed()
 
     def close_data(self) raises:
@@ -105,14 +109,21 @@ struct PortTransport(ImplicitlyCopyable):
         var packet = frame.take()
         if packet.kind == 1 or packet.kind == 4:
             if len(packet.bytes) != 0:
-                raise Error("Worker control frame contains an unexpected payload")
+                raise Error(
+                    "Worker control frame contains an unexpected payload"
+                )
             return MessagePacket(packet.kind, JsValue.undefined())
         if packet.kind != 2 and packet.kind != 3:
             raise Error("Worker channel received an invalid frame kind")
-        return MessagePacket(packet.kind, decode_structured_clone(packet.bytes^))
+        var kind = packet.kind
+        var bytes = List[UInt8]()
+        swap(bytes, packet.bytes)
+        return MessagePacket(kind, decode_structured_clone(bytes^))
 
     def exit_code(self) raises -> Optional[Int32]:
-        return self._remote.value().exit_code() if self._remote else Optional[Int32]()
+        return self._remote.value().exit_code() if self._remote else Optional[
+            Int32
+        ]()
 
     def id(self) -> Float64:
         return self._remote.value().id() if self._remote else 0
@@ -135,4 +146,7 @@ struct PortTransport(ImplicitlyCopyable):
 def local_pair() -> Tuple[PortTransport, PortTransport]:
     var first = ArcPointer(LocalInbox())
     var second = ArcPointer(LocalInbox())
-    return (PortTransport(LocalTransport(first, second)), PortTransport(LocalTransport(second, first)))
+    return (
+        PortTransport(LocalTransport(first, second)),
+        PortTransport(LocalTransport(second, first)),
+    )

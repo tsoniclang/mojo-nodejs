@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("mixed listener arities and emitted payloads remain independent selected contracts", () => {
@@ -22,7 +22,7 @@ export function main(): void {
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const output = artifactTexts(result).map(({ text }) => text).join("\n");
+  const output = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   for (const operation of ["on_callable", "once_callable1", "prepend_callable2", "prepend_once_callable3", "emit_callable1", "remove_all_listeners_for"])
     assert.ok(output.includes(operation), operation);
 });

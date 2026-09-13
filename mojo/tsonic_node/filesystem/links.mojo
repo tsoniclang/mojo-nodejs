@@ -7,11 +7,18 @@ def read_link(path: String) raises -> String:
     checked_path(path)
     var length = c_size_t(0)
     var status = c_int(0)
-    var value = external_call["tsonic_node_fs_readlink", OptionalPointer[Byte, MutUntrackedOrigin]](
-        path.as_c_string_slice(), Pointer(to=length), Pointer(to=status),
+    var native_path = path
+    var value = external_call[
+        "tsonic_node_fs_readlink", OptionalPointer[Byte, MutUntrackedOrigin]
+    ](
+        native_path.as_c_string_slice().ptr(),
+        Pointer(to=length),
+        Pointer(to=status),
     )
     check_status(Int32(status), "readlink")
     try:
-        return String(Span(value.value(), Int(length)))
+        return String(
+            from_utf8_lossy=Span(unsafe_ptr=value.value(), length=Int(length))
+        )
     finally:
         external_call["tsonic_node_fs_free", NoneType](value.value())

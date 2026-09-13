@@ -2,7 +2,25 @@ from std.collections import List
 from std.utils import Variant
 from std.testing import assert_equal, assert_true
 from tsonic_node.buffer import Buffer, buffer_concat
-from tsonic_node.zlib import ZlibOptions, BrotliOptions, gzip_sync, gzip_sync_options, gunzip_sync, gunzip_sync_options, inflate_sync, deflate_raw_sync_options, inflate_raw_sync_options, brotli_compress_sync_options, brotli_decompress_sync_options, create_unzip, create_brotli_compress, create_brotli_decompress, z_sync_flush, brotli_param_quality, brotli_param_lgwin
+from tsonic_node.zlib import (
+    ZlibOptions,
+    BrotliOptions,
+    gzip_sync,
+    gzip_sync_options,
+    gunzip_sync,
+    gunzip_sync_options,
+    inflate_sync,
+    deflate_raw_sync_options,
+    inflate_raw_sync_options,
+    brotli_compress_sync_options,
+    brotli_decompress_sync_options,
+    create_unzip,
+    create_brotli_compress,
+    create_brotli_decompress,
+    z_sync_flush,
+    brotli_param_quality,
+    brotli_param_lgwin,
+)
 from tsonic_node.zlib.options import BrotliParameters
 
 
@@ -12,7 +30,9 @@ def main() raises:
         text += "abcd"
     var input = Buffer.from_string(text)
     var compressed = gzip_sync(input)
-    var bounded = ZlibOptions(max_output_length=Float64(len(input)), chunk_size=64.0)
+    var bounded = ZlibOptions(
+        max_output_length=Float64(len(input)), chunk_size=64.0
+    )
     assert_true(gunzip_sync_options(compressed, bounded).equals(input))
     bounded.max_output_length = Float64(len(input) - 1)
     var rejected = False
@@ -53,8 +73,8 @@ def main() raises:
     assert_true(unzip.read().value().equals(input))
 
     var parameters = BrotliParameters()
-    parameters[brotli_param_quality()] = Variant[Bool, Float64](4.0)
-    parameters[brotli_param_lgwin()] = Variant[Bool, Float64](18.0)
+    parameters[brotli_param_quality()] = Variant[Float64, Bool](4.0)
+    parameters[brotli_param_lgwin()] = Variant[Float64, Bool](18.0)
     var brotli_options = BrotliOptions()
     brotli_options.params = parameters^
     brotli_options.max_output_length = 128.0
@@ -64,7 +84,9 @@ def main() raises:
     var decode_options = BrotliOptions()
     decode_options.max_output_length = Float64(len(input))
     decode_options.chunk_size = 64.0
-    assert_true(brotli_decompress_sync_options(brotli, decode_options).equals(input))
+    assert_true(
+        brotli_decompress_sync_options(brotli, decode_options).equals(input)
+    )
     decode_options.max_output_length = Float64(len(input) - 1)
     rejected = False
     try:

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("base and file streams select one exact binary-or-text read contract", () => {
@@ -20,7 +20,7 @@ export function main(): void {
   input.close();
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.match(emitted, /set_encoding\(/u);
   assert.match(emitted, /read_sized\(/u);
   assert.match(emitted, /Optional\[/u);

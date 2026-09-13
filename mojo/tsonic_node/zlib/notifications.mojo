@@ -6,7 +6,9 @@ def _initial_pending() -> CallbackQueue:
     return CallbackQueue(1 << 20)
 
 
-comptime pending_zlib = GlobalCell["tsonic.node.zlib.pending", _initial_pending]()
+comptime pending_zlib = GlobalCell[
+    "tsonic.node.zlib.pending", _initial_pending
+]()
 
 
 def has_pending_zlib() -> Bool:

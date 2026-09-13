@@ -1,5 +1,13 @@
 from std.testing import assert_equal, assert_false, assert_true
-from tsonic_runtime import ErasedCallableContext, Location, RaisingCallable, allocate_callable_environment, destroy_callable_environment
+from std.memory import ArcPointer
+from tsonic_runtime import (
+    ErasedCallableContext,
+    Location,
+    RaisingCallable,
+    TsError,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.internal.typed_listeners import TypedListeners
 
 
@@ -29,12 +37,67 @@ struct Action:
         destroy_callable_environment[Action](context)
 
 
-def callback(trace: Location[String], name: String, listeners: TypedListeners[Tuple[]], remove: Optional[Notification] = None, recurse: Bool = False) -> Notification:
-    var environment = allocate_callable_environment(Action(trace, name, listeners, remove, Location(recurse)), Action.destroy)
+def callback(
+    trace: Location[String],
+    name: String,
+    listeners: TypedListeners[Tuple[]],
+    remove: Optional[Notification] = None,
+    recurse: Bool = False,
+) -> Notification:
+    var environment = allocate_callable_environment(
+        Action(trace, name, listeners, remove, Location(recurse)),
+        Action.destroy,
+    )
     return Notification(environment, Action.invoke)
 
 
+struct _RecursiveState:
+    var listeners: TypedListeners[Tuple[TsError, RecursiveOwner]]
+    var calls: Int
+
+    def __init__(out self):
+        self.listeners = TypedListeners[Tuple[TsError, RecursiveOwner]]()
+        self.calls = 0
+
+
+struct RecursiveOwner(ImplicitlyCopyable):
+    var state: ArcPointer[_RecursiveState]
+
+    def __init__(out self):
+        self.state = ArcPointer(_RecursiveState())
+
+    @staticmethod
+    def receive(
+        _context: ErasedCallableContext, var arguments: Tuple[TsError, Self]
+    ) raises:
+        assert_equal(arguments[0].name, "SelectedError")
+        assert_equal(arguments[0].message, "exact-payload")
+        assert_equal(arguments[0].stack.value(), "exact-stack")
+        arguments[1].state[].calls += 1
+
+
+def recursive_payload() raises:
+    var owner = RecursiveOwner()
+    var retained_alias = owner
+    var environment = allocate_callable_environment(
+        0, destroy_callable_environment[Int]
+    )
+    var callback = RaisingCallable[Tuple[TsError, RecursiveOwner], NoneType](
+        environment, RecursiveOwner.receive
+    )
+    owner.state[].listeners.add(callback)
+    owner.state[].listeners.add(callback, True)
+    var error = TsError("SelectedError", "exact-payload", String("exact-stack"))
+    _ = retained_alias.state[].listeners.emit((error.copy(), owner))
+    assert_equal(owner.state[].calls, 2)
+    _ = owner.state[].listeners.emit((error.copy(), retained_alias))
+    assert_equal(retained_alias.state[].calls, 3)
+    retained_alias.state[].listeners.remove(callback)
+    assert_false(owner.state[].listeners.has_listeners())
+
+
 def main() raises:
+    recursive_payload()
     var listeners = TypedListeners[Tuple[]]()
     var trace = Location(String())
     var first = callback(trace, "A", listeners)

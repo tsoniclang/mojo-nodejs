@@ -8,7 +8,8 @@ from tsonic_runtime import (
     destroy_callable_environment,
 )
 from tsonic_node.events import EventEmitter, listener_count
-from tsonic_node.readline import ReadLineOptions, create_interface, poll_readline
+from tsonic_node.readline import ReadLineOptions, create_interface
+from support.input_events import poll_input_events
 from tsonic_node.stream import Readable, Writable
 from tsonic_node.worker_threads import (
     get_environment_data,
@@ -121,7 +122,9 @@ def main() raises:
     var received = receive_message_on_port(channel.port2)
     assert_true(received.value().message.is_string())
     assert_equal(received.value().message.string_value(), JsString("payload"))
-    assert_false(received.value().message.same_identity(JsValue(JsString("payload"))))
+    assert_false(
+        received.value().message.same_identity(JsValue(JsString("payload")))
+    )
     _ = channel.port2.unref_chain()
     assert_false(channel.port2.has_ref())
     _ = channel.port2.ref_chain()
@@ -131,7 +134,10 @@ def main() raises:
     assert_equal(message_count.read(), 1)
 
     set_environment_data(JsValue(JsString("mode")), JsValue(JsString("test")))
-    assert_equal(get_environment_data(JsValue(JsString("mode"))).string_value(), JsString("test"))
+    assert_equal(
+        get_environment_data(JsValue(JsString("mode"))).string_value(),
+        JsString("test"),
+    )
     assert_true(is_main_thread())
 
     var identity = js_value_error("identity")
@@ -148,6 +154,6 @@ def main() raises:
     var answer = Location(String())
     lines.question("name? ", answer_callback(answer))
     assert_equal(answer.read(), "")
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(answer.read(), "answer")
     lines.close()

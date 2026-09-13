@@ -10,7 +10,7 @@ from .zlib import has_pending_zlib, poll_zlib
 from .worker_threads import has_active_worker_threads, poll_worker_threads
 from .filesystem.watch import has_active_watchers, poll_watchers
 from .stream.completion import has_pending_streams, poll_streams
-from .stream.readable import has_active_pipes, poll_pipes
+from .stream.readable import has_active_readables, poll_readables
 from .readline import has_pending_readline, poll_readline
 
 
@@ -26,10 +26,12 @@ def run_event_loop() raises:
         or has_active_worker_threads()
         or has_active_watchers()
         or has_pending_streams()
-        or has_active_pipes()
+        or has_active_readables()
         or has_pending_readline()
     ):
-        var read_epoch = external_call["tsonic_node_stream_read_epoch", UInt64]()
+        var read_epoch = external_call[
+            "tsonic_node_stream_read_epoch", UInt64
+        ]()
         var timer_work = poll_timers()
         var server_work = poll_servers()
         var request_work = poll_requests()
@@ -40,8 +42,8 @@ def run_event_loop() raises:
         var worker_work = poll_worker_threads()
         var watcher_work = poll_watchers()
         var stream_work = poll_streams()
-        var pipe_work = poll_pipes()
         var readline_work = poll_readline()
+        var readable_work = poll_readables()
         if (
             timer_work
             or server_work
@@ -53,12 +55,14 @@ def run_event_loop() raises:
             or worker_work
             or watcher_work
             or stream_work
-            or pipe_work
+            or readable_work
             or readline_work
         ):
             continue
         var delay = next_timer_delay_ns()
         var sleep_ns = min(delay.value(), 10_000_000) if delay else 10_000_000
-        var waited = external_call["tsonic_node_stream_read_wait", c_int](read_epoch, UInt64(sleep_ns))
+        var waited = external_call["tsonic_node_stream_read_wait", c_int](
+            read_epoch, UInt64(sleep_ns)
+        )
         if waited < 0:
             raise Error("Native event-loop completion wait failed: ", waited)

@@ -42,9 +42,22 @@ def alternatives_and_ranges() raises:
     assert_true(matches_glob("part-c", "part-{a..f..2}"))
     assert_true(matches_glob("part--2", "part-{-3..0}"))
     assert_true(matches_glob("{word}", "{word}"))
-    assert_true(matches_glob("{999999999999999999999..word}", "{999999999999999999999..word}"))
-    assert_true(matches_glob("{999999999999999999999word..9}", "{999999999999999999999word..9}"))
-    assert_true(matches_glob("{999999999999999999999..9..word}", "{999999999999999999999..9..word}"))
+    assert_true(
+        matches_glob(
+            "{999999999999999999999..word}", "{999999999999999999999..word}"
+        )
+    )
+    assert_true(
+        matches_glob(
+            "{999999999999999999999word..9}", "{999999999999999999999word..9}"
+        )
+    )
+    assert_true(
+        matches_glob(
+            "{999999999999999999999..9..word}",
+            "{999999999999999999999..9..word}",
+        )
+    )
     assert_true(matches_glob("[word", "[word"))
     assert_true(matches_glob("x", "[w-z]"))
     assert_false(matches_glob("x", "[!w-z]"))
@@ -87,8 +100,12 @@ def extended_patterns() raises:
 def dialects_and_limits() raises:
     var windows = win32_value()
     assert_true(windows.matches_glob("C:\\posts\\entry.md", "c:/posts/*.md"))
-    assert_true(windows.matches_glob("\\\\?\\C:\\posts\\entry.md", "c:/posts/*.md"))
-    assert_false(posix_value().matches_glob("C:\\posts\\entry.md", "C:/posts/*.md"))
+    assert_true(
+        windows.matches_glob("\\\\?\\C:\\posts\\entry.md", "c:/posts/*.md")
+    )
+    assert_false(
+        posix_value().matches_glob("C:\\posts\\entry.md", "C:/posts/*.md")
+    )
     var rejected = False
     try:
         _ = matches_glob("file", "*" * 65537)

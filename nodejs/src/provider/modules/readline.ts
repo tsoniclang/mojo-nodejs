@@ -4,6 +4,9 @@ import type {
   MojoProviderTypeDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
+import { mojoSourceErrorType } from "@tsonic/target-mojo/provider";
+import { nodeEventMembers, nodeEventOperations } from "../model/events.js";
+import type { NodeEventDefinition } from "../model/events.js";
 import {
   booleanType,
   boolCarrier,
@@ -30,6 +33,15 @@ import {
 const moduleSpecifier = "node:readline";
 const optionsId = `${moduleSpecifier}::ReadLineOptions`;
 const interfaceId = `${moduleSpecifier}::Interface`;
+const events: readonly NodeEventDefinition[] = [
+  { suffix: "line", names: ["line"], parameters: [
+    { name: "line", source: stringType, target: nativeString },
+  ] },
+  { suffix: "error", names: ["error"], parameters: [
+    { name: "error", source: { kind: "source-global", name: "Error" }, target: mojoSourceErrorType() },
+  ] },
+  { suffix: "empty", names: ["pause", "resume", "close"], parameters: [] },
+];
 
 export function readlineModule(): MojoProviderModuleDefinition {
   const callback = providerCallbackType(
@@ -66,6 +78,7 @@ export function readlineModule(): MojoProviderModuleDefinition {
         name: "Interface",
         kind: "class",
         members: Object.freeze([
+          ...nodeEventMembers(moduleSpecifier, "Interface", events),
           methodMember(interfaceId, "question", [
             { name: "query", type: stringType },
             { name: "callback", type: callback },
@@ -114,6 +127,7 @@ export function readlineOperations(): readonly MojoProviderOperationDefinition[]
   const optionalBool = Object.freeze({ kind: "optional" as const, value: boolCarrier });
   const optionalString = Object.freeze({ kind: "optional" as const, value: nativeString });
   return Object.freeze([
+    ...nodeEventOperations(moduleSpecifier, "Interface", readlineInterfaceCarrier, events),
     ...option("input", readableCarrier),
     ...option("output", optionalWritable),
     ...option("terminal", optionalBool),
@@ -131,10 +145,10 @@ export function readlineOperations(): readonly MojoProviderOperationDefinition[]
     ),
     call("question", "question", [nativeString, readlineQuestionCallbackCarrier], unitCarrier, true),
     call("write", "write", [nativeString], unitCarrier, true),
-    call("pause", "pause", [], readlineInterfaceCarrier),
-    call("resume", "resume", [], readlineInterfaceCarrier),
+    call("pause", "pause", [], readlineInterfaceCarrier, true),
+    call("resume", "resume", [], readlineInterfaceCarrier, true),
     call("isPaused", "is_paused", [], boolCarrier),
-    call("close", "close", [], unitCarrier),
+    call("close", "close", [], unitCarrier, true),
     call("setPrompt", "set_prompt", [nativeString], unitCarrier),
     call("getPrompt", "get_prompt", [], nativeString),
     call("prompt", "prompt", [], unitCarrier, true),

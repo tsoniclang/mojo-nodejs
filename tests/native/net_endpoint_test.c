@@ -42,9 +42,9 @@ static int wait_ready(TsonicNetEndpoint *endpoint) {
 }
 
 static void duplex_and_half_close(void) {
-    TsonicNetEndpoint *server = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1);
+    TsonicNetEndpoint *server = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1, 8);
     assert(server != NULL && wait_ready(server) == 1);
-    TsonicNetEndpoint *client = tsonic_node_net_endpoint_new("localhost", endpoint_port(server), 0);
+    TsonicNetEndpoint *client = tsonic_node_net_endpoint_new("localhost", endpoint_port(server), 0, 511);
     assert(client != NULL && wait_ready(client) == 1);
     int status = 0;
     TsonicNetEndpoint *accepted = NULL;
@@ -123,21 +123,21 @@ static void duplex_and_half_close(void) {
 }
 
 static void failure_and_cancellation(void) {
-    TsonicNetEndpoint *invalid = tsonic_node_net_endpoint_new("127.0.0.1", -1, 0);
+    TsonicNetEndpoint *invalid = tsonic_node_net_endpoint_new("127.0.0.1", -1, 0, 511);
     assert(invalid != NULL && wait_ready(invalid) == UV_EINVAL);
     tsonic_node_net_endpoint_free(invalid);
-    TsonicNetEndpoint *server = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1);
+    TsonicNetEndpoint *server = tsonic_node_net_endpoint_new("127.0.0.1", 0, 1, 511);
     assert(server != NULL && wait_ready(server) == 1);
     int port = endpoint_port(server);
     tsonic_node_net_endpoint_free(server);
-    TsonicNetEndpoint *refused = tsonic_node_net_endpoint_new("127.0.0.1", port, 0);
+    TsonicNetEndpoint *refused = tsonic_node_net_endpoint_new("127.0.0.1", port, 0, 511);
     assert(refused != NULL && wait_ready(refused) == UV_ECONNREFUSED);
     tsonic_node_net_endpoint_free(refused);
-    TsonicNetEndpoint *missing = tsonic_node_net_endpoint_new("invalid/host", 80, 0);
+    TsonicNetEndpoint *missing = tsonic_node_net_endpoint_new("invalid/host", 80, 0, 511);
     assert(missing != NULL && wait_ready(missing) < 0);
     tsonic_node_net_endpoint_free(missing);
     for (int index = 0; index < 64; ++index) {
-        TsonicNetEndpoint *pending = tsonic_node_net_endpoint_new("localhost", 80, 0);
+        TsonicNetEndpoint *pending = tsonic_node_net_endpoint_new("localhost", 80, 0, 511);
         assert(pending != NULL);
         tsonic_node_net_endpoint_free(pending);
     }

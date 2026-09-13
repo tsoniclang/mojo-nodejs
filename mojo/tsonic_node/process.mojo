@@ -1,7 +1,6 @@
 from std.collections import List
 import std.os.path
 from std.ffi import c_int, c_long, external_call
-from std.io import FileDescriptor
 from std.os import chdir, setenv, unsetenv
 from std.pathlib import Path, cwd
 from std.sys import CompilationTarget, argv
@@ -9,9 +8,11 @@ from std.sys import exit as native_exit
 from std.time import monotonic
 from tsonic_runtime import GlobalCell
 
-from .buffer import Buffer
 from .os_info import arch as os_arch
 from .os_info import platform as os_platform
+from .stream import Writable
+from .stream import stdout as writable_stdout
+from .stream import stderr as writable_stderr
 
 
 struct ProcessEnv(Copyable):
@@ -29,30 +30,6 @@ struct MemoryUsage(Copyable):
     var heap_used: Float64
     var external: Float64
     var array_buffers: Float64
-
-
-struct ProcessWriteStream(Copyable):
-    var _fd: Int
-
-    def __init__(out self, fd: Int):
-        self._fd = fd
-
-    def write_string(mut self, value: String) raises -> Bool:
-        var descriptor = FileDescriptor(self._fd)
-        descriptor.write_string(value)
-        return True
-
-    def write_buffer(mut self, value: Buffer) raises -> Bool:
-        var descriptor = FileDescriptor(self._fd)
-        var bytes = value.copy_bytes()
-        descriptor.write_bytes(Span(bytes))
-        return True
-
-    def is_tty(self) -> Bool:
-        return FileDescriptor(self._fd).isatty()
-
-    def fd(self) -> Int:
-        return self._fd
 
 
 def _initial_exit_code() -> Optional[Int32]:
@@ -78,7 +55,7 @@ def environment_object() -> ProcessEnv:
 def environment(var name: String) -> Optional[String]:
     var value = external_call[
         "getenv", OptionalPointer[UInt8, ImmUntrackedOrigin]
-    ](name.as_c_string_slice())
+    ](name.as_c_string_slice().ptr())
     if not value:
         return None
     return String(unsafe_from_utf8_ptr=value.value())
@@ -202,12 +179,12 @@ def _resident_set_size() -> Float64:
         return 0.0
 
 
-def stdout() -> ProcessWriteStream:
-    return ProcessWriteStream(1)
+def stdout() -> Writable:
+    return writable_stdout()
 
 
-def stderr() -> ProcessWriteStream:
-    return ProcessWriteStream(2)
+def stderr() -> Writable:
+    return writable_stderr()
 
 
 def exit_code() -> Optional[Int32]:

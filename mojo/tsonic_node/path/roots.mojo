@@ -23,8 +23,23 @@ def reserved_device(name: String) -> Bool:
         var suffix = String(value[byte=3:])
         if suffix == "¹" or suffix == "²" or suffix == "³":
             return True
-        return suffix.byte_length() == 1 and suffix.as_bytes()[0] >= 49 and suffix.as_bytes()[0] <= 57
+        return (
+            suffix.byte_length() == 1
+            and suffix.as_bytes()[0] >= 49
+            and suffix.as_bytes()[0] <= 57
+        )
     return False
+
+
+def windows_resolve_root(path: String) -> WindowsRoot:
+    var result = windows_root(path)
+    if result.device.startswith("\\\\?\\") or result.device.startswith(
+        "\\\\.\\"
+    ):
+        var device = String(result.device[byte=:3])
+        result.device = device^
+        result.tail_start = 4
+    return result^
 
 
 def windows_root(path: String, normalization: Bool = False) -> WindowsRoot:
@@ -60,7 +75,7 @@ def windows_root(path: String, normalization: Bool = False) -> WindowsRoot:
             result.tail_start = 4
             var colon = share.find(":")
             if colon > 0 and reserved_device(String(share[byte=:colon])):
-                result.device = "\\\\?\\" + String(share[byte=:colon + 1])
+                result.device = "\\\\?\\" + String(share[byte = : colon + 1])
                 result.tail_start = share_start + colon + 1
         else:
             result.device = "\\\\" + host + "\\" + share
@@ -77,7 +92,7 @@ def windows_root(path: String, normalization: Bool = False) -> WindowsRoot:
     elif normalization:
         var colon = path.find(":")
         if colon > 0 and reserved_device(String(path[byte=:colon])):
-            result.device = String(path[byte=:colon + 1])
+            result.device = String(path[byte = : colon + 1])
             result.tail_start = colon + 1
             result.reserved = True
     return result^

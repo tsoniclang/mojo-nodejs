@@ -3,7 +3,13 @@ from std.sys import CompilationTarget
 from tsonic_js import JsRegExp, JsString
 from .syntax import GlobSyntax
 from .braces import expand_braces
-from .components import split_components, normalize_components, pattern_components, is_drive, strip_drive_namespace
+from .components import (
+    split_components,
+    normalize_components,
+    pattern_components,
+    is_drive,
+    strip_drive_namespace,
+)
 from .limits import pattern_limit, match_limit, require_source_size
 
 
@@ -29,7 +35,11 @@ def _compile(pattern: List[String]) raises -> List[_Component]:
         var syntax = GlobSyntax(part)
         var literal = syntax.literal()
         if literal:
-            result.append(_Component(False, Optional(literal.value().to_native_strict()), None))
+            result.append(
+                _Component(
+                    False, Optional(literal.value().to_native_strict()), None
+                )
+            )
             continue
         var expression = "^(?:" + syntax.expression() + ")$"
         size += expression.byte_length()
@@ -37,7 +47,13 @@ def _compile(pattern: List[String]) raises -> List[_Component]:
         var flags = "u" if syntax.unicode else ""
         comptime if CompilationTarget.is_macos():
             flags += "i"
-        result.append(_Component(False, None, Optional(JsRegExp(JsString(expression), JsString(flags)))))
+        result.append(
+            _Component(
+                False,
+                None,
+                Optional(JsRegExp(JsString(expression), JsString(flags))),
+            )
+        )
     return result^
 
 
@@ -59,11 +75,18 @@ def _match(path: List[String], pattern: List[_Component]) raises -> Bool:
                 if states[index] and component.matches(path[index]):
                     next[index + 1] = True
         states = next^
-    return states[len(path)] or (len(path) > 0 and not path[len(path) - 1] and states[len(path) - 1])
+    return states[len(path)] or (
+        len(path) > 0 and not path[len(path) - 1] and states[len(path) - 1]
+    )
 
 
-def matches_glob(path: String, pattern: String, windows: Bool = False) raises -> Bool:
-    if pattern.byte_length() > pattern_limit * 3 or len(JsString(pattern)) > pattern_limit:
+def matches_glob(
+    path: String, pattern: String, windows: Bool = False
+) raises -> Bool:
+    if (
+        pattern.byte_length() > pattern_limit * 3
+        or len(JsString(pattern)) > pattern_limit
+    ):
         raise Error("Path glob pattern exceeds 65536 UTF-16 code units")
     if not pattern:
         return not path
@@ -77,7 +100,12 @@ def matches_glob(path: String, pattern: String, windows: Bool = False) raises ->
             var selected = parts.copy()
             if windows:
                 strip_drive_namespace(selected)
-                if len(file) and len(selected) and is_drive(file[0]) and is_drive(selected[0]):
+                if (
+                    len(file)
+                    and len(selected)
+                    and is_drive(file[0])
+                    and is_drive(selected[0])
+                ):
                     selected[0] = selected[0].lower()
                     file[0] = file[0].lower()
             if len(file) > remaining // max(1, len(selected)):

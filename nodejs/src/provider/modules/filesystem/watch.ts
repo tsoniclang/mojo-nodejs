@@ -3,7 +3,7 @@ import type {
 } from "@tsonic/target-mojo/provider";
 import { mojoCallableTargetType, mojoNamedTargetType, mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import {
-  booleanType, boolCarrier, fnExport, functionCall, instanceCall, methodMember,
+  booleanType, boolCarrier, functionCall, instanceCall, methodMember,
   nativeString, nodeProviderType, numberType, optionalBoolCarrier, optionalFloat64Carrier,
   optionalStringCarrier, overloadedFunctionExport, propertyMember, propertyRead,
   propertyWrite, providerCallbackType, providerRef, statsCarrier, stringType, unitCarrier, voidType,
@@ -21,10 +21,10 @@ const optionsCarrier = mojoNamedTargetType("tsonic.mojo.node.WatchOptions", ["ts
 const filenameType = Object.freeze({ kind: "union" as const, types: Object.freeze([
   stringType, Object.freeze({ kind: "literal" as const, value: null }),
 ]) });
-const changeType = providerCallbackType("node:fs::WatchListener", "listener", [
+const changeType = (signature: string) => providerCallbackType(signature, "listener", [
   { name: "eventType", type: stringType }, { name: "filename", type: filenameType },
 ]);
-const statType = providerCallbackType("node:fs::StatWatcherListener", "listener", [
+const statType = (signature: string) => providerCallbackType(signature, "listener", [
   { name: "current", type: providerRef(moduleSpecifier, "Stats") },
   { name: "previous", type: providerRef(moduleSpecifier, "Stats") },
 ]);
@@ -54,16 +54,16 @@ export function filesystemWatchExports(): MojoProviderModuleDefinition["exports"
     ]) }),
     overloadedFunctionExport(moduleSpecifier, "watch", [
       { parameters: [pathParameter], returnType: watcherType },
-      { parameters: [pathParameter, { name: "listener", type: changeType }], returnType: watcherType },
-      { parameters: [pathParameter, { name: "options", type: providerRef(moduleSpecifier, "WatchOptions") }, { name: "listener", type: changeType }], returnType: watcherType },
+      { parameters: [pathParameter, { name: "listener", type: changeType("node:fs::watch(path,listener)") }], returnType: watcherType },
+      { parameters: [pathParameter, { name: "options", type: providerRef(moduleSpecifier, "WatchOptions") }, { name: "listener", type: changeType("node:fs::watch(path,options,listener)") }], returnType: watcherType },
     ]),
     overloadedFunctionExport(moduleSpecifier, "watchFile", [
-      { parameters: [pathParameter, { name: "listener", type: statType }], returnType: statWatcherType },
-      { parameters: [pathParameter, { name: "options", type: providerRef(moduleSpecifier, "WatchFileOptions") }, { name: "listener", type: statType }], returnType: statWatcherType },
+      { parameters: [pathParameter, { name: "listener", type: statType("node:fs::watchFile(path,listener)") }], returnType: statWatcherType },
+      { parameters: [pathParameter, { name: "options", type: providerRef(moduleSpecifier, "WatchFileOptions") }, { name: "listener", type: statType("node:fs::watchFile(path,options,listener)") }], returnType: statWatcherType },
     ]),
     overloadedFunctionExport(moduleSpecifier, "unwatchFile", [
       { parameters: [pathParameter], returnType: voidType },
-      { parameters: [pathParameter, { name: "listener", type: statType }], returnType: voidType },
+      { parameters: [pathParameter, { name: "listener", type: statType("node:fs::unwatchFile(path,listener)") }], returnType: voidType },
     ]),
   ]);
 }

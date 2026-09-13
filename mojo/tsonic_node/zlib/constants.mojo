@@ -26,7 +26,9 @@ def z_block() -> Float64:
 
 
 def z_default_compression() -> Float64:
-    return external_call["tsonic_node_constant_Z_DEFAULT_COMPRESSION", Float64]()
+    return external_call[
+        "tsonic_node_constant_Z_DEFAULT_COMPRESSION", Float64
+    ]()
 
 
 def z_best_speed() -> Float64:
@@ -62,15 +64,21 @@ def z_fixed() -> Float64:
 
 
 def brotli_operation_process() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_OPERATION_PROCESS", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_OPERATION_PROCESS", Float64
+    ]()
 
 
 def brotli_operation_flush() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_OPERATION_FLUSH", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_OPERATION_FLUSH", Float64
+    ]()
 
 
 def brotli_operation_finish() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_OPERATION_FINISH", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_OPERATION_FINISH", Float64
+    ]()
 
 
 def brotli_param_mode() -> Float64:
@@ -90,15 +98,22 @@ def brotli_param_lgblock() -> Float64:
 
 
 def brotli_param_disable_literal_context_modeling() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_PARAM_DISABLE_LITERAL_CONTEXT_MODELING", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_PARAM_DISABLE_LITERAL_CONTEXT_MODELING",
+        Float64,
+    ]()
 
 
 def brotli_param_size_hint() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_PARAM_SIZE_HINT", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_PARAM_SIZE_HINT", Float64
+    ]()
 
 
 def brotli_param_large_window() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_PARAM_LARGE_WINDOW", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_PARAM_LARGE_WINDOW", Float64
+    ]()
 
 
 def brotli_mode_generic() -> Float64:
@@ -122,24 +137,37 @@ def brotli_max_quality() -> Float64:
 
 
 def brotli_default_quality() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_DEFAULT_QUALITY", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_DEFAULT_QUALITY", Float64
+    ]()
 
 
 def brotli_min_window_bits() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_MIN_WINDOW_BITS", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_MIN_WINDOW_BITS", Float64
+    ]()
 
 
 def brotli_max_window_bits() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_MAX_WINDOW_BITS", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_MAX_WINDOW_BITS", Float64
+    ]()
 
 
 def brotli_default_window() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_DEFAULT_WINDOW", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_DEFAULT_WINDOW", Float64
+    ]()
 
 
 def brotli_decoder_param_disable_ring_buffer_reallocation() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_DECODER_PARAM_DISABLE_RING_BUFFER_REALLOCATION", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_DECODER_PARAM_DISABLE_RING_BUFFER_REALLOCATION",
+        Float64,
+    ]()
 
 
 def brotli_decoder_param_large_window() -> Float64:
-    return external_call["tsonic_node_constant_BROTLI_DECODER_PARAM_LARGE_WINDOW", Float64]()
+    return external_call[
+        "tsonic_node_constant_BROTLI_DECODER_PARAM_LARGE_WINDOW", Float64
+    ]()

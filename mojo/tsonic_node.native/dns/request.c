@@ -39,7 +39,7 @@ int tsonic_dns_result_append(TsonicDnsRequest *request, const char *value) {
     }
     if (request->count == request->capacity) {
         size_t capacity = request->capacity == 0 ? 8 : request->capacity * 2;
-        char **values = realloc(request->values, capacity * sizeof(*values));
+        struct TsonicDnsResult *values = realloc(request->values, capacity * sizeof(*values));
         if (values == NULL) {
             tsonic_dns_request_fail(request, "ENOMEM", "Unable to allocate DNS results");
             return 0;
@@ -53,7 +53,7 @@ int tsonic_dns_result_append(TsonicDnsRequest *request, const char *value) {
         return 0;
     }
     memcpy(copy, value, size);
-    request->values[request->count++] = copy;
+    request->values[request->count++] = (struct TsonicDnsResult){copy, 0};
     request->bytes += size;
     return 1;
 }
@@ -90,16 +90,16 @@ size_t tsonic_node_dns_request_count(TsonicDnsRequest *request) {
 }
 
 const char *tsonic_node_dns_request_value(TsonicDnsRequest *request, size_t index) {
-    return index < tsonic_node_dns_request_count(request) ? request->values[index] : NULL;
+    return index < tsonic_node_dns_request_count(request) ? request->values[index].value : NULL;
 }
 
-int tsonic_node_dns_request_family(TsonicDnsRequest *request) {
-    return tsonic_node_dns_request_ready(request) && !request->failed ? request->family : 0;
+int tsonic_node_dns_request_family(TsonicDnsRequest *request, size_t index) {
+    return index < tsonic_node_dns_request_count(request) ? request->values[index].family : 0;
 }
 
 void tsonic_node_dns_request_free(TsonicDnsRequest *request) {
     if (request == NULL || atomic_fetch_sub_explicit(&request->references, 1, memory_order_acq_rel) != 1) return;
-    for (size_t index = 0; index < request->count; index++) free(request->values[index]);
+    for (size_t index = 0; index < request->count; index++) free(request->values[index].value);
     free(request->values);
     free(request->input);
     free(request);

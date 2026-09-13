@@ -16,7 +16,9 @@ import {
   nativeString,
   nodeProviderType,
   numberType,
+  nullType,
   overloadedMethodMember,
+  overloadedFunctionExport,
   methodMember,
   propertyMember,
   propertyRead,
@@ -32,7 +34,10 @@ import {
 } from "../../model.js";
 import { addressCarrier, addressType } from "../net/records.js";
 import { tlsEventMembers, tlsEventOperations } from "./events.js";
+import { withDuplexView } from "../stream/duplex.js";
+import { listenOptionsImport, serverListenMember, serverListenOperations } from "../net/listen-contract.js";
 import { tlsConnectionFields, tlsServerFields, tlsOptionDeclaration, tlsOptionOperations } from "./options.js";
+import { secureContextCarrier, secureContextFields, secureContextOptionsCarrier } from "./secure-context.js";
 
 const moduleSpecifier = "node:tls";
 const connectOptionsId = `${moduleSpecifier}::ConnectionOptions`;
@@ -42,7 +47,7 @@ const serverId = `${moduleSpecifier}::Server`;
 const bufferType = providerRef("node:buffer", "Buffer");
 const optionalBufferType = Object.freeze({
   kind: "union" as const,
-  types: Object.freeze([bufferType, Object.freeze({ kind: "null" as const })]),
+  types: Object.freeze([bufferType, nullType]),
 });
 const optionalStringType = Object.freeze({
   kind: "union" as const,
@@ -60,9 +65,15 @@ export function tlsModule(): MojoProviderModuleDefinition {
       namedImports: Object.freeze([{ exportedName: "Buffer" }]),
     }), Object.freeze({
       moduleSpecifier: "node:net",
-      namedImports: Object.freeze([{ exportedName: "AddressInfo" }]),
+      namedImports: Object.freeze([{ exportedName: "AddressInfo" }, ...listenOptionsImport.namedImports]),
     })]),
     exports: Object.freeze([
+      Object.freeze({ id: "node:tls::SecureContext", name: "SecureContext", kind: "interface", members: Object.freeze([]) }),
+      tlsOptionDeclaration("node:tls::SecureContextOptions", "SecureContextOptions", secureContextFields),
+      overloadedFunctionExport(moduleSpecifier, "createSecureContext", [
+        { parameters: [], returnType: providerRef(moduleSpecifier, "SecureContext") },
+        { parameters: [{ name: "options", type: providerRef(moduleSpecifier, "SecureContextOptions") }], returnType: providerRef(moduleSpecifier, "SecureContext") },
+      ]),
       tlsOptionDeclaration(connectOptionsId, "ConnectionOptions", tlsConnectionFields),
       tlsOptionDeclaration(serverOptionsId, "TlsOptions", tlsServerFields),
       Object.freeze({
@@ -107,7 +118,7 @@ export function tlsModule(): MojoProviderModuleDefinition {
           propertyMember(socketId, "authorized", booleanType),
           propertyMember(socketId, "authorizationError", optionalStringType),
           propertyMember(socketId, "encrypted", booleanType),
-          propertyMember(socketId, "servername", { kind: "union", types: [negotiatedStringType, { kind: "null" }] }),
+          propertyMember(socketId, "servername", { kind: "union", types: [negotiatedStringType, nullType] }),
           propertyMember(socketId, "alpnProtocol", negotiatedStringType),
           propertyMember(socketId, "bytesRead", numberType),
           propertyMember(socketId, "bytesWritten", numberType),
@@ -120,28 +131,8 @@ export function tlsModule(): MojoProviderModuleDefinition {
         kind: "class",
         members: Object.freeze([
           ...tlsEventMembers("Server"),
-          methodMember(serverId, "address", [], { kind: "union", types: [addressType, { kind: "null" }] }),
-          overloadedMethodMember(serverId, "listen", [
-            { parameters: [{ name: "port", type: numberType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port" },
-            { parameters: [{ name: "port", type: numberType }, { name: "host", type: stringType }], returnType: providerRef(moduleSpecifier, "Server"), signatureSuffix: "port,host" },
-            {
-              parameters: [
-                { name: "port", type: numberType },
-                { name: "callback", type: providerCallbackType(`${serverId}.listen(port,callback)`, "callback", []) },
-              ],
-              returnType: providerRef(moduleSpecifier, "Server"),
-              signatureSuffix: "port,callback",
-            },
-            {
-              parameters: [
-                { name: "port", type: numberType },
-                { name: "host", type: stringType },
-                { name: "callback", type: providerCallbackType(`${serverId}.listen(port,host,callback)`, "callback", []) },
-              ],
-              returnType: providerRef(moduleSpecifier, "Server"),
-              signatureSuffix: "port,host,callback",
-            },
-          ]),
+          methodMember(serverId, "address", [], { kind: "union", types: [addressType, nullType] }),
+          serverListenMember(moduleSpecifier),
           ...(["close", "ref", "unref"] as const).map((name) => Object.freeze({
             id: `${serverId}.${name}`,
             name,
@@ -203,19 +194,24 @@ export function tlsModule(): MojoProviderModuleDefinition {
 
 export function tlsTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
+    nodeProviderType("node:tls::SecureContext", secureContextCarrier, "implicitly-copyable"),
+    nodeProviderType("node:tls::SecureContextOptions", secureContextOptionsCarrier, "copyable", { objectLiteralConstruction: true }),
     nodeProviderType(connectOptionsId, tlsConnectOptionsCarrier, "copyable", {
       objectLiteralConstruction: true,
     }),
     nodeProviderType(serverOptionsId, tlsServerOptionsCarrier, "copyable", {
       objectLiteralConstruction: true,
     }),
-    nodeProviderType(socketId, tlsSocketCarrier, "implicitly-copyable"),
+    withDuplexView(nodeProviderType(socketId, tlsSocketCarrier, "implicitly-copyable"), "tls"),
     nodeProviderType(serverId, tlsServerCarrier, "implicitly-copyable"),
   ]);
 }
 
 export function tlsOperations(): readonly MojoProviderOperationDefinition[] {
   const rows: MojoProviderOperationDefinition[] = [
+    ...tlsOptionOperations("node:tls::SecureContextOptions", secureContextOptionsCarrier, secureContextFields),
+    functionCall("node:tls::createSecureContext", "node:tls::createSecureContext()", "tls", "create_secure_context", [], secureContextCarrier, true),
+    functionCall("node:tls::createSecureContext", "node:tls::createSecureContext(options)", "tls", "create_secure_context", [secureContextOptionsCarrier], secureContextCarrier, true),
     ...tlsEventOperations("TLSSocket", tlsSocketCarrier),
     ...tlsEventOperations("Server", tlsServerCarrier),
     ...tlsOptionOperations(connectOptionsId, tlsConnectOptionsCarrier, tlsConnectionFields),
@@ -247,10 +243,7 @@ export function tlsOperations(): readonly MojoProviderOperationDefinition[] {
     ...socketProperty("destroyed", "closed", boolCarrier),
     functionCall(`${moduleSpecifier}::createServer`, `${moduleSpecifier}::createServer(options)`, "tls", "create_server", [tlsServerOptionsCarrier], tlsServerCarrier, true),
     instanceCall(serverId, `${serverId}.address`, `${serverId}.address()`, "address", tlsServerCarrier, [], mojoOptionalTargetType(addressCarrier), true),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port)`, "listen_default_host", tlsServerCarrier, [float64Carrier], tlsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host)`, "listen", tlsServerCarrier, [float64Carrier, nativeString], tlsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", tlsServerCarrier, [float64Carrier, emptyCallbackCarrier], tlsServerCarrier, true, "mut"),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,host,callback)`, "listen", tlsServerCarrier, [float64Carrier, nativeString, emptyCallbackCarrier], tlsServerCarrier, true, "mut"),
+    ...serverListenOperations(moduleSpecifier, tlsServerCarrier),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", tlsServerCarrier, [], tlsServerCarrier, true, "mut"),
     instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", tlsServerCarrier, [], tlsServerCarrier, false, "mut"),
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", tlsServerCarrier, [], tlsServerCarrier, false, "mut"),

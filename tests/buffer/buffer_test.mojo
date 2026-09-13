@@ -9,7 +9,7 @@ def main() raises:
     assert_equal(buffer.get(1), UInt8(101))
     assert_equal(buffer.to_string(), "hello")
 
-    var view = buffer.subarray(1, 4)
+    var view = buffer.subarray(1, Float64(4))
     assert_equal(view.to_string(), "ell")
     assert_true(buffer.same_storage(view))
     view.set(0, UInt8(65))
@@ -23,9 +23,9 @@ def main() raises:
     assert_equal(allocated.get(2), UInt8(7))
 
     var copied = Buffer.allocate(5)
-    assert_equal(buffer.copy(copied, 1, 1, 4), 3)
+    assert_equal(buffer.copy(copied, 1, 1, Float64(4)), 3)
     assert_equal(copied.get(1), UInt8(65))
-    assert_true(buffer.slice(1, 3).same_storage(buffer))
+    assert_true(buffer.slice(1, Float64(3)).same_storage(buffer))
 
     var numbers = Buffer.allocate(8)
     _ = numbers.write_uint16_be(0x1234, 0)

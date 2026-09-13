@@ -59,7 +59,9 @@ struct ResponseState:
 struct ServerResponse(ImplicitlyCopyable):
     var _state: ArcPointer[ResponseState]
 
-    def __init__(out self, transport: HttpTransport, head_request: Bool = False):
+    def __init__(
+        out self, transport: HttpTransport, head_request: Bool = False
+    ):
         self._state = ArcPointer(
             ResponseState(
                 transport,
@@ -129,9 +131,14 @@ struct ServerResponse(ImplicitlyCopyable):
         if not self._state[].finished or self.is_drained():
             return False
         try:
-            var written = self._state[].transport.write_some(self._state[].output, self._state[].offset)
+            var written = self._state[].transport.write_some(
+                self._state[].output, self._state[].offset
+            )
             self._state[].offset += written
-            if self._state[].offset == len(self._state[].output) and not self._state[].end_sent:
+            if (
+                self._state[].offset == len(self._state[].output)
+                and not self._state[].end_sent
+            ):
                 self._state[].transport.end()
                 self._state[].end_sent = True
                 self._state[].output = List[Byte]()
@@ -158,12 +165,21 @@ struct ServerResponse(ImplicitlyCopyable):
             "HTTP/1.1 "
             + String(status)
             + " "
-            + (self._state[].status_message.value() if self._state[].status_message else _status_message(status))
+            + (
+                self._state[]
+                .status_message.value() if self._state[]
+                .status_message else _status_message(status)
+            )
             + "\r\n"
         )
         var has_length = False
         var chunked = False
-        var no_body = self._state[].head_request or status < 200 or status == 204 or status == 304
+        var no_body = (
+            self._state[].head_request
+            or status < 200
+            or status == 204
+            or status == 304
+        )
         for header in self._state[].headers:
             var name = header[0].lower()
             if name == "connection":
@@ -176,19 +192,32 @@ struct ServerResponse(ImplicitlyCopyable):
                     continue
             if name == "content-length" and (status < 200 or status == 204):
                 continue
-            if name == "content-length" and not no_body and Int(header[1]) != len(self._state[].body):
+            if (
+                name == "content-length"
+                and not no_body
+                and Int(header[1]) != len(self._state[].body)
+            ):
                 raise Error("Response Content-Length does not match its body")
             head += header[0] + ": " + header[1] + "\r\n"
             if header[0].lower() == "content-length":
                 has_length = True
         if has_length and chunked:
-            raise Error("Response cannot combine Content-Length and Transfer-Encoding")
-        if not has_length and not chunked and not (status < 200 or status == 204 or status == 304):
+            raise Error(
+                "Response cannot combine Content-Length and Transfer-Encoding"
+            )
+        if (
+            not has_length
+            and not chunked
+            and not (status < 200 or status == 204 or status == 304)
+        ):
             head += (
                 "Content-Length: " + String(len(self._state[].body)) + "\r\n"
             )
         head += "Connection: close\r\n\r\n"
-        var output = List[Byte](capacity=head.byte_length() + (0 if no_body else len(self._state[].body)))
+        var output = List[Byte](
+            capacity=head.byte_length()
+            + (0 if no_body else len(self._state[].body))
+        )
         for byte in head.as_bytes():
             output.append(byte)
         if not no_body:
@@ -199,7 +228,10 @@ struct ServerResponse(ImplicitlyCopyable):
             for byte in self._state[].body:
                 output.append(byte)
             if chunked:
-                var suffix = "\r\n0\r\n\r\n" if len(self._state[].body) != 0 else "0\r\n\r\n"
+                var suffix = (
+                    "\r\n0\r\n\r\n" if len(self._state[].body)
+                    != 0 else "0\r\n\r\n"
+                )
                 for byte in suffix.as_bytes():
                     output.append(byte)
         self._state[].output = output^
@@ -211,7 +243,9 @@ struct ServerResponse(ImplicitlyCopyable):
 def _check_header_value(value: String) raises:
     for byte in value.as_bytes():
         if (byte < 32 and byte != 9) or byte == 127:
-            raise Error("HTTP response value contains a prohibited control character")
+            raise Error(
+                "HTTP response value contains a prohibited control character"
+            )
 
 
 def _chunk_size(var value: Int) -> String:

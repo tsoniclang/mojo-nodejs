@@ -2,9 +2,17 @@ from std.collections import List
 from std.testing import assert_equal, assert_true, assert_false
 from tsonic_node.buffer import Buffer, buffer_concat
 from tsonic_node.zlib import (
-    create_gzip, create_gunzip, create_brotli_compress, create_brotli_decompress,
-    gzip_sync, gzip_sync_info_options, gunzip_sync_info_options,
-    gzip_sync_result_options, ZlibOptions, ZlibInfo, brotli_operation_flush,
+    create_gzip,
+    create_gunzip,
+    create_brotli_compress,
+    create_brotli_decompress,
+    gzip_sync,
+    gzip_sync_info_options,
+    gunzip_sync_info_options,
+    gzip_sync_result_options,
+    ZlibOptions,
+    ZlibInfo,
+    brotli_operation_flush,
 )
 
 
@@ -13,28 +21,28 @@ def main() raises:
     var second = Buffer.from_string("second")
     var compressor = create_gzip()
     var decoder = create_gunzip()
-    var alias = compressor
+    var retained_alias = compressor
     assert_true(compressor.write(first))
     compressor.flush_kind(2.0)
     var prefix = compressor.read()
     assert_true(prefix)
     assert_true(decoder.write(prefix.value()))
     assert_equal(decoder.read().value().to_string(), "first")
-    assert_equal(alias.bytes_written(), 5.0)
+    assert_equal(retained_alias.bytes_written(), 5.0)
     compressor.params(1.0, 0.0)
-    alias.end_buffer(second)
+    retained_alias.end_buffer(second)
     assert_true(compressor.closed())
     decoder.end_buffer(compressor.read().value())
     assert_equal(decoder.read().value().to_string(), "second")
     assert_false(decoder.read())
     var rejected = False
     try:
-        _ = alias.write(first)
+        _ = retained_alias.write(first)
     except:
         rejected = True
     assert_true(rejected)
     compressor.destroy()
-    alias.destroy()
+    retained_alias.destroy()
 
     var info = gzip_sync_info_options(first, ZlibOptions(info=True))
     assert_equal(info.engine.bytes_written(), 5.0)

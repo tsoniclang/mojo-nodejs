@@ -1,11 +1,32 @@
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from std.time import monotonic, sleep
-from tsonic_runtime import Location, ErasedCallableContext, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    Location,
+    ErasedCallableContext,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.buffer import Buffer
-from tsonic_node.filesystem import RmOptions, read_text_file, remove_path, write_text_file
-from tsonic_node.filesystem.streams import ReadStreamOptions, create_read_stream, create_write_stream
-from tsonic_node.readline import Interface, QuestionCallback, ReadLineOptions, create_interface, has_pending_readline, poll_readline
+from tsonic_node.filesystem import (
+    RmOptions,
+    read_text_file,
+    remove_path,
+    write_text_file,
+)
+from tsonic_node.filesystem.streams import (
+    ReadStreamOptions,
+    create_read_stream,
+    create_write_stream,
+)
+from tsonic_node.readline import (
+    Interface,
+    QuestionCallback,
+    ReadLineOptions,
+    create_interface,
+    has_pending_readline,
+)
+from support.input_events import poll_input_events
 from tsonic_node.stream import Readable
 
 
@@ -18,13 +39,20 @@ struct AnswerAction:
     var reenter: Bool
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[String]) raises:
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[String]
+    ) raises:
         var action = context.unsafe_bitcast[Self]()
         action[].trace.write(action[].trace.read() + "[" + arguments[0] + "]")
         if action[].remaining > 1:
-            action[].interface.value().question("next? ", answer(action[].trace, action[].interface, action[].remaining - 1))
+            action[].interface.value().question(
+                "next? ",
+                answer(
+                    action[].trace, action[].interface, action[].remaining - 1
+                ),
+            )
         if action[].reenter:
-            _ = poll_readline()
+            _ = poll_input_events()
         if action[].fail:
             raise Error("deliberate answer failure")
 
@@ -33,8 +61,17 @@ struct AnswerAction:
         destroy_callable_environment[Self](context)
 
 
-def answer(trace: Location[String], interface: Optional[Interface] = None, remaining: Int = 1, fail: Bool = False, reenter: Bool = False) -> QuestionCallback:
-    var context = allocate_callable_environment(AnswerAction(trace, interface, remaining, fail, reenter), AnswerAction.destroy)
+def answer(
+    trace: Location[String],
+    interface: Optional[Interface] = None,
+    remaining: Int = 1,
+    fail: Bool = False,
+    reenter: Bool = False,
+) -> QuestionCallback:
+    var context = allocate_callable_environment(
+        AnswerAction(trace, interface, remaining, fail, reenter),
+        AnswerAction.destroy,
+    )
     return QuestionCallback(context, AnswerAction.invoke)
 
 
@@ -42,7 +79,7 @@ def drain_questions() raises:
     var deadline = monotonic() + 10000000000
     while has_pending_readline():
         assert_true(monotonic() < deadline)
-        _ = poll_readline()
+        _ = poll_input_events()
         sleep(0.001)
 
 
@@ -50,23 +87,23 @@ def retained_input() raises:
     var options = ReadLineOptions()
     var input = options.input
     var interface = create_interface(options)
-    var alias = interface
+    var retained_alias = interface
     var trace = Location(String())
     interface.question("first? ", answer(trace, interface, 3))
     assert_equal(trace.read(), "")
-    assert_false(poll_readline())
+    _ = poll_input_events()
     assert_true(has_pending_readline())
-    _ = alias.pause()
+    _ = retained_alias.pause()
     assert_true(input.is_paused())
     input.append(Buffer.from_string("first\n\nlast\n"))
-    assert_false(poll_readline())
+    assert_false(poll_input_events())
     assert_equal(trace.read(), "")
-    _ = alias.resume()
+    _ = retained_alias.resume()
     assert_false(input.is_paused())
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(trace.read(), "[first][][last]")
     assert_true(has_pending_readline())
-    alias.close()
+    retained_alias.close()
     assert_false(has_pending_readline())
     assert_true(input.readable())
 
@@ -80,11 +117,11 @@ def chunk_splits() raises:
         var trace = Location(String())
         interface.question("", answer(trace))
         input.append(bytes.subarray(0, Float64(split)))
-        _ = poll_readline()
+        _ = poll_input_events()
         if split != len(bytes):
             assert_equal(trace.read(), "")
         input.append(bytes.subarray(Float64(split)))
-        _ = poll_readline()
+        _ = poll_input_events()
         assert_equal(trace.read(), "[a😀é]")
         interface.close()
 
@@ -138,7 +175,7 @@ def retained_history() raises:
     assert_equal(interface._state[].history[0], "third")
     assert_equal(interface._state[].history[1], "😀")
     interface.close()
-    for invalid in (-1.0, 1.5, 1048577.0):
+    for invalid in [Float64(-1), Float64(1.5), Float64(1048577)]:
         options.historySize = invalid
         var rejected = False
         try:
@@ -149,11 +186,11 @@ def retained_history() raises:
 
 
 def eof_and_ranges(root: String) raises:
-    write_text_file(root + "/lines", "xxfirst\r\n😀\nlastyy")
+    write_text_file(root + "/lines", "xxfirst\r\n😀\nlast\nyy")
     var read_options = ReadStreamOptions()
-    read_options.high_water_mark = 1
-    read_options.start = 2
-    read_options.end = 17
+    read_options.high_water_mark = Float64(1)
+    read_options.start = 2.0
+    read_options.end = 18.0
     var options = ReadLineOptions()
     options.input = create_read_stream(root + "/lines", read_options)
     var interface = create_interface(options)
@@ -162,7 +199,7 @@ def eof_and_ranges(root: String) raises:
     drain_questions()
     assert_equal(trace.read(), "[first][😀][last]")
     assert_true(interface._state[].closed)
-    assert_equal(options.input.bytes_read(), 16.0)
+    assert_equal(options.input.bytes_read(), 17.0)
     write_text_file(root + "/empty", "")
     options.input = create_read_stream(root + "/empty")
     interface = create_interface(options)
@@ -187,7 +224,7 @@ def callback_failure_retains_other_work() raises:
     second.question("", answer(trace))
     var rejected = False
     try:
-        _ = poll_readline()
+        _ = poll_input_events()
     except error:
         rejected = "deliberate answer failure" in String(error)
     assert_true(rejected)
@@ -200,7 +237,7 @@ def callback_failure_retains_other_work() raises:
 
 def eof_reentry() raises:
     var options = ReadLineOptions()
-    options.input.append(Buffer.from_string("first\nsecond"))
+    options.input.append(Buffer.from_string("first\nsecond\n"))
     options.input._accept_read(None)
     var interface = create_interface(options)
     var trace = Location(String())
@@ -216,14 +253,14 @@ def interface_consumes_between_questions() raises:
     var interface = create_interface(options)
     assert_true(has_pending_readline())
     input.append(Buffer.from_string("old\ncurrent"))
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(interface.line(), "current")
     var trace = Location(String())
     interface.question("", answer(trace))
-    assert_false(poll_readline())
+    assert_false(poll_input_events())
     assert_equal(trace.read(), "")
     input.append(Buffer.from_string("\n"))
-    assert_true(poll_readline())
+    assert_true(poll_input_events())
     assert_equal(trace.read(), "[current]")
     assert_true(has_pending_readline())
     input._accept_read(None)
@@ -237,13 +274,13 @@ def eof_callback_failure() raises:
     options.input._accept_read(None)
     var interface = create_interface(options)
     var trace = Location(String())
-    interface.question("", answer(trace, interface, 2, True))
+    _ = interface.once_line("line", answer(trace, interface, 2, True))
     var rejected = False
     var deadline = monotonic() + 10000000000
     while not rejected:
         assert_true(monotonic() < deadline)
         try:
-            _ = poll_readline()
+            _ = poll_input_events()
         except error:
             rejected = "deliberate answer failure" in String(error)
     assert_equal(trace.read(), "[tail]")

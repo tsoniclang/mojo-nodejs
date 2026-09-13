@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("readline retains exact selected input, options and nested callbacks", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { createReadStream, createWriteStream } from "node:fs";
 import { createInterface as linesFrom } from "node:readline";
 export function begin(path: string): () => string {
@@ -25,7 +25,7 @@ export function begin(path: string): () => string {
   return (): string => trace;
 }` } });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const member of ["create_interface", "question", "historySize", "removeHistoryDuplicates"]) {
     assert.ok(emitted.includes(member), member);
   }
@@ -39,6 +39,11 @@ test("readline source options and callbacks cannot drift from their selected typ
     "lines.question('name?', (answer: number): void => {});",
     "lines.line = 'not an input operation';",
     "lines.write(42);",
+    "lines.on('line', (line: number): void => {});",
+    "lines.on('error', (error: string): void => {});",
+    "lines.on('close', (value: string): void => {});",
+    "lines.on('data', (): void => {});",
+    "lines.once('SIGINT', (): void => {});",
   ]) {
     assert.throws(() => compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { createReadStream } from "node:fs";
@@ -48,5 +53,30 @@ export function main(): void {
   const lines = createInterface({ input });
   ${statement}
 }` } }), /TypeScript diagnostics:/u, statement);
+  }
+});
+
+test("readline event relations retain exact payloads and alias identity", () => {
+  const result = compileMojo({ target: { id: "mojo", options: { outputType: "lib" } }, capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+import { createReadStream } from "node:fs";
+import { createInterface as fromInput } from "node:readline";
+export function begin(path: string): () => string {
+  const lines = fromInput({ input: createReadStream(path) });
+  let trace = "";
+  const listener = (line: string): void => { trace += line; };
+  const alias = lines.on("line", listener);
+  alias.off("line", listener);
+  lines.once("line", listener);
+  lines.on("error", error => { trace += error.message; });
+  lines.once("close", (): void => { trace += "close"; });
+  lines.on("pause", (): void => { trace += "pause"; });
+  lines.on("resume", (): void => { trace += "resume"; });
+  lines.on("line", (): void => { trace += "ignored-payload"; });
+  return (): string => trace;
+}` } });
+  assert.deepEqual(result.diagnostics, []);
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
+  for (const operation of ["on_line", "once_line", "off_line", "on_error", "once_empty", "on_empty"]) {
+    assert.ok(emitted.includes(operation), operation);
   }
 });

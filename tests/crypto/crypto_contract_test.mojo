@@ -19,11 +19,13 @@ def main() raises:
         create_hmac("sha256", "").digest("hex"),
         "b613679a0814d9ec772f95d778c35fc5ff1697c493715653c6c712144292c5ad",
     )
-    var key = Buffer.from_string("xJefey").subarray(1, 5)
+    var key = Buffer.from_string("xJefey").subarray(1, Float64(5))
     var mac = create_hmac("sha256", key)
     var shared = mac
     _ = mac.update_buffer(
-        Buffer.from_string("xwhat do ya want for nothing?y").subarray(1, 29)
+        Buffer.from_string("xwhat do ya want for nothing?y").subarray(
+            1, Float64(29)
+        )
     )
     assert_equal(
         shared.digest().to_string("hex"),
@@ -57,10 +59,12 @@ def main() raises:
             rejected = True
         assert_true(rejected)
     assert_equal(len(random_bytes(0)), 0)
+    assert_equal(len(random_bytes(0.9)), 0)
     assert_equal(len(random_bytes(1.5)), 1)
     assert_equal(len(random_bytes(32)), 32)
     for invalid in [
         -1.0,
+        -0.1,
         Float64(FloatLiteral.nan),
         Float64(FloatLiteral.infinity),
         2147483648.0,

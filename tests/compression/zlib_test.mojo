@@ -50,7 +50,8 @@ struct CallbackEnvironment:
 
 
 def callback(
-    count: Location[Int], fail: Bool = False,
+    count: Location[Int],
+    fail: Bool = False,
 ) -> RaisingCallable[Tuple[JsValue, Optional[Buffer]], NoneType]:
     var environment = allocate_callable_environment(
         CallbackEnvironment(count, fail), CallbackEnvironment.destroy

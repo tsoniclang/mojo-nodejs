@@ -15,11 +15,15 @@ struct NativeCodec(Movable):
 
     def __deinit__(deinit self):
         if self.handle:
-            external_call["tsonic_node_codec_free", NoneType](self.handle.value())
+            external_call["tsonic_node_codec_free", NoneType](
+                self.handle.value()
+            )
 
     def close(mut self):
         if self.handle:
-            external_call["tsonic_node_codec_free", NoneType](self.handle.value())
+            external_call["tsonic_node_codec_free", NoneType](
+                self.handle.value()
+            )
             self.handle = None
 
     def write(mut self, input: Buffer, flush: Int32) raises -> Buffer:
@@ -28,14 +32,22 @@ struct NativeCodec(Movable):
         var empty = Byte(0)
         var pointer = Pointer(to=empty).as_unsafe_any_origin()
         if len(input) != 0:
-            pointer = (input._bytes[].unsafe_ptr() + input._offset).as_unsafe_any_origin()
+            pointer = (
+                input._bytes[].unsafe_ptr() + input._offset
+            ).as_unsafe_any_origin()
         var output = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var length = c_size_t(0)
         var consumed = c_size_t(0)
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var status = external_call["tsonic_node_codec_write", c_int](
-            self.handle.value(), pointer, c_size_t(len(input)), c_int(flush),
-            Pointer(to=output), Pointer(to=length), Pointer(to=consumed), Pointer(to=error),
+            self.handle.value(),
+            pointer,
+            c_size_t(len(input)),
+            c_int(flush),
+            Pointer(to=output),
+            Pointer(to=length),
+            Pointer(to=consumed),
+            Pointer(to=error),
         )
         self.consumed += Int(consumed)
         if status == 0:
@@ -49,8 +61,12 @@ struct NativeCodec(Movable):
         var length = c_size_t(0)
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var status = external_call["tsonic_node_codec_params", c_int](
-            self.handle.value(), c_int(level), c_int(strategy),
-            Pointer(to=output), Pointer(to=length), Pointer(to=error),
+            self.handle.value(),
+            c_int(level),
+            c_int(strategy),
+            Pointer(to=output),
+            Pointer(to=length),
+            Pointer(to=error),
         )
         if status == 0:
             self.close()
@@ -63,20 +79,24 @@ def process(input: Buffer, mode: Int32, options: CodecOptions) raises -> Buffer:
 
 
 def process(input: Buffer, mode: Int32, options: ZlibOptions) raises -> Buffer:
-    if options.info.value_or(False):
+    if options.info_value():
         raise Error("Compression info requires the engine/result contract")
     return process(input, mode, CodecOptions(options))
 
 
-def process(input: Buffer, mode: Int32, options: BrotliOptions) raises -> Buffer:
-    if options.info.value_or(False):
+def process(
+    input: Buffer, mode: Int32, options: BrotliOptions
+) raises -> Buffer:
+    if options.info_value():
         raise Error("Compression info requires the engine/result contract")
     return process(input, mode, CodecOptions(options.copy()))
 
 
 def take_output(
-    status: c_int, output: OptionalPointer[UInt8, MutUntrackedOrigin],
-    length: Int, error: OptionalPointer[UInt8, MutUntrackedOrigin],
+    status: c_int,
+    output: OptionalPointer[UInt8, MutUntrackedOrigin],
+    length: Int,
+    error: OptionalPointer[UInt8, MutUntrackedOrigin],
 ) raises -> Buffer:
     if status == 0 or not output:
         if output:

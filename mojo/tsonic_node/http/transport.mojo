@@ -18,7 +18,7 @@ struct _TransportState(Movable):
         if self.descriptor >= 0:
             _ = close(self.descriptor)
         if self.tls:
-            self.tls.value().destroy()
+            _ = self.tls.value().destroy()
 
 
 struct HttpTransport(ImplicitlyCopyable):
@@ -33,7 +33,9 @@ struct HttpTransport(ImplicitlyCopyable):
     def read_into(self, mut bytes: List[Byte]) raises -> Int:
         if self._state[].tls:
             return self._state[].tls.value().read_into(bytes)
-        var count = external_call["tsonic_node_socket_read", Int64](self._state[].descriptor, bytes.unsafe_ptr(), c_size_t(len(bytes)))
+        var count = external_call["tsonic_node_socket_read", Int64](
+            self._state[].descriptor, bytes.unsafe_ptr(), c_size_t(len(bytes))
+        )
         if count == -1:
             raise Error("Unable to read HTTP connection")
         return Int(count)
@@ -52,7 +54,11 @@ struct HttpTransport(ImplicitlyCopyable):
                 chunk.append(bytes[offset + index])
             _ = socket.write_buffer(Buffer(chunk^))
             return count
-        var written = external_call["tsonic_node_socket_write", Int64](self._state[].descriptor, bytes.unsafe_ptr().unsafe_offset(offset), c_size_t(count))
+        var written = external_call["tsonic_node_socket_write", Int64](
+            self._state[].descriptor,
+            bytes.unsafe_ptr().unsafe_offset(offset),
+            c_size_t(count),
+        )
         if written == -2:
             return 0
         if written <= 0:
@@ -68,10 +74,17 @@ struct HttpTransport(ImplicitlyCopyable):
 
     def close(self):
         if self._state[].tls:
-            self._state[].tls.value().destroy()
+            _ = self._state[].tls.value().destroy()
         if self._state[].descriptor >= 0:
             _ = close(self._state[].descriptor)
             self._state[].descriptor = -1
 
     def closed(self) -> Bool:
-        return self._state[].tls.value().closed() if self._state[].tls else self._state[].descriptor < 0
+        return (
+            self._state[]
+            .tls.value()
+            .closed() if self._state[]
+            .tls else self._state[]
+            .descriptor
+            < 0
+        )

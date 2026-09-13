@@ -2,7 +2,11 @@ from std.collections import List
 from std.ffi import c_int, external_call
 from std.sys._libc import close
 from tsonic_runtime import error_new
-from ..internal.network_endpoint import network_error, poll_network_resolution, monotonic_milliseconds
+from ..internal.network_endpoint import (
+    network_error,
+    poll_network_resolution,
+    monotonic_milliseconds,
+)
 from .socket import TLSSocket, _activities, prune_sockets
 from .server import Server, _servers, prune_servers
 from .native import _socket_readable, _take_error
@@ -13,7 +17,9 @@ comptime _MAX_PENDING = 1 << 20
 
 def has_active_tls() -> Bool:
     for socket in _activities.get()[]:
-        if socket._state[].failure or (socket.closed() and not socket._state[].close_notified):
+        if socket._state[].failure or (
+            socket.closed() and not socket._state[].close_notified
+        ):
             return True
         if socket._state[].referenced and not socket.closed():
             return True
@@ -44,10 +50,14 @@ def _accept(server: Server) raises -> Bool:
             callback.call(())
         _ = server._state[].listening_events.emit(())
         worked = True
-    if not server._state[].active or not _socket_readable(server._state[].endpoint.value().descriptor()):
+    if not server._state[].active or not _socket_readable(
+        server._state[].endpoint.value().descriptor()
+    ):
         return worked
     var status = c_int(0)
-    var descriptor = external_call["tsonic_node_socket_accept", c_int](server._state[].endpoint.value().descriptor(), Pointer(to=status))
+    var descriptor = external_call["tsonic_node_socket_accept", c_int](
+        server._state[].endpoint.value().descriptor(), Pointer(to=status)
+    )
     if descriptor == -2:
         return worked
     if descriptor < 0:
@@ -58,8 +68,13 @@ def _accept(server: Server) raises -> Bool:
         _ = close(descriptor)
         raise Error("Pending TLS connections exceed the finite runtime limit")
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-    var handle = external_call["tsonic_node_tls_server_accept", OptionalPointer[NoneType, MutUntrackedOrigin]](
-        server._state[].native[].handle.value(), descriptor, Pointer(to=error),
+    var handle = external_call[
+        "tsonic_node_tls_server_accept",
+        OptionalPointer[NoneType, MutUntrackedOrigin],
+    ](
+        server._state[].native[].handle.value(),
+        descriptor,
+        Pointer(to=error),
     )
     if not handle:
         raise Error(_take_error(error, "TLS server handshake failed"))
@@ -69,7 +84,9 @@ def _accept(server: Server) raises -> Bool:
     socket._state[].native_owner = server._state[].native
     socket._state[].allow_half_open = server._state[].allow_half_open
     if server._state[].handshake_timeout > 0:
-        socket._state[].handshake_deadline = monotonic_milliseconds() + server._state[].handshake_timeout
+        socket._state[].handshake_deadline = (
+            monotonic_milliseconds() + server._state[].handshake_timeout
+        )
     server._state[].clients.append(socket)
     return True
 

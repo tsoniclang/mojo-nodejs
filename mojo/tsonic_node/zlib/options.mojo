@@ -4,7 +4,7 @@ from ..buffer import Buffer
 from ..validation import checked_integer
 
 
-comptime BrotliParameters = Dict[Float64, Variant[Bool, Float64]]
+comptime BrotliParameters = Dict[Float64, Variant[Float64, Bool]]
 comptime MAX_OUTPUT = 268_435_456
 comptime UNSET = Int32(-2147483648)
 
@@ -22,7 +22,8 @@ struct ZlibOptions(ImplicitlyCopyable):
     var info: Optional[Bool]
 
     def __init__(
-        out self, flush: Optional[Float64] = None,
+        out self,
+        flush: Optional[Float64] = None,
         finish_flush: Optional[Float64] = None,
         chunk_size: Optional[Float64] = None,
         window_bits: Optional[Float64] = None,
@@ -45,7 +46,7 @@ struct ZlibOptions(ImplicitlyCopyable):
         self.info = info
 
     def info_value(self) -> Bool:
-        return self.info.value_or(False)
+        return self.info.value() if self.info else False
 
 
 @fieldwise_init
@@ -66,7 +67,7 @@ struct BrotliOptions(Copyable):
         self.info = None
 
     def info_value(self) -> Bool:
-        return self.info.value_or(False)
+        return self.info.value() if self.info else False
 
 
 comptime CodecOptions = Variant[ZlibOptions, BrotliOptions]
@@ -85,14 +86,18 @@ def optional_integer(value: Optional[Float64]) raises -> Int32:
 
 
 def output_limit(value: Optional[Float64]) raises -> Int:
-    var result = Int(checked_integer(value.value(), Float64(MAX_OUTPUT), "maxOutputLength")) if value else MAX_OUTPUT
+    var result = Int(
+        checked_integer(value.value(), Float64(MAX_OUTPUT), "maxOutputLength")
+    ) if value else MAX_OUTPUT
     if result == 0:
         raise Error("maxOutputLength must be positive")
     return result
 
 
 def chunk_size(value: Optional[Float64]) raises -> Int:
-    var result = Int(checked_integer(value.value(), Float64(MAX_OUTPUT), "chunkSize")) if value else 16384
+    var result = Int(
+        checked_integer(value.value(), Float64(MAX_OUTPUT), "chunkSize")
+    ) if value else 16384
     if result < 64:
         raise Error("chunkSize must be at least 64")
     return result
@@ -105,17 +110,21 @@ def validate_flush(value: Optional[Float64], maximum: Int) raises:
 
 def finish_flush(options: CodecOptions) -> Int32:
     if options.isa[ZlibOptions]():
-        return Int32(options.unsafe_get[ZlibOptions]().finish_flush.value_or(4.0))
-    return Int32(options.unsafe_get[BrotliOptions]().finish_flush.value_or(2.0))
+        var value = options.unsafe_get[ZlibOptions]().finish_flush
+        return Int32(value.value()) if value else 4
+    var value = options.unsafe_get[BrotliOptions]().finish_flush
+    return Int32(value.value()) if value else 2
 
 
 def write_flush(options: CodecOptions) -> Int32:
     if options.isa[ZlibOptions]():
-        return Int32(options.unsafe_get[ZlibOptions]().flush.value_or(0.0))
-    return Int32(options.unsafe_get[BrotliOptions]().flush.value_or(0.0))
+        var value = options.unsafe_get[ZlibOptions]().flush
+        return Int32(value.value()) if value else 0
+    var value = options.unsafe_get[BrotliOptions]().flush
+    return Int32(value.value()) if value else 0
 
 
 def wants_info(options: CodecOptions) -> Bool:
     if options.isa[ZlibOptions]():
-        return options.unsafe_get[ZlibOptions]().info.value_or(False)
-    return options.unsafe_get[BrotliOptions]().info.value_or(False)
+        return options.unsafe_get[ZlibOptions]().info_value()
+    return options.unsafe_get[BrotliOptions]().info_value()

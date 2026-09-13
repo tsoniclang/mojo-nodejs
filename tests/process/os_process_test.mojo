@@ -43,6 +43,14 @@ def main() raises:
     assert_true(uptime() >= 0)
     assert_equal(stdout().fd(), 1)
     assert_equal(stderr().fd(), 2)
+    var output = stdout()
+    var retained_output = stdout()
+    output.cork()
+    assert_equal(retained_output.writable_corked(), 1.0)
+    retained_output.uncork()
+    assert_equal(output.writable_corked(), 0.0)
+    assert_true(output.writable())
+    assert_false(output.writable_ended())
 
     var name = "TSONIC_MOJO_NODE_TEST_VALUE"
     unset_environment(name)

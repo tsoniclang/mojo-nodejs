@@ -1,7 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "model.h"
 
-static int select_alpn(
+int tsonic_tls_select_alpn(
     SSL *ssl,
     const unsigned char **output,
     unsigned char *output_length,
@@ -9,44 +9,44 @@ static int select_alpn(
     unsigned int input_length,
     void *opaque
 ) {
-    (void)ssl;
-    TsonicTlsServer *server = (TsonicTlsServer *)opaque;
-    if (server->alpn_length == 0u) return SSL_TLSEXT_ERR_NOACK;
+    (void)opaque;
+    TsonicTlsSocket *socket = SSL_get_app_data(ssl);
+    if (socket == NULL || socket->offered_alpn_length == 0u) return SSL_TLSEXT_ERR_NOACK;
     return SSL_select_next_proto(
         (unsigned char **)output,
         output_length,
-        server->alpn,
-        server->alpn_length,
+        socket->offered_alpn,
+        socket->offered_alpn_length,
         input,
         input_length
     ) == OPENSSL_NPN_NEGOTIATED ? SSL_TLSEXT_ERR_OK : SSL_TLSEXT_ERR_NOACK;
 }
 
 void *tsonic_node_tls_server_create(
-    const char *key_pem,
-    const char *certificate_pem,
-    const char *ca_pem,
+    void *context_value,
     const unsigned char *alpn,
     size_t alpn_length,
     int32_t request_certificate,
     int32_t reject_unauthorized,
     char **error
 ) {
-    if (error == NULL || alpn_length > UINT_MAX) return NULL;
+    if (error == NULL || context_value == NULL || alpn_length > UINT_MAX || (alpn_length != 0u && alpn == NULL)) return NULL;
     *error = NULL;
     TsonicTlsServer *server = (TsonicTlsServer *)calloc(1u, sizeof(*server));
     if (server == NULL) return NULL;
-    server->context = SSL_CTX_new(TLS_server_method());
-    if (server->context == NULL ||
-        !tsonic_tls_apply_certificate(server->context, certificate_pem, key_pem, error) ||
-        !tsonic_tls_apply_ca_text(server->context, ca_pem, error)) {
-        if (server->context != NULL) SSL_CTX_free(server->context);
+    server->context = context_value;
+    if (SSL_CTX_get0_certificate(server->context) == NULL || SSL_CTX_get0_privatekey(server->context) == NULL) {
+        tsonic_tls_set_error(error, "TLS server requires a certificate and private key identity");
         free(server);
         return NULL;
     }
-    int verify = request_certificate ? SSL_VERIFY_PEER : SSL_VERIFY_NONE;
-    if (request_certificate && reject_unauthorized) verify |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-    SSL_CTX_set_verify(server->context, verify, reject_unauthorized ? NULL : tsonic_tls_allow_unverified);
+    if (SSL_CTX_up_ref(server->context) != 1) {
+        tsonic_tls_set_ssl_error(error, "Unable to retain TLS server context");
+        free(server);
+        return NULL;
+    }
+    server->request_certificate = request_certificate;
+    server->reject_unauthorized = reject_unauthorized;
     if (alpn_length != 0u) {
         server->alpn = (unsigned char *)malloc(alpn_length);
         if (server->alpn == NULL) {
@@ -57,7 +57,6 @@ void *tsonic_node_tls_server_create(
         }
         memcpy(server->alpn, alpn, alpn_length);
         server->alpn_length = (unsigned int)alpn_length;
-        SSL_CTX_set_alpn_select_cb(server->context, select_alpn, server);
     }
     return server;
 }
@@ -91,11 +90,23 @@ void *tsonic_node_tls_server_accept(void *server_value, int32_t descriptor, char
         return NULL;
     }
     SSL_set_accept_state(ssl);
-    TsonicTlsSocket *socket = tsonic_tls_socket_from_ssl(NULL, ssl, endpoint, "", 0);
+    int verify = server->request_certificate ? SSL_VERIFY_PEER : SSL_VERIFY_NONE;
+    if (server->request_certificate && server->reject_unauthorized) verify |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+    SSL_set_verify(ssl, verify, server->reject_unauthorized ? NULL : tsonic_tls_allow_unverified);
+    TsonicTlsSocket *socket = tsonic_tls_socket_from_ssl(ssl, endpoint, "");
     if (socket == NULL) {
         tsonic_tls_set_error(error, "Unable to allocate TLS socket state");
         SSL_free(ssl);
         tsonic_node_net_endpoint_free(endpoint);
+    } else if (server->alpn_length != 0u) {
+        socket->offered_alpn = malloc(server->alpn_length);
+        if (socket->offered_alpn == NULL) {
+            tsonic_tls_set_error(error, "Unable to retain TLS server ALPN configuration");
+            tsonic_node_tls_socket_free(socket);
+            return NULL;
+        }
+        memcpy(socket->offered_alpn, server->alpn, server->alpn_length);
+        socket->offered_alpn_length = server->alpn_length;
     }
     return socket;
 }

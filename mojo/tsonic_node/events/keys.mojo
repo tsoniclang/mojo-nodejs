@@ -7,11 +7,11 @@ def validate_event(event: JsValue) raises:
         raise Error("Event name must be a string or symbol")
 
 
-def is_error_event(event: JsValue) -> Bool:
+def is_error_event(event: JsValue) raises -> Bool:
     return event.is_string() and event.string_value() == JsString("error")
 
 
-def event_index(event: JsValue) -> Optional[UInt32]:
+def event_index(event: JsValue) raises -> Optional[UInt32]:
     if not event.is_string():
         return None
     var text = event.string_value()
@@ -31,7 +31,7 @@ def event_index(event: JsValue) -> Optional[UInt32]:
     return UInt32(result)
 
 
-def ordered_event_names(events: List[JsValue]) -> List[JsValue]:
+def ordered_event_names(events: List[JsValue]) raises -> List[JsValue]:
     var indexes = List[Tuple[UInt32, JsValue]]()
     var strings = List[JsValue]()
     var symbols = List[JsValue]()

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("glob calls retain named, default and dialect provider identities", () => {
@@ -15,10 +15,11 @@ export function match(file: string, pattern: string): boolean {
 export function local(): boolean {
   const matchesGlob = (left: number, right: number): boolean => left === right;
   return matchesGlob(3, 3);
-}` },
+}
+export function main(): void { match("file.txt", "*.txt"); local(); }` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.ok(emitted.includes("matches_glob"));
 });
 

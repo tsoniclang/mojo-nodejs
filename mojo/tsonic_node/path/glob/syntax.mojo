@@ -47,7 +47,13 @@ struct GlobSyntax:
             expression += escaped_unit(unit)
         var literal = JsString(code_units=units^)
         units = List[UInt16]()
-        sequence.append(self._append(GlobNode(literal_kind, expression^, Optional(literal), List[Int]())))
+        sequence.append(
+            self._append(
+                GlobNode(
+                    literal_kind, expression^, Optional(literal), List[Int]()
+                )
+            )
+        )
 
     def _group_end(self, start: Int, limit: Int) raises -> Int:
         var depth = 1
@@ -59,7 +65,11 @@ struct GlobSyntax:
                 if character_class:
                     index = character_class.value().end
                     continue
-            if _extended(unit) and index + 1 < limit and self.pattern.code_unit_at(index + 1).value() == 40:
+            if (
+                _extended(unit)
+                and index + 1 < limit
+                and self.pattern.code_unit_at(index + 1).value() == 40
+            ):
                 depth += 1
                 require_depth(depth)
                 index += 2
@@ -71,7 +81,9 @@ struct GlobSyntax:
             index += 1
         return -1
 
-    def _alternatives(mut self, start: Int, end: Int, depth: Int) raises -> List[Int]:
+    def _alternatives(
+        mut self, start: Int, end: Int, depth: Int
+    ) raises -> List[Int]:
         var result = List[Int]()
         var beginning = start
         var index = start
@@ -82,7 +94,11 @@ struct GlobSyntax:
                 if character_class:
                     index = character_class.value().end
                     continue
-            if _extended(unit) and index + 1 < end and self.pattern.code_unit_at(index + 1).value() == 40:
+            if (
+                _extended(unit)
+                and index + 1 < end
+                and self.pattern.code_unit_at(index + 1).value() == 40
+            ):
                 var closing = self._group_end(index + 2, end)
                 if closing >= 0:
                     index = closing + 1
@@ -101,18 +117,33 @@ struct GlobSyntax:
         var index = start
         while index < end:
             var unit = self.pattern.code_unit_at(index).value()
-            if _extended(unit) and index + 1 < end and self.pattern.code_unit_at(index + 1).value() == 40:
+            if (
+                _extended(unit)
+                and index + 1 < end
+                and self.pattern.code_unit_at(index + 1).value() == 40
+            ):
                 var closing = self._group_end(index + 2, end)
                 if closing >= 0:
-                    if index == start and closing + 1 == end and closing == index + 2 and unit != 33:
+                    if (
+                        index == start
+                        and closing + 1 == end
+                        and closing == index + 2
+                        and unit != 33
+                    ):
                         units.append(unit)
                         units.append(40)
                         units.append(41)
                         index = closing + 1
                         continue
                     self._literal(children, units)
-                    var alternatives = self._alternatives(index + 2, closing, depth + 1)
-                    children.append(self._append(GlobNode(Int(unit), "", None, alternatives^)))
+                    var alternatives = self._alternatives(
+                        index + 2, closing, depth + 1
+                    )
+                    children.append(
+                        self._append(
+                            GlobNode(Int(unit), "", None, alternatives^)
+                        )
+                    )
                     index = closing + 1
                     continue
             if unit == 91:
@@ -124,13 +155,29 @@ struct GlobSyntax:
                         units.append(selected.literal.value())
                     else:
                         self._literal(children, units)
-                        children.append(self._append(GlobNode(class_kind, selected.source, None, List[Int]())))
+                        children.append(
+                            self._append(
+                                GlobNode(
+                                    class_kind,
+                                    selected.source,
+                                    None,
+                                    List[Int](),
+                                )
+                            )
+                        )
                     index = selected.end
                     continue
             if unit == 42 or unit == 63:
                 self._literal(children, units)
-                if unit != 42 or not len(children) or self.nodes[children[len(children) - 1]].kind != 42 or len(self.nodes[children[len(children) - 1]].children):
-                    children.append(self._append(GlobNode(Int(unit), "", None, List[Int]())))
+                if (
+                    unit != 42
+                    or not len(children)
+                    or self.nodes[children[len(children) - 1]].kind != 42
+                    or len(self.nodes[children[len(children) - 1]].children)
+                ):
+                    children.append(
+                        self._append(GlobNode(Int(unit), "", None, List[Int]()))
+                    )
             else:
                 units.append(unit)
             index += 1
@@ -150,7 +197,9 @@ struct GlobSyntax:
     def expression(self) raises -> String:
         return self._expression(self.root, "", True, 0)
 
-    def _expression(self, sequence: Int, following: String, beginning: Bool, depth: Int) raises -> String:
+    def _expression(
+        self, sequence: Int, following: String, beginning: Bool, depth: Int
+    ) raises -> String:
         require_depth(depth)
         ref children = self.nodes[sequence].children
         var starts = List[Bool]()
@@ -167,21 +216,33 @@ struct GlobSyntax:
             if node.kind == literal_kind:
                 part = node.expression
                 if start and node.literal.value().code_unit_at(0).value() == 46:
-                    var literal_dots = len(children) == 1 and (node.literal.value() == JsString(".") or node.literal.value() == JsString(".."))
+                    var literal_dots = len(children) == 1 and (
+                        node.literal.value() == JsString(".")
+                        or node.literal.value() == JsString("..")
+                    )
                     if not literal_dots:
                         part = "(?!\\.\\.?$)" + part
             elif node.kind == class_kind:
                 part = ("(?!\\.)" if start else "") + node.expression
             elif not len(node.children):
                 if node.kind == 42:
-                    part = "[^/]+?" if beginning and len(children) == 1 else "[^/]*?"
+                    part = (
+                        "[^/]+?" if beginning
+                        and len(children) == 1 else "[^/]*?"
+                    )
                 else:
                     part = "[^/]"
                 if start:
                     part = "(?!\\.)" + part
             else:
                 var continuation = expression + following
-                var body = self._group_body(node.children, continuation, start, depth + 1, node.kind == 33)
+                var body = self._group_body(
+                    node.children,
+                    continuation,
+                    start,
+                    depth + 1,
+                    node.kind == 33,
+                )
                 if node.kind == 33:
                     if not body:
                         part = "[^/]+?"
@@ -194,7 +255,9 @@ struct GlobSyntax:
                 elif node.kind == 63:
                     part = "(?:" + body + ")?"
                 else:
-                    var rest = self._group_body(node.children, continuation, False, depth + 1, False)
+                    var rest = self._group_body(
+                        node.children, continuation, False, depth + 1, False
+                    )
                     part = "(?:" + body + ")(?:" + rest + ")*?"
                     if node.kind == 42:
                         part = "(?:" + part + ")?"
@@ -202,7 +265,14 @@ struct GlobSyntax:
             require_source_size(expression.byte_length())
         return expression^
 
-    def _group_body(self, children: List[Int], following: String, beginning: Bool, depth: Int, negative: Bool) raises -> String:
+    def _group_body(
+        self,
+        children: List[Int],
+        following: String,
+        beginning: Bool,
+        depth: Int,
+        negative: Bool,
+    ) raises -> String:
         var output = String()
         var alternatives = 0
         for child in children:

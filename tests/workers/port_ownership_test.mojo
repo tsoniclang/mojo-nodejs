@@ -1,9 +1,20 @@
 from std.memory.arc_pointer import WeakPointer
 from std.testing import assert_equal, assert_false, assert_true
 from tsonic_js import JsString, JsValue
-from tsonic_runtime import ErasedCallableContext, Location, RaisingCallable, allocate_callable_environment, destroy_callable_environment
+from tsonic_runtime import (
+    ErasedCallableContext,
+    Location,
+    RaisingCallable,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 from tsonic_node.worker_threads import message_channel_new, poll_worker_threads
-from tsonic_node.worker_threads.ports import MessagePort, PortState, _ports, has_active_worker_threads
+from tsonic_node.worker_threads.ports import (
+    MessagePort,
+    PortState,
+    _ports,
+    has_active_worker_threads,
+)
 
 
 @fieldwise_init
@@ -12,7 +23,9 @@ struct CountEnvironment:
     var fail: Bool
 
     @staticmethod
-    def invoke(context: ErasedCallableContext, var arguments: Tuple[JsValue]) raises:
+    def invoke(
+        context: ErasedCallableContext, var arguments: Tuple[JsValue]
+    ) raises:
         var environment = context.unsafe_bitcast[CountEnvironment]()
         environment[].count.write(environment[].count.read() + 1)
         if environment[].fail:
@@ -23,23 +36,42 @@ struct CountEnvironment:
         destroy_callable_environment[CountEnvironment](context)
 
 
-def listener(count: Location[Int], fail: Bool = False) -> RaisingCallable[Tuple[JsValue], NoneType]:
-    var environment = allocate_callable_environment(CountEnvironment(count, fail), CountEnvironment.destroy)
-    return RaisingCallable[Tuple[JsValue], NoneType](environment, CountEnvironment.invoke)
+def listener(
+    count: Location[Int], fail: Bool = False
+) -> RaisingCallable[Tuple[JsValue], NoneType]:
+    var environment = allocate_callable_environment(
+        CountEnvironment(count, fail), CountEnvironment.destroy
+    )
+    return RaisingCallable[Tuple[JsValue], NoneType](
+        environment, CountEnvironment.invoke
+    )
 
 
-def dropped_pair() raises -> Tuple[WeakPointer[PortState], WeakPointer[PortState]]:
+def dropped_pair() raises -> (
+    Tuple[WeakPointer[PortState], WeakPointer[PortState]]
+):
     var channel = message_channel_new()
     channel.port1.post_message(JsValue(42.0))
-    return (WeakPointer[PortState](downgrade=channel.port1._state), WeakPointer[PortState](downgrade=channel.port2._state))
+    return (
+        WeakPointer[PortState](downgrade=channel.port1._state),
+        WeakPointer[PortState](downgrade=channel.port2._state),
+    )
 
 
 def dropped_peer() raises -> Tuple[WeakPointer[PortState], MessagePort]:
     var channel = message_channel_new()
-    return (WeakPointer[PortState](downgrade=channel.port1._state), channel.port2)
+    return (
+        WeakPointer[PortState](downgrade=channel.port1._state),
+        channel.port2,
+    )
 
 
-def active_listener(count: Location[Int], unreference: Bool = False, remove: Bool = False, fail: Bool = False) raises -> WeakPointer[PortState]:
+def active_listener(
+    count: Location[Int],
+    unreference: Bool = False,
+    remove: Bool = False,
+    fail: Bool = False,
+) raises -> WeakPointer[PortState]:
     var channel = message_channel_new()
     var callback = listener(count, fail)
     var event = JsValue(JsString("message"))
@@ -54,7 +86,9 @@ def active_listener(count: Location[Int], unreference: Bool = False, remove: Boo
 
 def close_notification(count: Location[Int]) raises -> WeakPointer[PortState]:
     var channel = message_channel_new()
-    _ = channel.port2.once_callable1(JsValue(JsString("close")), listener(count))
+    _ = channel.port2.once_callable1(
+        JsValue(JsString("close")), listener(count)
+    )
     channel.port2.close()
     return WeakPointer[PortState](downgrade=channel.port2._state)
 

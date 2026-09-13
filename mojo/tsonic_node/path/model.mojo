@@ -5,7 +5,14 @@ struct PathParts(Copyable):
     var name: String
     var extension: String
 
-    def __init__(out self, var root: String = "", var directory: String = "", var base: String = "", var name: String = "", var extension: String = ""):
+    def __init__(
+        out self,
+        var root: String = "",
+        var directory: String = "",
+        var base: String = "",
+        var name: String = "",
+        var extension: String = "",
+    ):
         self.root = root^
         self.directory = directory^
         self.base = base^

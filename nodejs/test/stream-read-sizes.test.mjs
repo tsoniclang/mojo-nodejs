@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
 
 test("base and file streams retain source-selected optional read size", () => {
   const result = compileMojo({
+    target: { id: "mojo", options: { outputType: "lib" } },
     capabilities: [capability],
     files: { "index.ts": `
 import { createReadStream } from "node:fs";
@@ -23,7 +24,7 @@ export function ranged(path: string): string {
 }` },
   });
   assert.deepEqual(result.diagnostics, []);
-  const emitted = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const emitted = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.ok(emitted.includes("read_sized"));
 });
 

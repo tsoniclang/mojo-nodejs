@@ -17,10 +17,19 @@ The provider exposes these canonical module families:
 - `node:events`, `node:readline`, `node:stream`, and `node:timers`;
 - `node:url`, `node:util`, `node:worker_threads`, and `node:zlib`.
 
-Module presence does not imply the complete Node API. In particular, the
-worker executable-dispatch contract, complete stream/event integration and
-additional network/path options are still being completed. The architecture
-parity branch contains unverified implementation work, not a new certification.
+Module presence does not imply the complete Node API. Worker executable dispatch,
+the declared stream/event lifecycle, standard filesystem options, socket listen
+options and independent TLS controls have provider and native execution proofs.
+Arbitrary stream subclasses and undeclared operations are not implied.
+
+The pinned native compiler still fails the asynchronous file-content and
+directory-copy executables during compilation. A retained async source filter
+also requires an owning coroutine capture contract that the compiler does not
+currently provide. Those positive tests remain enabled; the complete bank is
+not all-green. Synchronous copy has independent native options, permissions,
+symlink, filter and timestamp proofs, so an async compiler failure cannot hide
+its results. Timestamp copying follows Node's rounded Stats Date values while
+the numeric Stats millisecond fields retain their fractional precision.
 
 Hash and HMAC use the existing pinned OpenSSL dependency, with shared native
 handle ownership, incremental updates and exact finalization behavior. String
@@ -37,8 +46,8 @@ Assigning a Buffer to `unknown` preserves live bytes and Buffer identity; no
 conversion to a JSON object occurs at assignment. Its `toJSON` presentation is
 selected only by JSON serialization. Structured clone instead produces the
 standard unsigned-byte view without the Buffer brand, while preserving shared
-backing between related cloned views. This source/runtime slice has authored
-proofs but is not yet certified.
+backing between related cloned views. This source/runtime slice has executed
+provider and native proofs; it is separate from the async compiler failures.
 
 Provider construction is nested under `nodejs/src/provider/model/`: source
 types, native carriers, lifecycle definitions, declarations, and call/property
@@ -99,9 +108,8 @@ ECMAScript regex primitive, while globstars match component positions with
 bounded state storage. A pattern exceeding 65,536 UTF-16 units, 65,536 brace
 alternatives, 128 nesting levels or the 16 MiB generated-source budget rejects
 explicitly. Matching is also capped at 16,777,216 component states across all
-alternatives. These are resource errors, not false match results. The new native,
-source, differential and Pudding proofs are authored but remain unexecuted in
-the coding-only phase.
+alternatives. These are resource errors, not false match results. Native,
+source, differential and Pudding proofs exercise this contract.
 
 DNS and compression callbacks receive `null` on success. Failed operations have
 absent results, reflected in their source declarations. For example:

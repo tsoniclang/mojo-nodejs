@@ -20,9 +20,7 @@ export function main(): void { const stats = statSync("index.ts"); stats.mtime.g
 `;
   const positive = compileMojo({ capabilities: [capability], surfaces: ["js"], files: { "index.ts": source } });
   assert.deepEqual(positive.diagnostics, []);
-  const native = compileMojo({ capabilities: [capability], files: { "index.ts": source } });
-  assert.ok(native.diagnostics.length > 0);
-  assert.ok(native.diagnostics.some((entry) => entry.message.includes("mtime") || entry.message.includes("atime")));
+  assert.throws(() => compileMojo({ capabilities: [capability], files: { "index.ts": source } }), /TS2551: Property '(mtime|atime)'/u);
 });
 
 test("default module projections never reuse a named export's signature identity", () => {

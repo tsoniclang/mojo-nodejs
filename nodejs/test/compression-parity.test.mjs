@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { artifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
+import { projectArtifactTexts, compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs";
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 const capability = createMojoNodejsCapability();
@@ -61,7 +61,7 @@ export function main(): void {
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const source = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   assert.ok(source.includes("gzip_sync_info_options"));
   assert.ok(source.includes("gzip_callback_info_options"));
   assert.ok(source.includes("bytes_written"));
@@ -85,7 +85,7 @@ export function main(): void {
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
-  const source = artifactTexts(result).map((entry) => entry.text).join("\n");
+  const source = projectArtifactTexts(result).map((entry) => entry.text).join("\n");
   for (const name of ["brotli_compress_sync_options", "brotli_decompress_sync_options", "create_unzip", "create_brotli_compress_options", "create_brotli_decompress"]) {
     assert.ok(source.includes(name), name);
   }

@@ -4,6 +4,7 @@ import { compressionConstantsExport, compressionConstantsOperations } from "./co
 import { compressionOptionExports, compressionOptionTypes, compressionOptionOperations, sourceOptions, targetOptions, type ResultMode } from "./options.js";
 import { compressionCallbackType, compressionCallbackCarrier, compressionInfoExport, compressionInfoType, compressionInfoOperations, sourceResult, targetResult } from "./results.js";
 import { compressionStreamExport, compressionStreamOperations } from "./stream.js";
+import { withDuplexView } from "../stream/duplex.js";
 
 const moduleSpecifier = "node:zlib";
 const bufferType = providerRef("node:buffer", "Buffer");
@@ -65,7 +66,7 @@ export function zlibModule(): MojoProviderModuleDefinition {
 export function zlibTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     ...compressionOptionTypes(), compressionInfoType,
-    nodeProviderType(compressionStreamExport.id, zlibTransformCarrier, "implicitly-copyable"),
+    withDuplexView(nodeProviderType(compressionStreamExport.id, zlibTransformCarrier, "implicitly-copyable"), "zlib"),
   ]);
 }
 

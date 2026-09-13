@@ -2,9 +2,10 @@ import { mojoOptionalTargetType } from "@tsonic/target-mojo/provider";
 import type { MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
 import {
   booleanType, boolCarrier, float64Carrier, nativeString, numberType,
-  propertyMember, propertyRead, propertyWrite, stringArrayType, stringListCarrier, stringType,
+  propertyMember, propertyRead, propertyWrite, providerRef, stringArrayType, stringListCarrier, stringType,
 } from "../../model.js";
 import type { ProviderTypeExpression } from "../../model/types.js";
+import { secureContextCarrier, secureContextFields } from "./secure-context.js";
 
 interface Field {
   readonly source: string;
@@ -14,7 +15,7 @@ interface Field {
 }
 
 const common = [
-  { source: "ca", target: "ca", sourceType: stringArrayType, carrier: stringListCarrier },
+  ...secureContextFields,
   { source: "ALPNProtocols", target: "alpn_protocols", sourceType: stringArrayType, carrier: stringListCarrier },
   { source: "rejectUnauthorized", target: "reject_unauthorized", sourceType: booleanType, carrier: boolCarrier },
   { source: "allowHalfOpen", target: "allow_half_open", sourceType: booleanType, carrier: boolCarrier },
@@ -25,12 +26,11 @@ export const tlsConnectionFields: readonly Field[] = [
   { source: "servername", target: "servername", sourceType: stringType, carrier: nativeString },
   { source: "port", target: "port", sourceType: numberType, carrier: float64Carrier },
   ...common,
+  { source: "secureContext", target: "secure_context", sourceType: providerRef("node:tls", "SecureContext"), carrier: secureContextCarrier },
   { source: "timeout", target: "timeout", sourceType: numberType, carrier: float64Carrier },
 ];
 
 export const tlsServerFields: readonly Field[] = [
-  { source: "key", target: "key", sourceType: stringType, carrier: nativeString },
-  { source: "cert", target: "cert", sourceType: stringType, carrier: nativeString },
   ...common,
   { source: "requestCert", target: "request_cert", sourceType: booleanType, carrier: boolCarrier },
   { source: "handshakeTimeout", target: "handshake_timeout", sourceType: numberType, carrier: float64Carrier },

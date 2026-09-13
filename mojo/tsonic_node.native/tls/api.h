@@ -4,12 +4,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void *tsonic_node_tls_connect(const char *host, const char *verification_name,
-    const char *servername, int32_t port, int32_t reject_unauthorized,
-    const char *ca_pem, int32_t ca_present, const unsigned char *alpn,
+void *tsonic_node_tls_context_create(const char *key_pem, const char *certificate_pem,
+    const char *ca_pem, int32_t ca_present, const unsigned char *pfx, size_t pfx_length,
+    int32_t pfx_present, const char *passphrase, int32_t minimum, int32_t maximum, char **error);
+int tsonic_node_tls_context_retain(void *context);
+void tsonic_node_tls_context_free(void *context);
+int tsonic_node_tls_context_apply(void *source, void *destination, char **error);
+void *tsonic_node_tls_connect(void *context, const char *host, const char *verification_name,
+    const char *servername, int32_t port, int32_t reject_unauthorized, const unsigned char *alpn,
     size_t alpn_length, char **error);
-void *tsonic_node_tls_server_create(const char *key_pem, const char *certificate_pem,
-    const char *ca_pem, const unsigned char *alpn, size_t alpn_length,
+void *tsonic_node_tls_server_create(void *context, const unsigned char *alpn, size_t alpn_length,
     int32_t request_certificate, int32_t reject_unauthorized, char **error);
 void tsonic_node_tls_server_free(void *value);
 void *tsonic_node_tls_server_accept(void *server, int32_t descriptor, char **error);

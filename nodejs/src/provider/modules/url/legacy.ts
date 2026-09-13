@@ -71,6 +71,7 @@ export function legacyUrlModule(): MojoProviderModuleDefinition {
         Object.freeze([{ name: "input", type: stringType }]),
         providerRef(moduleSpecifier, "UrlWithStringQuery"),
       ),
+      fnExport(moduleSpecifier, "resolve", [{ name: "from", type: stringType }, { name: "to", type: stringType }], stringType),
     ]),
   });
 }
@@ -84,6 +85,7 @@ export function legacyUrlTypes(): readonly MojoProviderTypeDefinition[] {
 
 export function legacyUrlOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
+    functionCall(`${moduleSpecifier}::resolve`, `${moduleSpecifier}::resolve(from,to)`, "url", "resolve", [{ kind: "native-string" }, { kind: "native-string" }], { kind: "native-string" }, true),
     functionCall(
       `${moduleSpecifier}::parse`,
       `${moduleSpecifier}::parse(input)`,

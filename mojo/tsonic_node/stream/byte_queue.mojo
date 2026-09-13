@@ -14,7 +14,9 @@ struct ByteQueue(Movable):
         if len(value) == 0:
             return
         if len(value) > 9007199254740991 - self.length:
-            raise Error("Stream buffered byte count exceeds the exact source range")
+            raise Error(
+                "Stream buffered byte count exceeds the exact source range"
+            )
         self._chunks.append(value)
         self.length += len(value)
 

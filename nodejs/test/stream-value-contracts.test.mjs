@@ -12,7 +12,7 @@ test("file and generic readable streams publish null, not undefined", () => {
     assert.equal(member.signatures.length, 2);
     for (const signature of member.signatures) {
     assert.equal(signature.returnType.kind, "union");
-    assert.equal(signature.returnType.types.some((type) => type.kind === "null"), true);
+    assert.equal(signature.returnType.types.some((type) => type.kind === "literal" && type.value === null), true);
     assert.equal(signature.returnType.types.some((type) => type.kind === "undefined"), false);
     assert.equal(signature.returnType.types.some((type) => type.kind === "string"), true);
     const rows = definition.operations.filter((entry) => entry.exportId === owner.id &&

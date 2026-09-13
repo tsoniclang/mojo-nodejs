@@ -4,7 +4,9 @@ from .messages import IncomingMessage, ServerResponse
 from .parsing import RequestParser
 from .transport import HttpTransport
 
-comptime RequestHandler = RaisingCallable[Tuple[IncomingMessage, ServerResponse], NoneType]
+comptime RequestHandler = RaisingCallable[
+    Tuple[IncomingMessage, ServerResponse], NoneType
+]
 comptime MAX_PENDING = 1 << 20
 
 
@@ -23,8 +25,12 @@ def _initial_responses() -> List[ServerResponse]:
     return List[ServerResponse]()
 
 
-comptime _requests = GlobalCell["tsonic.node.http.server.requests", _initial_requests]()
-comptime _responses = GlobalCell["tsonic.node.http.server.responses", _initial_responses]()
+comptime _requests = GlobalCell[
+    "tsonic.node.http.server.requests", _initial_requests
+]()
+comptime _responses = GlobalCell[
+    "tsonic.node.http.server.responses", _initial_responses
+]()
 
 
 def accept_connection(transport: HttpTransport, handler: RequestHandler) raises:
@@ -70,7 +76,9 @@ def poll_connections() raises -> Bool:
         var response: Optional[ServerResponse] = None
         try:
             var message = request.parser.message()
-            response = ServerResponse(request.transport, message.method == "HEAD")
+            response = ServerResponse(
+                request.transport, message.method == "HEAD"
+            )
             request.handler.call((message, response.value()))
             if not response.value().is_drained():
                 _responses.get()[].append(response.value())

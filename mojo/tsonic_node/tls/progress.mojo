@@ -8,7 +8,12 @@ def progress_socket(socket: TLSSocket) raises -> Bool:
     var worked = False
     if not socket.closed():
         try:
-            if not socket.ready() and socket._state[].handshake_deadline > 0 and monotonic_milliseconds() >= socket._state[].handshake_deadline:
+            if (
+                not socket.ready()
+                and socket._state[].handshake_deadline > 0
+                and monotonic_milliseconds()
+                >= socket._state[].handshake_deadline
+            ):
                 raise Error("TLS connection handshake timed out")
             socket.progress()
         except error:
@@ -20,7 +25,11 @@ def progress_socket(socket: TLSSocket) raises -> Bool:
         socket._state[].last_activity = monotonic_milliseconds()
         socket._state[].timeout_armed = socket._state[].timeout > 0
         worked = True
-    if socket.ready() and not socket.closed() and not socket._state[].secure_notified:
+    if (
+        socket.ready()
+        and not socket.closed()
+        and not socket._state[].secure_notified
+    ):
         socket._state[].secure_notified = True
         socket._state[].native_owner = None
         socket._state[].server_errors = None
@@ -40,7 +49,11 @@ def progress_socket(socket: TLSSocket) raises -> Bool:
         if not socket._state[].paused and not socket.read_ended():
             if socket._state[].flowing:
                 var received = 0
-                while received < 65536 and not socket.closed() and not socket._state[].paused:
+                while (
+                    received < 65536
+                    and not socket.closed()
+                    and not socket._state[].paused
+                ):
                     var chunk: Optional[Buffer] = None
                     try:
                         chunk = socket.read()
@@ -58,15 +71,27 @@ def progress_socket(socket: TLSSocket) raises -> Bool:
                     readiness = socket.peek()
                 except error:
                     socket.fail(error)
-                if readiness > 0 and socket._state[].events.readable.has_listeners() and not socket._state[].readable_notified:
+                if (
+                    readiness > 0
+                    and socket._state[].events.readable.has_listeners()
+                    and not socket._state[].readable_notified
+                ):
                     socket._state[].readable_notified = True
                     _ = socket._state[].events.readable.emit(())
                     worked = True
-        if socket._state[].need_drain and socket.queued_bytes() == 0 and not socket.closed():
+        if (
+            socket._state[].need_drain
+            and socket.queued_bytes() == 0
+            and not socket.closed()
+        ):
             socket._state[].need_drain = False
             _ = socket._state[].events.drains.emit(())
             worked = True
-    if socket.read_ended() and not socket._state[].end_notified and not socket._state[].had_error:
+    if (
+        socket.read_ended()
+        and not socket._state[].end_notified
+        and not socket._state[].had_error
+    ):
         socket._state[].end_notified = True
         if not socket._state[].allow_half_open:
             try:
@@ -84,7 +109,10 @@ def progress_socket(socket: TLSSocket) raises -> Bool:
         if latest_activity != socket._state[].activity_bytes:
             socket._state[].activity_bytes = latest_activity
             socket._state[].last_activity = monotonic_milliseconds()
-        if monotonic_milliseconds() - socket._state[].last_activity >= socket._state[].timeout:
+        if (
+            monotonic_milliseconds() - socket._state[].last_activity
+            >= socket._state[].timeout
+        ):
             socket._state[].timeout_armed = False
             _ = socket._state[].events.timeouts.emit(())
             worked = True

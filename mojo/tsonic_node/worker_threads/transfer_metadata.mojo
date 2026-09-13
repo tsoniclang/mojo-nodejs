@@ -8,7 +8,9 @@ def _initial_untransferable() -> List[JsValueWeakIdentity]:
     return List[JsValueWeakIdentity]()
 
 
-comptime _untransferable = GlobalCell["tsonic.node.worker-threads.untransferable", _initial_untransferable]()
+comptime _untransferable = GlobalCell[
+    "tsonic.node.worker-threads.untransferable", _initial_untransferable
+]()
 
 
 def _prune_and_find(value: JsValue) -> Bool:
@@ -32,7 +34,9 @@ def mark_as_untransferable(value: JsValue) raises:
     if _prune_and_find(value):
         return
     if len(_untransferable.get()[]) >= 1048576:
-        raise Error("Untransferable identity set exceeds the finite runtime limit")
+        raise Error(
+            "Untransferable identity set exceeds the finite runtime limit"
+        )
     _untransferable.get()[].append(JsValueWeakIdentity(value))
 
 

@@ -102,7 +102,7 @@ export function eventsOperations(): readonly MojoProviderOperationDefinition[] {
     instance("listenerCount", "listener_count", `${emitterId}.listenerCount(eventName)`, [jsValueCarrier], float64Carrier, false, true),
     instance("removeAllListeners", "remove_all_listeners", `${emitterId}.removeAllListeners()`, [], eventEmitterCarrier, true),
     instance("removeAllListeners", "remove_all_listeners_for", `${emitterId}.removeAllListeners(eventName)`, [jsValueCarrier], eventEmitterCarrier, true, true),
-    instance("eventNames", "event_names", `${emitterId}.eventNames()`, [], eventNameListCarrier),
+    instance("eventNames", "event_names", `${emitterId}.eventNames()`, [], eventNameListCarrier, false, true),
     instance("getMaxListeners", "get_max_listeners", `${emitterId}.getMaxListeners()`, [], float64Carrier),
     instance("setMaxListeners", "set_max_listeners", `${emitterId}.setMaxListeners(count)`, [float64Carrier], eventEmitterCarrier, true, true),
     Object.freeze({

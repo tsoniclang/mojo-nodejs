@@ -74,7 +74,7 @@ test("Node capability closes source, target, and runtime contracts together", ()
   );
   assert.equal(
     definition.operations.some((operation) => operation.exportId === "node:util::getSystemErrorName"),
-    false,
+    true,
   );
   const createServer = definition.operations.find((operation) =>
     operation.exportId === "node:http::createServer");
@@ -145,40 +145,76 @@ test("every public Node carrier declares its exact Mojo lifecycle", () => {
     ["node:crypto::Hash", implicitlyCopyable],
     ["node:crypto::Hmac", implicitlyCopyable],
     ["node:dns::LookupAddress", copyable],
+    ["node:dns::LookupAllOptions", copyable],
+    ["node:dns::LookupOneOptions", copyable],
+    ["node:dns::LookupOptions", copyable],
     ["node:events::EventEmitter", implicitlyCopyable],
+    ["node:fs::FSWatcher", implicitlyCopyable],
+    ["node:fs::StatWatcher", implicitlyCopyable],
+    ["node:fs::WatchOptions", copyable],
+    ["node:fs::WatchFileOptions", copyable],
+    ["node:fs::ReadStream", implicitlyCopyable],
+    ["node:fs::WriteStream", implicitlyCopyable],
+    ["node:fs::ReadStreamOptions", copyable],
+    ["node:fs::WriteStreamOptions", copyable],
+    ["node:fs::CopySyncOptions", copyable],
+    ["node:fs::CopyOptions", copyable],
     ["node:fs::Stats", copyable],
     ["node:fs::Dirent", copyable],
     ["node:fs::MakeDirectoryOptions", copyable],
     ["node:fs::RmOptions", copyable],
     ["node:fs::ReaddirOptions", copyable],
+    ["node:path::ParsedPath", copyable],
+    ["node:path::FormatInputPathObject", copyable],
+    ["node:path::PlatformPath", implicitlyCopyable],
+    ["node:http::ClientRequest", implicitlyCopyable],
+    ["node:http::RequestOptions", copyable],
     ["node:http::IncomingMessage", implicitlyCopyable],
     ["node:http::ServerResponse", implicitlyCopyable],
     ["node:http::Server", implicitlyCopyable],
     ["node:https::ServerOptions", copyable],
     ["node:https::Server", implicitlyCopyable],
     ["node:https::ClientRequest", implicitlyCopyable],
+    ["node:https::RequestOptions", copyable],
+    ["node:net::AddressInfo", implicitlyCopyable],
+    ["node:net::ServerOpts", copyable],
+    ["node:net::NetConnectOpts", copyable],
+    ["node:net::ListenOptions", copyable],
     ["node:net::Socket", implicitlyCopyable],
     ["node:net::Server", implicitlyCopyable],
     ["node:process::ProcessEnv", copyable],
     ["node:process::MemoryUsage", copyable],
-    ["node:process::ProcessWriteStream", copyable],
+    ["node:process::ProcessWriteStream", implicitlyCopyable],
     ["node:readline::ReadLineOptions", copyable],
     ["node:readline::Interface", implicitlyCopyable],
     ["node:stream::Readable", implicitlyCopyable],
+    ["node:stream::Duplex", implicitlyCopyable],
     ["node:stream::Writable", implicitlyCopyable],
     ["node:timers::Timeout", implicitlyCopyable],
     ["node:tls::ConnectionOptions", copyable],
+    ["node:tls::SecureContext", implicitlyCopyable],
+    ["node:tls::SecureContextOptions", copyable],
     ["node:tls::TlsOptions", copyable],
     ["node:tls::TLSSocket", implicitlyCopyable],
     ["node:tls::Server", implicitlyCopyable],
     ["node:util::TextDecoder", copyable],
     ["node:url::Url", copyable],
     ["node:url::UrlWithStringQuery", copyable],
+    ["node:url::UrlObject", copyable],
+    ["node:url::URL", implicitlyCopyable],
+    ["node:url::URLSearchParams", implicitlyCopyable],
+    ["node:worker_threads::MessagePortMessage", implicitlyCopyable],
     ["node:worker_threads::Worker", implicitlyCopyable],
     ["node:worker_threads::WorkerOptions", copyable],
     ["node:worker_threads::MessagePort", implicitlyCopyable],
     ["node:worker_threads::MessageChannel", implicitlyCopyable],
     ["node:zlib::ZlibOptions", implicitlyCopyable],
+    ["node:zlib::ZlibBufferOptions", implicitlyCopyable],
+    ["node:zlib::ZlibInfoOptions", implicitlyCopyable],
+    ["node:zlib::BrotliOptions", copyable],
+    ["node:zlib::BrotliBufferOptions", copyable],
+    ["node:zlib::BrotliInfoOptions", copyable],
+    ["node:zlib::ZlibInfo", implicitlyCopyable],
     ["node:zlib::Zlib", implicitlyCopyable],
   ]);
   assert.equal(definition.types.length, expected.size);
@@ -216,7 +252,7 @@ test("Node parity rows expose exact closed contracts and omit unsupported open r
     "node:worker_threads",
     "node:zlib",
   ]) assert.equal(modules.has(moduleSpecifier), true, moduleSpecifier);
-  assert.equal(modules.get("node:fs").exports.some((entry) => entry.name === "watch"), false);
+  assert.equal(modules.get("node:fs").exports.some((entry) => entry.name === "watch"), true);
   assert.equal(modules.get("node:fs/promises").exports.some((entry) => entry.name === "readFile"), true);
   assert.equal(modules.get("node:process").exports.some((entry) => entry.name === "stdin"), true);
 
@@ -246,8 +282,8 @@ test("Node parity rows expose exact closed contracts and omit unsupported open r
     "readUInt32LE", "readUInt32BE", "readInt32LE", "readInt32BE",
   ]) assert.equal(bufferMembers.has(member), true, member);
 
-  assert.equal(operations.has("node:util::inspect"), false);
-  assert.equal(operations.has("node:util::format"), false);
+  assert.equal(operations.has("node:util::inspect"), true);
+  assert.equal(operations.has("node:util::format"), true);
 });
 
 test("new Node families retain exact declarations and target operations", () => {
@@ -257,27 +293,28 @@ test("new Node families retain exact declarations and target operations", () => 
   const operations = definition.operations;
 
   const expectedExports = new Map([
-    ["node:dns", ["LookupAddress", "lookup", "resolve4", "resolve6", "reverse"]],
-    ["node:dns/promises", ["lookup", "resolve4", "resolve6", "reverse"]],
+    ["node:dns", ["LookupAllOptions", "LookupOneOptions", "LookupOptions", "ADDRCONFIG", "V4MAPPED", "ALL", "LookupAddress", "lookup", "resolve4", "resolve6", "reverse", "NodeDnsModule"]],
+    ["node:dns/promises", ["lookup", "resolve4", "resolve6", "reverse", "NodeDnsPromisesModule"]],
     ["node:events", ["EventEmitter", "listenerCount"]],
-    ["node:https", ["ServerOptions", "Server", "ClientRequest", "createServer", "request", "get"]],
-    ["node:net", ["AddressInfo", "ServerOpts", "NetConnectOpts", "Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6"]],
-    ["node:readline", ["ReadLineOptions", "Interface", "createInterface"]],
-    ["node:stream", ["Readable", "Writable"]],
-    ["node:tls", ["ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer"]],
+    ["node:https", ["RequestOptions", "ClientRequest", "request", "get", "ServerOptions", "Server", "createServer", "NodeHttpsModule"]],
+    ["node:net", ["AddressInfo", "ServerOpts", "NetConnectOpts", "ListenOptions", "Socket", "Server", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6", "NodeNetModule"]],
+    ["node:readline", ["ReadLineOptions", "Interface", "createInterface", "NodeReadlineModule"]],
+    ["node:stream", ["Duplex", "Readable", "Writable"]],
+    ["node:tls", ["SecureContext", "SecureContextOptions", "createSecureContext", "ConnectionOptions", "TlsOptions", "TLSSocket", "Server", "connect", "createServer", "NodeTlsModule"]],
     ["node:worker_threads", [
       "MessagePortMessage", "Worker", "WorkerOptions", "MessagePort", "MessageChannel",
       "receiveMessageOnPort", "getEnvironmentData", "setEnvironmentData",
       "markAsUntransferable", "isMarkedAsUntransferable", "isMainThread",
-      "threadId", "workerData", "parentPort",
+      "threadId", "workerData", "parentPort", "NodeWorkerThreadsModule",
     ]],
     ["node:zlib", [
-      "ZlibOptions", "Zlib", "gzipSync", "gunzipSync", "deflateSync",
-      "inflateSync", "deflateRawSync", "inflateRawSync", "unzipSync",
-      "brotliCompressSync", "brotliDecompressSync", "gzip", "gunzip",
-      "deflate", "inflate", "deflateRaw", "inflateRaw", "unzip",
-      "brotliCompress", "brotliDecompress", "createGzip", "createGunzip",
-      "createDeflate", "createInflate", "createDeflateRaw", "createInflateRaw",
+      "constants", "ZlibOptions", "ZlibBufferOptions", "ZlibInfoOptions",
+      "BrotliOptions", "BrotliBufferOptions", "BrotliInfoOptions", "ZlibInfo", "Zlib",
+      "gzipSync", "gzip", "createGzip", "gunzipSync", "gunzip", "createGunzip",
+      "deflateSync", "deflate", "createDeflate", "inflateSync", "inflate", "createInflate",
+      "deflateRawSync", "deflateRaw", "createDeflateRaw", "inflateRawSync", "inflateRaw", "createInflateRaw",
+      "unzipSync", "unzip", "createUnzip", "brotliCompressSync", "brotliCompress", "createBrotliCompress",
+      "brotliDecompressSync", "brotliDecompress", "createBrotliDecompress", "NodeZlibModule",
     ]],
   ]);
   for (const [moduleSpecifier, exports] of expectedExports) {

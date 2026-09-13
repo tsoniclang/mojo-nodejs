@@ -1,7 +1,18 @@
 from std.testing import assert_equal, assert_false, assert_true
 from tsonic_js import JsString, JsSymbol, JsValue
-from tsonic_node.events import EventEmitter, Listener0, Listener1, Listener2, Listener3
-from tsonic_runtime import ErasedCallableContext, Location, allocate_callable_environment, destroy_callable_environment
+from tsonic_node.events import (
+    EventEmitter,
+    Listener0,
+    Listener1,
+    Listener2,
+    Listener3,
+)
+from tsonic_runtime import (
+    ErasedCallableContext,
+    Location,
+    allocate_callable_environment,
+    destroy_callable_environment,
+)
 
 
 @fieldwise_init
@@ -15,21 +26,28 @@ struct Record:
         record[].trace.write(record[].trace.read() + record[].name)
 
     @staticmethod
-    def one(context: ErasedCallableContext, var arguments: Tuple[JsValue]) raises:
+    def one(
+        context: ErasedCallableContext, var arguments: Tuple[JsValue]
+    ) raises:
         var record = context.unsafe_bitcast[Record]()
         record[].trace.write(record[].trace.read() + record[].name)
         assert_true(arguments[0].is_number())
         assert_equal(arguments[0].number_value(), 42.0)
 
     @staticmethod
-    def two(context: ErasedCallableContext, var arguments: Tuple[JsValue, JsValue]) raises:
+    def two(
+        context: ErasedCallableContext, var arguments: Tuple[JsValue, JsValue]
+    ) raises:
         var record = context.unsafe_bitcast[Record]()
         record[].trace.write(record[].trace.read() + record[].name)
         assert_equal(arguments[0].number_value(), 42.0)
         assert_true(arguments[1].is_undefined())
 
     @staticmethod
-    def three(context: ErasedCallableContext, var arguments: Tuple[JsValue, JsValue, JsValue]) raises:
+    def three(
+        context: ErasedCallableContext,
+        var arguments: Tuple[JsValue, JsValue, JsValue],
+    ) raises:
         var record = context.unsafe_bitcast[Record]()
         record[].trace.write(record[].trace.read() + record[].name)
         assert_true(arguments[0].is_undefined())
@@ -42,7 +60,10 @@ struct Record:
 
 
 def record(trace: Location[String], name: String) -> Listener0:
-    return Listener0(allocate_callable_environment(Record(trace, name), Record.destroy), Record.zero)
+    return Listener0(
+        allocate_callable_environment(Record(trace, name), Record.destroy),
+        Record.zero,
+    )
 
 
 @fieldwise_init
@@ -70,21 +91,51 @@ struct DuringEmit:
         destroy_callable_environment[DuringEmit](context)
 
 
-def during(trace: Location[String], emitter: EventEmitter, remove: Listener0, reenter: Bool, fail: Bool) -> Listener0:
-    return Listener0(allocate_callable_environment(DuringEmit(trace, emitter, remove, reenter, fail), DuringEmit.destroy), DuringEmit.invoke)
+def during(
+    trace: Location[String],
+    emitter: EventEmitter,
+    remove: Listener0,
+    reenter: Bool,
+    fail: Bool,
+) -> Listener0:
+    return Listener0(
+        allocate_callable_environment(
+            DuringEmit(trace, emitter, remove, reenter, fail),
+            DuringEmit.destroy,
+        ),
+        DuringEmit.invoke,
+    )
 
 
 def mixed_arity() raises:
     var emitter = EventEmitter()
     var trace = Location(String())
     var event = JsValue(JsString("event"))
-    _ = emitter.on_callable1(event, Listener1(allocate_callable_environment(Record(trace, "B"), Record.destroy), Record.one))
+    _ = emitter.on_callable1(
+        event,
+        Listener1(
+            allocate_callable_environment(Record(trace, "B"), Record.destroy),
+            Record.one,
+        ),
+    )
     _ = emitter.on_callable(event, record(trace, "C"))
-    _ = emitter.prepend_callable2(event, Listener2(allocate_callable_environment(Record(trace, "A"), Record.destroy), Record.two))
+    _ = emitter.prepend_callable2(
+        event,
+        Listener2(
+            allocate_callable_environment(Record(trace, "A"), Record.destroy),
+            Record.two,
+        ),
+    )
     assert_true(emitter.emit_callable1(event, JsValue(42.0)))
     assert_equal(trace.read(), "ABC")
     _ = emitter.remove_all_listeners()
-    _ = emitter.once_callable3(event, Listener3(allocate_callable_environment(Record(trace, "D"), Record.destroy), Record.three))
+    _ = emitter.once_callable3(
+        event,
+        Listener3(
+            allocate_callable_environment(Record(trace, "D"), Record.destroy),
+            Record.three,
+        ),
+    )
     assert_true(emitter.emit_callable(event))
     assert_false(emitter.emit_callable(event))
     assert_equal(trace.read(), "ABCD")
@@ -108,7 +159,9 @@ def reentrant_once() raises:
     var trace = Location(String())
     var event = JsValue(JsString("event"))
     var second = record(trace, "B")
-    _ = emitter.once_callable(event, during(trace, emitter, second, True, False))
+    _ = emitter.once_callable(
+        event, during(trace, emitter, second, True, False)
+    )
     _ = emitter.once_callable(event, second)
     _ = emitter.once_callable(event, record(trace, "C"))
     assert_true(emitter.emit_callable(event))
@@ -122,7 +175,9 @@ def failing_once() raises:
     var trace = Location(String())
     var event = JsValue(JsString("event"))
     var absent = record(trace, "X")
-    _ = emitter.once_callable(event, during(trace, emitter, absent, False, True))
+    _ = emitter.once_callable(
+        event, during(trace, emitter, absent, False, True)
+    )
     _ = emitter.once_callable(event, record(trace, "B"))
     var failed = False
     try:

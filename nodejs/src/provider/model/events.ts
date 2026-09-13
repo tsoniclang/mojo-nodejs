@@ -1,7 +1,9 @@
 import { mojoCallableTargetType } from "@tsonic/target-mojo/provider";
 import type { MojoTargetTypeRef } from "@tsonic/target-mojo/provider";
-import { instanceCall, nativeString, unitCarrier } from "../model.js";
-import { overloadedMethodMember, providerCallbackType, providerRef } from "../model.js";
+import { instanceCall } from "./operations/calls.js";
+import { nativeString, unitCarrier } from "./carriers.js";
+import { overloadedMethodMember } from "./declarations.js";
+import { providerCallbackType, providerRef } from "./source-types.js";
 import type { ProviderTypeExpression } from "./types.js";
 
 export interface NodeEventDefinition {

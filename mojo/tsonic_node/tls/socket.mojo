@@ -145,7 +145,12 @@ struct TLSSocket(ImplicitlyCopyable):
 
     def finish_response(self) raises:
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-        if external_call["tsonic_node_tls_finish_response", c_int](self._handle(), Pointer(to=error)) == 0:
+        if (
+            external_call["tsonic_node_tls_finish_response", c_int](
+                self._handle(), Pointer(to=error)
+            )
+            == 0
+        ):
             raise Error(_take_error(error, "Unable to finish TLS response"))
         _schedule_socket(self)
 
@@ -162,16 +167,23 @@ struct TLSSocket(ImplicitlyCopyable):
         _ = self.destroy()
 
     def ready(self) -> Bool:
-        return external_call["tsonic_node_tls_ready", c_int](self._handle()) != 0
+        return (
+            external_call["tsonic_node_tls_ready", c_int](self._handle()) != 0
+        )
 
     def closed(self) -> Bool:
-        return external_call["tsonic_node_tls_closed", c_int](self._handle()) != 0
+        return (
+            external_call["tsonic_node_tls_closed", c_int](self._handle()) != 0
+        )
 
     def read_into(self, mut bytes: List[Byte]) raises -> Int:
         self._state[].readable_notified = False
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
         var count = external_call["tsonic_node_tls_read", Int64](
-            self._handle(), bytes.unsafe_ptr(), c_size_t(len(bytes)), Pointer(to=error),
+            self._handle(),
+            bytes.unsafe_ptr(),
+            c_size_t(len(bytes)),
+            Pointer(to=error),
         )
         if count == -1:
             var failure = Error(_take_error(error, "TLS read failed"))
@@ -181,30 +193,51 @@ struct TLSSocket(ImplicitlyCopyable):
 
     def peek(self) raises -> Int:
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-        var result = external_call["tsonic_node_tls_peek", c_int](self._handle(), Pointer(to=error))
+        var result = external_call["tsonic_node_tls_peek", c_int](
+            self._handle(), Pointer(to=error)
+        )
         if result == -1:
             raise Error(_take_error(error, "TLS read failed"))
         return Int(result)
 
     def progress(self) raises:
         var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
-        if external_call["tsonic_node_tls_progress", c_int](self._handle(), Pointer(to=error)) < 0:
+        if (
+            external_call["tsonic_node_tls_progress", c_int](
+                self._handle(), Pointer(to=error)
+            )
+            < 0
+        ):
             raise Error(_take_error(error, "TLS transport failed"))
 
     def pending(self) -> Bool:
-        return external_call["tsonic_node_tls_pending", c_int](self._handle()) != 0
+        return (
+            external_call["tsonic_node_tls_pending", c_int](self._handle()) != 0
+        )
 
     def read_ended(self) -> Bool:
-        return external_call["tsonic_node_tls_read_ended", c_int](self._handle()) != 0
+        return (
+            external_call["tsonic_node_tls_read_ended", c_int](self._handle())
+            != 0
+        )
 
     def write_ended(self) -> Bool:
-        return external_call["tsonic_node_tls_write_ended", c_int](self._handle()) != 0
+        return (
+            external_call["tsonic_node_tls_write_ended", c_int](self._handle())
+            != 0
+        )
 
     def queued_bytes(self) -> Int:
-        return Int(external_call["tsonic_node_tls_queued_bytes", UInt64](self._handle()))
+        return Int(
+            external_call["tsonic_node_tls_queued_bytes", UInt64](
+                self._handle()
+            )
+        )
 
     def activity_bytes(self) -> UInt64:
-        return external_call["tsonic_node_tls_activity_bytes", UInt64](self._handle())
+        return external_call["tsonic_node_tls_activity_bytes", UInt64](
+            self._handle()
+        )
 
     def pause(self) -> Self:
         self._state[].paused = True
@@ -221,7 +254,9 @@ struct TLSSocket(ImplicitlyCopyable):
     def set_no_delay(self, enabled: Bool = True) raises -> Self:
         self._state[].no_delay = enabled
         if self.ready() and not self.closed():
-            var status = external_call["tsonic_node_tls_set_no_delay", c_int](self._handle(), c_int(enabled))
+            var status = external_call["tsonic_node_tls_set_no_delay", c_int](
+                self._handle(), c_int(enabled)
+            )
             if status != 0:
                 raise network_error(status)
         return self
@@ -234,7 +269,9 @@ struct TLSSocket(ImplicitlyCopyable):
         self._state[].timeout_armed = self._state[].timeout > 0
         return self
 
-    def set_timeout_callback(self, timeout: Float64, callback: EmptyCallback) raises -> Self:
+    def set_timeout_callback(
+        self, timeout: Float64, callback: EmptyCallback
+    ) raises -> Self:
         if self.closed():
             return self
         _ = self.set_timeout(timeout)
@@ -286,7 +323,9 @@ struct TLSSocket(ImplicitlyCopyable):
             "tsonic_node_tls_alpn",
             OptionalPointer[UInt8, ImmUntrackedOrigin],
         ](self._handle())
-        return Variant[String, Bool](String(unsafe_from_utf8_ptr=value.value())) if value else Variant[String, Bool](False)
+        return Variant[String, Bool](
+            String(unsafe_from_utf8_ptr=value.value())
+        ) if value else Variant[String, Bool](False)
 
     def bytes_read(self) -> Float64:
         return Float64(
@@ -300,51 +339,69 @@ struct TLSSocket(ImplicitlyCopyable):
             )
         )
 
-    def on_data(self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]) raises -> Self:
+    def on_data(
+        self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]
+    ) raises -> Self:
         require_event(event, "data")
         self._state[].events.data.add(callback)
         if not self._state[].paused:
             self._state[].flowing = True
         return self
 
-    def once_data(self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]) raises -> Self:
+    def once_data(
+        self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]
+    ) raises -> Self:
         require_event(event, "data")
         self._state[].events.data.add(callback, True)
         if not self._state[].paused:
             self._state[].flowing = True
         return self
 
-    def off_data(self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]) raises -> Self:
+    def off_data(
+        self, event: String, callback: RaisingCallable[Tuple[Buffer], NoneType]
+    ) raises -> Self:
         require_event(event, "data")
         self._state[].events.data.remove(callback)
         return self
 
-    def on_error(self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def on_error(
+        self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]
+    ) raises -> Self:
         require_event(event, "error")
         self._state[].events.errors.add(callback)
         return self
 
-    def once_error(self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def once_error(
+        self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]
+    ) raises -> Self:
         require_event(event, "error")
         self._state[].events.errors.add(callback, True)
         return self
 
-    def off_error(self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]) raises -> Self:
+    def off_error(
+        self, event: String, callback: RaisingCallable[Tuple[TsError], NoneType]
+    ) raises -> Self:
         require_event(event, "error")
         self._state[].events.errors.remove(callback)
         return self
 
-    def on_close(self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]) raises -> Self:
+    def on_close(
+        self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]
+    ) raises -> Self:
         require_event(event, "close")
         self._state[].events.closes.add(callback)
         return self
 
-    def once_close(self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]) raises -> Self:
+    def once_close(
+        self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]
+    ) raises -> Self:
         require_event(event, "close")
         self._state[].events.closes.add(callback, True)
         return self
 
-    def off_close(self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]) raises -> Self:
+    def off_close(
+        self, event: String, callback: RaisingCallable[Tuple[Bool], NoneType]
+    ) raises -> Self:
         require_event(event, "close")
         self._state[].events.closes.remove(callback)
         return self
@@ -383,7 +440,11 @@ def _schedule_socket(socket: TLSSocket):
 def prune_sockets():
     var retained = List[TLSSocket]()
     for socket in _activities.get()[]:
-        if not socket.closed() or not socket._state[].close_notified or socket._state[].failure:
+        if (
+            not socket.closed()
+            or not socket._state[].close_notified
+            or socket._state[].failure
+        ):
             retained.append(socket)
         else:
             socket._state[].scheduled = False

@@ -4,6 +4,7 @@ export {
   booleanType,
   voidType,
   undefinedType,
+  nullType,
   int32Type,
   stringArrayType,
   numberArrayType,

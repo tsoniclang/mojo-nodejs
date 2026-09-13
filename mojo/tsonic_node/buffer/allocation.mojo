@@ -49,10 +49,15 @@ def pooled_buffer(size: Int) raises -> Buffer:
         var threshold = Int(source_number_to_uint32(pool[].size) >> 1)
         if size >= threshold:
             return Buffer.allocate(size)
-        if not pool[].storage or size > len(pool[].storage.value()[]) - pool[].position:
+        if (
+            not pool[].storage
+            or size > len(pool[].storage.value()[]) - pool[].position
+        ):
             var storage = Buffer.allocate(checked_buffer_size(pool[].size))
             if len(storage) < size:
-                raise Error("Buffer pool cannot contain the requested allocation")
+                raise Error(
+                    "Buffer pool cannot contain the requested allocation"
+                )
             pool[].storage = storage._bytes
             pool[].position = 0
         var result = Buffer(pool[].storage.value(), pool[].position, size)

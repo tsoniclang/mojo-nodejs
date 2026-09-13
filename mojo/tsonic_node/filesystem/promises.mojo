@@ -9,6 +9,7 @@ from .core import (
     make_directory as make_directory_sync,
     make_directory_default as make_directory_default_sync,
     read_directory_names,
+    remove_directory as remove_directory_sync,
     remove_path as remove_path_sync,
     remove_path_default as remove_path_default_sync,
     rename_path as rename_path_sync,
@@ -26,15 +27,53 @@ from .contents import (
     append_file as append_file_sync,
     append_text_file as append_text_file_sync,
 )
-from .descriptors import access as access_sync, chmod as chmod_sync, truncate_file as truncate_file_sync
+from .descriptors import (
+    access as access_sync,
+    chmod as chmod_sync,
+    truncate_file as truncate_file_sync,
+)
 from .links import read_link as read_link_sync
+from .copy_options import AsyncCopyOptions, CopyFilterFuture
+from .copy import CopyTraversal
+from tsonic_runtime import create_raising_task
+
+
+async def copy_tree(
+    source: String,
+    destination: String,
+    options: AsyncCopyOptions = AsyncCopyOptions(),
+) raises:
+    var traversal = CopyTraversal(source, destination, options.controls(), True)
+    try:
+        while True:
+            var entry = traversal.next()
+            if not entry:
+                return
+            if options.filter:
+                var result = options.filter.value().call(
+                    (entry.value().source, entry.value().destination)
+                )
+                var accepted: Bool
+                if result.isa[Bool]():
+                    accepted = result^.unsafe_unwrap[Bool]()
+                else:
+                    accepted = await create_raising_task(
+                        result^.unsafe_unwrap[CopyFilterFuture]()
+                    )
+                if not accepted:
+                    continue
+            traversal.accept(entry.value())
+    finally:
+        traversal.finish()
 
 
 async def append_file(path: String, value: Buffer) raises:
     append_file_sync(path, value)
 
 
-async def append_text_file(path: String, value: String, encoding: String = "utf8") raises:
+async def append_text_file(
+    path: String, value: String, encoding: String = "utf8"
+) raises:
     append_text_file_sync(path, value, encoding)
 
 
@@ -62,7 +101,9 @@ async def write_file(path: String, value: Buffer) raises:
     write_file_sync(path, value)
 
 
-async def write_text_file(path: String, value: String, encoding: String = "utf8") raises:
+async def write_text_file(
+    path: String, value: String, encoding: String = "utf8"
+) raises:
     write_text_file_sync(path, value, encoding)
 
 
@@ -84,6 +125,10 @@ async def make_directory(path: String, options: MkdirOptions) raises:
 
 async def remove_path_default(path: String) raises:
     remove_path_default_sync(path)
+
+
+async def remove_directory(path: String) raises:
+    remove_directory_sync(path)
 
 
 async def remove_path(path: String, options: RmOptions) raises:

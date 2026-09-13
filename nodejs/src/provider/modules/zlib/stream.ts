@@ -34,7 +34,7 @@ const rows: readonly Row[] = [
     { target: "end", suffix: "", arguments: [] },
     { target: "end_buffer", suffix: "input", arguments: [input] },
     { target: "end_string", suffix: "text", arguments: [text] },
-  ].map((row) => ({ ...row, name: "end", result: voidType, carrier: unitCarrier, raises: true })),
+  ].map((row) => ({ ...row, name: "end", result: providerRef("node:zlib", "Zlib"), carrier: zlibTransformCarrier, raises: true })),
   ...[
     { target: "flush", suffix: "", arguments: [] },
     { target: "flush_kind", suffix: "kind", arguments: [kind] },

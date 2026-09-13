@@ -48,8 +48,10 @@ def _range(body: String) raises -> Optional[List[String]]:
             return None
         var start_code = Int(parts[0].as_bytes()[0])
         var end_code = Int(parts[1].as_bytes()[0])
-        if not ((65 <= start_code <= 90 or 97 <= start_code <= 122) and
-                (65 <= end_code <= 90 or 97 <= end_code <= 122)):
+        if not (
+            (65 <= start_code <= 90 or 97 <= start_code <= 122)
+            and (65 <= end_code <= 90 or 97 <= end_code <= 122)
+        ):
             return None
         start = start_code
         stop = end_code
@@ -66,15 +68,25 @@ def _range(body: String) raises -> Optional[List[String]]:
         for index in range(2):
             var digits = parts[index]
             var offset = 1 if digits.startswith("-") else 0
-            if digits.byte_length() > offset + 1 and digits.as_bytes()[offset] == 48:
+            if (
+                digits.byte_length() > offset + 1
+                and digits.as_bytes()[offset] == 48
+            ):
                 width = max(parts[0].byte_length(), parts[1].byte_length())
     var result = List[String]()
     for index in range(count):
-        var value = start + (index * stride if stop >= start else -index * stride)
+        var value = start + (
+            index * stride if stop >= start else -index * stride
+        )
         if numeric:
             result.append(_padded(value, width))
         else:
-            result.append(String() if value == 92 else String(Codepoint(unsafe_unchecked_codepoint=UInt32(value))))
+            result.append(
+                String() if value
+                == 92 else String(
+                    Codepoint(unsafe_unchecked_codepoint=UInt32(value))
+                )
+            )
     return Optional(result^)
 
 
@@ -118,7 +130,9 @@ def expand_braces(pattern: String) raises -> List[String]:
         var bytes = work.text.as_bytes()
         var opening = work.scan
         while opening < len(bytes):
-            if bytes[opening] != 123 or (opening > 0 and bytes[opening - 1] == 36):
+            if bytes[opening] != 123 or (
+                opening > 0 and bytes[opening - 1] == 36
+            ):
                 opening += 1
                 continue
             var depth = 1
@@ -134,12 +148,14 @@ def expand_braces(pattern: String) raises -> List[String]:
             if depth:
                 opening += 1
                 continue
-            var alternatives = _choices(String(work.text[byte=opening + 1:closing]))
+            var alternatives = _choices(
+                String(work.text[byte = opening + 1 : closing])
+            )
             if not alternatives:
                 opening += 1
                 continue
             var prefix = String(work.text[byte=:opening])
-            var suffix = String(work.text[byte=closing + 1:])
+            var suffix = String(work.text[byte = closing + 1 :])
             for alternative in alternatives.value():
                 var next = prefix + alternative + suffix
                 retained_bytes += next.byte_length()
@@ -152,5 +168,7 @@ def expand_braces(pattern: String) raises -> List[String]:
             retained_bytes += work.text.byte_length()
             require_source_size(retained_bytes)
             require_expansion_size(len(result) + 1)
-            result.append(work.text^)
+            var text = String()
+            swap(text, work.text)
+            result.append(text^)
     return result^

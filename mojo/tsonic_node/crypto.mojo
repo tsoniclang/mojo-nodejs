@@ -31,7 +31,10 @@ struct _Digest(ImplicitlyCopyable):
     def duplicate(self) raises -> Self:
         if self.state[].finished:
             raise Error("Cannot copy a finalized digest")
-        var handle = external_call["tsonic_node_digest_copy", OptionalPointer[NoneType, MutUntrackedOrigin]](self.state[].handle.value())
+        var handle = external_call[
+            "tsonic_node_digest_copy",
+            OptionalPointer[NoneType, MutUntrackedOrigin],
+        ](self.state[].handle.value())
         if not handle:
             raise Error("Unable to copy digest")
         return Self(ArcPointer(_DigestState(handle)))
@@ -46,7 +49,7 @@ struct _Digest(ImplicitlyCopyable):
             "tsonic_node_digest_create",
             OptionalPointer[NoneType, MutUntrackedOrigin],
         ](
-            algorithm.as_c_string_slice(),
+            algorithm.as_c_string_slice().ptr(),
             bytes.unsafe_ptr(),
             c_size_t(len(bytes)),
             c_int(keyed),
@@ -156,8 +159,6 @@ def random_bytes(size: Float64) raises -> Buffer:
     if size != size or size < 0 or size > 2147483647:
         raise Error("Random byte count must be between 0 and 2147483647")
     var length = Int(size)
-    if Float64(length) != size:
-        raise Error("Random byte count must be an integer")
     var bytes = List[Byte](capacity=length)
     for _ in range(length):
         bytes.append(0)
@@ -183,9 +184,14 @@ def timing_safe_equal(left: Buffer, right: Buffer) raises -> Bool:
         raise Error("Input buffers must have the same byte length")
     var left_bytes = left.copy_bytes()
     var right_bytes = right.copy_bytes()
-    return external_call["tsonic_node_timing_safe_equal", c_int](
-        left_bytes.unsafe_ptr(), right_bytes.unsafe_ptr(), c_size_t(len(left_bytes)),
-    ) != 0
+    return (
+        external_call["tsonic_node_timing_safe_equal", c_int](
+            left_bytes.unsafe_ptr(),
+            right_bytes.unsafe_ptr(),
+            c_size_t(len(left_bytes)),
+        )
+        != 0
+    )
 
 
 def random_int(maximum: Float64) raises -> Float64:
@@ -193,7 +199,11 @@ def random_int(maximum: Float64) raises -> Float64:
 
 
 def random_int(minimum: Float64, maximum: Float64) raises -> Float64:
-    if not (minimum >= -9007199254740991.0 and maximum <= 9007199254740991.0 and maximum > minimum):
+    if not (
+        minimum >= -9007199254740991.0
+        and maximum <= 9007199254740991.0
+        and maximum > minimum
+    ):
         raise Error("Random integer bounds must be ordered safe integers")
     var first = Int64(minimum)
     var last = Int64(maximum)
@@ -206,8 +216,15 @@ def random_int(minimum: Float64, maximum: Float64) raises -> Float64:
     var limit = highest - highest % width
     while True:
         var value = UInt64(0)
-        if external_call["tsonic_node_random_bytes", c_int](Pointer(to=value), c_size_t(8)) != 1:
-            raise Error("Unable to obtain cryptographically secure random bytes")
+        if (
+            external_call["tsonic_node_random_bytes", c_int](
+                Pointer(to=value), c_size_t(8)
+            )
+            != 1
+        ):
+            raise Error(
+                "Unable to obtain cryptographically secure random bytes"
+            )
         if value < limit:
             return Float64(first + Int64(value % width))
 

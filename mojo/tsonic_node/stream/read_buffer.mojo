@@ -5,7 +5,7 @@ from .decoder import StreamDecoder
 from .chunk import StreamChunk
 
 
-struct ReadBuffer(Movable):
+struct ReadBuffer(Movable, Sized):
     var _bytes: ByteQueue
     var _text: TextQueue
     var _decoder: Optional[StreamDecoder]
@@ -54,6 +54,10 @@ struct ReadBuffer(Movable):
             return None
         if self._decoder:
             var text = self._text.take(size)
-            return Optional(StreamChunk(text.value())) if text else Optional[StreamChunk]()
+            return Optional(StreamChunk(text.value())) if text else Optional[
+                StreamChunk
+            ]()
         var bytes = self._bytes.take(size)
-        return Optional(StreamChunk(bytes.value())) if bytes else Optional[StreamChunk]()
+        return Optional(StreamChunk(bytes.value())) if bytes else Optional[
+            StreamChunk
+        ]()

@@ -1,10 +1,21 @@
 from support.stream_values import require_buffer
+from support.stream_events import require_unhandled_stream_error
 from std.testing import assert_equal, assert_false, assert_true
 from std.tempfile import mkdtemp
 from tsonic_node.event_loop import run_event_loop
-from tsonic_node import Buffer, RmOptions, read_text_file, remove_path, write_text_file
+from tsonic_node.filesystem.contents import read_file
+from tsonic_node import (
+    Buffer,
+    RmOptions,
+    read_text_file,
+    remove_path,
+    write_text_file,
+)
 from tsonic_node.filesystem.streams import (
-    ReadStreamOptions, WriteStreamOptions, create_read_stream, create_write_stream,
+    ReadStreamOptions,
+    WriteStreamOptions,
+    create_read_stream,
+    create_write_stream,
 )
 
 
@@ -17,16 +28,16 @@ def main() raises:
         var options = ReadStreamOptions()
         options.high_water_mark = 2.0
         var input = create_read_stream(source, options)
-        var alias = input
+        var retained_alias = input
         var output = create_write_stream(destination)
         _ = input.pipe_to(output)
         assert_equal(read_text_file(destination), "")
         run_event_loop()
         assert_equal(read_text_file(destination), "a😀b\0tail")
-        assert_equal(alias.bytes_read(), 11.0)
+        assert_equal(retained_alias.bytes_read(), 11.0)
         assert_equal(output.bytes_written(), 11.0)
-        assert_false(Bool(alias.read()))
-        alias.close()
+        assert_false(Bool(retained_alias.read()))
+        retained_alias.close()
         output.close()
         assert_equal(input.path(), source)
         assert_equal(output.path(), destination)
@@ -51,17 +62,33 @@ def main() raises:
         _ = output.end()
         assert_equal(read_text_file(destination), "0xy34")
         assert_equal(output.bytes_written(), 2.0)
+        assert_false(output.write_string("late"))
+        require_unhandled_stream_error("Cannot write to an ended")
+
+        writes.flags = String("wx")
         var rejected = False
         try:
-            _ = output.write_string("late")
+            _ = create_write_stream(destination, writes)
         except:
             rejected = True
         assert_true(rejected)
-
-        writes.flags = String("wx")
+        var encoded_options = WriteStreamOptions()
+        encoded_options.encoding = "utf16le"
+        var encoded = create_write_stream(root + "/encoded", encoded_options)
+        encoded_options.encoding = "utf8"
+        var encoded_alias = encoded
+        _ = encoded.write_string("A")
+        _ = encoded_alias.write_string_encoded("B", "utf8")
+        _ = encoded.write_buffer(Buffer.from_string("C"))
+        _ = encoded.end_string("D")
+        run_event_loop()
+        assert_equal(
+            read_file(root + "/encoded").to_string("hex"), "410042434400"
+        )
+        encoded_options.encoding = "not-an-encoding"
         rejected = False
         try:
-            _ = create_write_stream(destination, writes)
+            _ = create_write_stream(destination, encoded_options)
         except:
             rejected = True
         assert_true(rejected)

@@ -1,6 +1,12 @@
 from std.collections import List, Span
+from tsonic_js import JsValue
+from tsonic_js.inspection import inspect_value
 
 from .buffer import Buffer
+
+
+def inspect(value: JsValue) -> String:
+    return inspect_value(value)
 
 
 struct TextDecoder(Copyable):

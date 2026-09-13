@@ -3,7 +3,7 @@ from std.testing import assert_equal, assert_true
 from tsonic_node.process import available_memory, constrained_memory
 
 
-def main():
+def main() raises:
     var constrained = constrained_memory()
     assert_equal(
         constrained,

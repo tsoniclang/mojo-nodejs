@@ -32,7 +32,9 @@ def write_file(path: String, value: Buffer) raises:
     _write(path, value, "w")
 
 
-def write_text_file(path: String, value: String, encoding: String = "utf8") raises:
+def write_text_file(
+    path: String, value: String, encoding: String = "utf8"
+) raises:
     var buffer = buffer_from_string_encoded(value, encoding)
     write_file(path, buffer)
 
@@ -41,6 +43,8 @@ def append_file(path: String, value: Buffer) raises:
     _write(path, value, "a")
 
 
-def append_text_file(path: String, value: String, encoding: String = "utf8") raises:
+def append_text_file(
+    path: String, value: String, encoding: String = "utf8"
+) raises:
     var buffer = buffer_from_string_encoded(value, encoding)
     append_file(path, buffer)

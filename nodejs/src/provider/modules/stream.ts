@@ -4,23 +4,24 @@ import type {
   MojoProviderTypeDefinition,
 } from "@tsonic/target-mojo/provider";
 import { writableCallMembers, writableCallOperations } from "./stream/writable-calls.js";
+import { writableEventMembers, writableEventOperations } from "./stream/writable-events.js";
+import { writableLifecycleMembers, writableLifecycleOperations } from "./stream/writable-lifecycle.js";
 import { readableReadMember, readableReadOperations } from "./stream/readable-calls.js";
+import { readableEventMembers, readableEventOperations } from "./stream/readable-events.js";
+import { duplexExport, duplexOperations, duplexType } from "./stream/duplex.js";
 import {
   booleanType,
   boolCarrier,
-  float64Carrier,
   httpServerResponseCarrier,
   instanceCall,
   methodMember,
   nativeString,
   nodeProviderType,
-  numberType,
   propertyMember,
   propertyRead,
   providerRef,
   readableCarrier,
   stringType,
-  unitCarrier,
   writableCarrier,
 } from "../model.js";
 
@@ -37,12 +38,14 @@ export function streamModule(): MojoProviderModuleDefinition {
       Object.freeze({ moduleSpecifier: "node:http", namedImports: Object.freeze([{ exportedName: "ServerResponse" }]) }),
     ]),
     exports: Object.freeze([
+      duplexExport,
       Object.freeze({
         id: readableId,
         name: "Readable",
         kind: "class",
         members: Object.freeze([
           readableReadMember(readableId),
+          ...readableEventMembers(moduleSpecifier, "Readable"),
           methodMember(readableId, "setEncoding", [{ name: "encoding", type: stringType }], providerRef(moduleSpecifier, "Readable")),
           Object.freeze({
             id: `${readableId}.pipe`, name: "pipe", kind: "method",
@@ -64,11 +67,8 @@ export function streamModule(): MojoProviderModuleDefinition {
         kind: "class",
         members: Object.freeze([
           ...writableCallMembers(writableId, providerRef(moduleSpecifier, "Writable")),
-          methodMember(writableId, "cork", [], Object.freeze({ kind: "void" })),
-          methodMember(writableId, "uncork", [], Object.freeze({ kind: "void" })),
-          propertyMember(writableId, "writableCorked", numberType),
-          propertyMember(writableId, "writable", booleanType),
-          propertyMember(writableId, "writableEnded", booleanType),
+          ...writableEventMembers(moduleSpecifier, "Writable"),
+          ...writableLifecycleMembers(writableId, providerRef(moduleSpecifier, "Writable")),
         ]),
       }),
     ]),
@@ -78,6 +78,7 @@ export function streamModule(): MojoProviderModuleDefinition {
 export function streamTypes(): readonly MojoProviderTypeDefinition[] {
   return Object.freeze([
     nodeProviderType(readableId, readableCarrier, "implicitly-copyable"),
+    duplexType,
     nodeProviderType(writableId, writableCarrier, "implicitly-copyable"),
   ]);
 }
@@ -85,21 +86,20 @@ export function streamTypes(): readonly MojoProviderTypeDefinition[] {
 export function streamOperations(): readonly MojoProviderOperationDefinition[] {
   return Object.freeze([
     ...readableReadOperations(readableId, readableCarrier),
+    ...duplexOperations,
+    ...readableEventOperations(moduleSpecifier, "Readable", readableCarrier),
     instanceCall(readableId, `${readableId}.setEncoding`, `${readableId}.setEncoding(encoding)`, "set_encoding", readableCarrier, [nativeString], readableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(writable)`, "pipe_to", readableCarrier, [writableCarrier], writableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.pipe`, `${readableId}.pipe(serverResponse)`, "pipe_to_response", readableCarrier, [httpServerResponseCarrier], httpServerResponseCarrier, true, "mut"),
-    instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, false, "mut"),
-    instanceCall(readableId, `${readableId}.resume`, `${readableId}.resume()`, "resume", readableCarrier, [], readableCarrier, false, "mut"),
+    instanceCall(readableId, `${readableId}.pause`, `${readableId}.pause()`, "pause", readableCarrier, [], readableCarrier, true, "mut"),
+    instanceCall(readableId, `${readableId}.resume`, `${readableId}.resume()`, "resume", readableCarrier, [], readableCarrier, true, "mut"),
     instanceCall(readableId, `${readableId}.isPaused`, `${readableId}.isPaused()`, "is_paused", readableCarrier, [], boolCarrier),
     ...writableCallOperations(writableId, writableCarrier),
-    instanceCall(writableId, `${writableId}.cork`, `${writableId}.cork()`, "cork", writableCarrier, [], unitCarrier, false, "mut"),
-    instanceCall(writableId, `${writableId}.uncork`, `${writableId}.uncork()`, "uncork", writableCarrier, [], unitCarrier, true, "mut"),
-    propertyRead(writableId, `${writableId}.writableCorked`, "writable_corked", writableCarrier, float64Carrier, "method"),
+    ...writableEventOperations(moduleSpecifier, "Writable", writableCarrier),
+    ...writableLifecycleOperations(writableId, writableCarrier),
     ...([
       [readableId, readableCarrier, "readable", "readable"],
       [readableId, readableCarrier, "readableEnded", "readable_ended"],
-      [writableId, writableCarrier, "writable", "writable"],
-      [writableId, writableCarrier, "writableEnded", "writable_ended"],
     ] as const).map(([id, carrier, name, target]) =>
       propertyRead(id, `${id}.${name}`, target, carrier, boolCarrier, "method")),
   ]);

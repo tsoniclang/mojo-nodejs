@@ -1,4 +1,5 @@
 #include "vendor/ada/ada.h"
+#include "url/scalar_params.h"
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
@@ -69,7 +70,7 @@ extern "C" void* tsonic_node_url_new(const char* bytes, size_t length,
     if (!parsed) throw std::invalid_argument("Invalid URL");
     state = std::make_unique<UrlState>();
     state->url = std::move(*parsed);
-    state->params.reset(state->url->get_search());
+    state->params = tsonic_node_url::scalar_params(state->url->get_search());
   });
   return status == 0 ? state.release() : nullptr;
 }
@@ -78,7 +79,7 @@ extern "C" void* tsonic_node_url_params_new(const char* bytes, size_t length) no
   std::unique_ptr<UrlState> state;
   const auto status = guarded([&] {
     state = std::make_unique<UrlState>();
-    state->params.reset(input(bytes, length));
+    state->params = tsonic_node_url::scalar_params(input(bytes, length));
   });
   return status == 0 ? state.release() : nullptr;
 }
@@ -173,7 +174,7 @@ extern "C" int tsonic_node_url_set(void* handle, int field,
       default: throw std::invalid_argument("Unknown URL field");
     }
     if (field == 0 || field == 8) {
-      auto params = ada::url_search_params(url.get_search());
+      auto params = tsonic_node_url::scalar_params(url.get_search());
       state.params = std::move(params);
     }
     state.url = std::move(url);

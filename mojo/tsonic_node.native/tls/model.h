@@ -19,10 +19,11 @@ typedef struct {
     SSL_CTX *context;
     unsigned char *alpn;
     unsigned int alpn_length;
+    int request_certificate;
+    int reject_unauthorized;
 } TsonicTlsServer;
 
 typedef struct {
-    SSL_CTX *context;
     SSL *ssl;
     TsonicNetEndpoint *endpoint;
     int descriptor;
@@ -35,6 +36,8 @@ typedef struct {
     char *authorization_error;
     char *servername;
     char *alpn;
+    unsigned char *offered_alpn;
+    unsigned int offered_alpn_length;
     int connecting;
     int ready;
     int ending;
@@ -55,9 +58,11 @@ char *tsonic_tls_copy_text(const char *value);
 void tsonic_tls_set_error(char **error, const char *message);
 void tsonic_tls_set_ssl_error(char **error, const char *fallback);
 int tsonic_tls_allow_unverified(int valid, X509_STORE_CTX *store);
+int tsonic_tls_select_alpn(SSL *ssl, const unsigned char **output, unsigned char *output_length,
+    const unsigned char *input, unsigned int input_length, void *opaque);
 int tsonic_tls_apply_ca_text(SSL_CTX *context, const char *pem, char **error);
-int tsonic_tls_apply_certificate(SSL_CTX *context, const char *certificate_pem, const char *key_pem, char **error);
-TsonicTlsSocket *tsonic_tls_socket_from_ssl(SSL_CTX *context, SSL *ssl, TsonicNetEndpoint *endpoint, const char *servername, int context_owned);
+int tsonic_tls_apply_certificate(SSL_CTX *context, const char *certificate_pem, const char *key_pem, const char *passphrase, char **error);
+TsonicTlsSocket *tsonic_tls_socket_from_ssl(SSL *ssl, TsonicNetEndpoint *endpoint, const char *servername);
 int tsonic_tls_complete_handshake(TsonicTlsSocket *socket, char **error);
 int tsonic_tls_initialize_transport(SSL *ssl);
 int tsonic_tls_pump_transport(TsonicTlsSocket *socket, char **error);

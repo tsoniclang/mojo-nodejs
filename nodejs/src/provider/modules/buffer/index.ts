@@ -5,6 +5,7 @@ import type {
   MojoProviderTypeDefinition,
   MojoTargetTypeRef,
 } from "@tsonic/target-mojo/provider";
+import { bufferIndexMember, bufferIndexOperations } from "./indexing.js";
 import {
   booleanType,
   boolCarrier,
@@ -99,6 +100,7 @@ export function bufferModule(): MojoProviderModuleDefinition {
         name: "Buffer",
         kind: "class",
         members: Object.freeze([
+          bufferIndexMember(),
           bufferPredicateMember(),
           overloadedMethodMember(bufferId, "from", [
             { parameters: [{ name: "value", type: stringType }], returnType: bufferType, signatureSuffix: "string" },
@@ -204,6 +206,7 @@ export function bufferOperations(): readonly MojoProviderOperationDefinition[] {
     instanceOperation(member, "start,end", member, [float64Carrier, float64Carrier], bufferCarrier),
   ]);
   return Object.freeze([
+    ...bufferIndexOperations(),
     staticOperation("from", "string", "buffer_from_string", [nativeString], bufferCarrier, true),
     staticOperation("from", "string,encoding", "buffer_from_string_encoded", [nativeString, nativeString], bufferCarrier, true),
     staticOperation("from", "numberArray", "buffer_from_numbers", [numberListCarrier], bufferCarrier, true),

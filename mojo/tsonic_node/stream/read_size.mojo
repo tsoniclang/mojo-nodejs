@@ -1,4 +1,8 @@
-from tsonic_js.number import number_is_integer, number_parse_int, number_to_string
+from tsonic_js.number import (
+    number_is_integer,
+    number_parse_int,
+    number_to_string,
+)
 
 
 def requested_read_size(value: Optional[Float64]) -> Optional[Float64]:

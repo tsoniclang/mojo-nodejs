@@ -8,7 +8,6 @@ import {
   booleanType,
   boolCarrier,
   bufferCarrier,
-  emptyCallbackCarrier,
   httpIncomingMessageCarrier,
   httpRequestCallbackCarrier,
   httpServerCarrier,
@@ -30,6 +29,7 @@ import {
   voidType,
 } from "../../model.js";
 import { httpClientExports, httpClientOperations, httpClientTypes } from "./client.js";
+import { listenOptionsImport, serverListenMember, serverListenOperations } from "../net/listen-contract.js";
 
 const moduleSpecifier = "node:http";
 const incomingId = `${moduleSpecifier}::IncomingMessage`;
@@ -45,11 +45,10 @@ export function httpModule(): MojoProviderModuleDefinition {
       { name: "response", type: providerRef(moduleSpecifier, "ServerResponse") },
     ],
   );
-  const listenCallback = (signatureId: string) => providerCallbackType(signatureId, "callback", []);
   return Object.freeze({
     moduleSpecifier,
     providerModuleId: "tsonic.mojo.node.http",
-    imports: Object.freeze([Object.freeze({
+    imports: Object.freeze([listenOptionsImport, Object.freeze({
       moduleSpecifier: "node:buffer",
       namedImports: Object.freeze([{ exportedName: "Buffer" }]),
     })]),
@@ -101,31 +100,7 @@ export function httpModule(): MojoProviderModuleDefinition {
         name: "Server",
         kind: "class",
         members: Object.freeze([
-          overloadedMethodMember(serverId, "listen", [
-            {
-              parameters: [
-                { name: "port", type: int32Type },
-                {
-                  name: "callback",
-                  type: listenCallback(`${serverId}.listen(port,callback)`),
-                },
-              ],
-              returnType: providerRef(moduleSpecifier, "Server"),
-              signatureSuffix: "port,callback",
-            },
-            {
-              parameters: [
-                { name: "port", type: int32Type },
-                { name: "hostname", type: stringType },
-                {
-                  name: "callback",
-                  type: listenCallback(`${serverId}.listen(port,hostname,callback)`),
-                },
-              ],
-              returnType: providerRef(moduleSpecifier, "Server"),
-              signatureSuffix: "port,hostname,callback",
-            },
-          ]),
+          serverListenMember(moduleSpecifier),
           methodMember(serverId, "close", [], voidType),
           methodMember(serverId, "ref", [], providerRef(moduleSpecifier, "Server")),
           methodMember(serverId, "unref", [], providerRef(moduleSpecifier, "Server")),
@@ -187,8 +162,7 @@ export function httpOperations(): readonly MojoProviderOperationDefinition[] {
     instanceCall(responseId, `${responseId}.end`, `${responseId}.end()`, "end_empty", httpServerResponseCarrier, [], unitCarrier, true),
     instanceCall(responseId, `${responseId}.end`, `${responseId}.end(string)`, "end_string", httpServerResponseCarrier, [nativeString], unitCarrier, true),
     instanceCall(responseId, `${responseId}.end`, `${responseId}.end(buffer)`, "end_buffer", httpServerResponseCarrier, [bufferCarrier], unitCarrier, true),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,callback)`, "listen_default_host", httpServerCarrier, [int32Carrier, emptyCallbackCarrier], httpServerCarrier, true),
-    instanceCall(serverId, `${serverId}.listen`, `${serverId}.listen(port,hostname,callback)`, "listen", httpServerCarrier, [int32Carrier, nativeString, emptyCallbackCarrier], httpServerCarrier, true),
+    ...serverListenOperations(moduleSpecifier, httpServerCarrier),
     instanceCall(serverId, `${serverId}.close`, `${serverId}.close()`, "close", httpServerCarrier, [], unitCarrier),
     instanceCall(serverId, `${serverId}.ref`, `${serverId}.ref()`, "ref", httpServerCarrier, [], httpServerCarrier),
     instanceCall(serverId, `${serverId}.unref`, `${serverId}.unref()`, "unref", httpServerCarrier, [], httpServerCarrier),

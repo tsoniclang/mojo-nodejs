@@ -4,15 +4,15 @@ import { compileMojo } from "../../../tsonic-mojo/test/helpers/mojo-session.mjs"
 import { createMojoNodejsCapability } from "../../dist/index.js";
 
 test("worker environment uses selected closed keys and supports explicit deletion", () => {
-  const result = compileMojo({ capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
+  const result = compileMojo({ surfaces: ["js"], capabilities: [createMojoNodejsCapability()], files: { "index.ts": `
 import { getEnvironmentData, setEnvironmentData } from "node:worker_threads";
 export function main(): void {
   setEnvironmentData(1, "value");
   const found = getEnvironmentData(1);
   setEnvironmentData(1, undefined);
   setEnvironmentData("missing");
-  setEnvironmentData(NaN, true);
-  setEnvironmentData(NaN);
+  setEnvironmentData(Number.NaN, true);
+  setEnvironmentData(Number.NaN);
 }
 ` } });
   assert.deepEqual(result.diagnostics, []);
