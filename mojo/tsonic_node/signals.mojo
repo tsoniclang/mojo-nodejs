@@ -6,7 +6,7 @@ def signal_number(name: String) raises -> Int:
     if selected.find("\x00") >= 0:
         raise Error("Unknown signal: ", name)
     var number = external_call["tsonic_node_signal_number", c_int](
-        selected.as_c_string_slice().ptr()
+        selected.as_c_string_slice().unsafe_ptr()
     )
     if number < 0:
         raise Error("Unknown signal: ", name)

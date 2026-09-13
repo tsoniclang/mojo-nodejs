@@ -34,9 +34,11 @@ def connect(options: ConnectionOptions) raises -> TLSSocket:
         OptionalPointer[NoneType, MutUntrackedOrigin],
     ](
         context._state[].handle,
-        host.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        verification_name.as_c_string_slice().ptr().as_unsafe_any_origin(),
-        servername.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        host.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
+        verification_name.as_c_string_slice()
+        .unsafe_ptr()
+        .as_unsafe_any_origin(),
+        servername.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
         c_int(port),
         c_int(reject),
         alpn.unsafe_ptr(),

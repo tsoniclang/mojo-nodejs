@@ -85,7 +85,7 @@ def _retain_port(state: ArcPointer[PortState]):
     required = required or (
         state[].referenced and state[].started and not state[].closed
     )
-    var identity = UInt(Int(state.ptr()))
+    var identity = UInt(Int(state.unsafe_ptr()))
     if required:
         _retained_ports.get()[][identity] = state
     else:

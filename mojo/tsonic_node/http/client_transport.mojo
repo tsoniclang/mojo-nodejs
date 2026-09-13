@@ -37,7 +37,7 @@ struct NativeRequest(ImplicitlyCopyable):
             "tsonic_node_http_new",
             OptionalPointer[NoneType, MutUntrackedOrigin],
         ](
-            native_url.as_c_string_slice().ptr(),
+            native_url.as_c_string_slice().unsafe_ptr(),
             c_size_t(MAX_MESSAGE_BYTES),
         )
         if not handle:
@@ -88,7 +88,7 @@ struct NativeRequest(ImplicitlyCopyable):
                 c_size_t(len(key)),
                 pfx.unsafe_ptr(),
                 c_size_t(len(pfx)),
-                password.as_c_string_slice().ptr(),
+                password.as_c_string_slice().unsafe_ptr(),
             )
             == 0
         ):
@@ -121,7 +121,8 @@ struct NativeRequest(ImplicitlyCopyable):
         var line = name + ": " + value if value else name + ";"
         if (
             external_call["tsonic_node_http_header", c_int](
-                self._state[].handle.value(), line.as_c_string_slice().ptr()
+                self._state[].handle.value(),
+                line.as_c_string_slice().unsafe_ptr(),
             )
             == 0
         ):
@@ -141,7 +142,7 @@ struct NativeRequest(ImplicitlyCopyable):
         if (
             external_call["tsonic_node_http_start", c_int](
                 self._state[].handle.value(),
-                native_method.as_c_string_slice().ptr(),
+                native_method.as_c_string_slice().unsafe_ptr(),
                 body.unsafe_ptr(),
                 c_size_t(len(body)),
                 c_int(present),

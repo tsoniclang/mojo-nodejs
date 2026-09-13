@@ -73,7 +73,9 @@ def is_ip(value: String) -> Float64:
     var native_value = value
     return Float64(
         external_call["tsonic_node_is_ip", c_int](
-            native_value.as_c_string_slice().ptr().as_unsafe_any_origin(),
+            native_value.as_c_string_slice()
+            .unsafe_ptr()
+            .as_unsafe_any_origin(),
         )
     )
 

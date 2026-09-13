@@ -61,7 +61,7 @@ def source_module_entry() raises -> Optional[String]:
         raise Error("Worker name contains a null byte")
     if native_name.byte_length() != 0:
         var status = external_call["tsonic_node_worker_name", c_int](
-            native_name.as_c_string_slice().ptr().as_unsafe_any_origin()
+            native_name.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin()
         )
         if status != 0:
             raise Error("Unable to assign worker process name")

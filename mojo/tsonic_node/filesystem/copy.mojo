@@ -197,7 +197,7 @@ struct CopyTraversal:
             var destination_path = entry.destination.copy()
             check_status(
                 external_call["tsonic_node_fs_utimes", Int32](
-                    destination_path.as_c_string_slice().ptr(),
+                    destination_path.as_c_string_slice().unsafe_ptr(),
                     updated.atime().get_time() / 1000,
                     updated.mtime().get_time() / 1000,
                 ),

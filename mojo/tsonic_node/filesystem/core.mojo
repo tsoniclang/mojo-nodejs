@@ -128,7 +128,7 @@ def remove_directory(path: String) raises:
     var native_path = path
     check_status(
         external_call["tsonic_node_fs_rmdir", Int32](
-            native_path.as_c_string_slice().ptr()
+            native_path.as_c_string_slice().unsafe_ptr()
         ),
         "rmdir",
     )
@@ -144,7 +144,7 @@ def remove_path(path: String, options: RmOptions) raises:
     ) if options.retry_delay else UInt32(100)
     var native_path = path
     var status = external_call["tsonic_node_fs_remove", Int32](
-        native_path.as_c_string_slice().ptr(),
+        native_path.as_c_string_slice().unsafe_ptr(),
         c_int(options.recursive.value() if options.recursive else False),
         c_int(options.force.value() if options.force else False),
         retries,
@@ -159,7 +159,7 @@ def make_temp_directory(prefix: String) raises -> String:
     var native_prefix = prefix
     var value = external_call[
         "tsonic_node_fs_mkdtemp", OptionalPointer[UInt8, MutUntrackedOrigin]
-    ](native_prefix.as_c_string_slice().ptr(), Pointer(to=status))
+    ](native_prefix.as_c_string_slice().unsafe_ptr(), Pointer(to=status))
     check_status(Int32(status), "mkdtemp")
     try:
         return String(unsafe_from_utf8_ptr=value.value())
@@ -179,8 +179,8 @@ def copy_file(source: String, destination: String, mode: Float64 = 0) raises:
     var native_destination = destination
     check_status(
         external_call["tsonic_node_fs_copy", Int32](
-            native_source.as_c_string_slice().ptr(),
-            native_destination.as_c_string_slice().ptr(),
+            native_source.as_c_string_slice().unsafe_ptr(),
+            native_destination.as_c_string_slice().unsafe_ptr(),
             flags,
         ),
         "copyFile",
@@ -191,8 +191,8 @@ def rename_path(source: String, destination: String) raises:
     var source_buffer = source
     var destination_buffer = destination
     var status = external_call["rename", c_int](
-        source_buffer.as_c_string_slice().ptr(),
-        destination_buffer.as_c_string_slice().ptr(),
+        source_buffer.as_c_string_slice().unsafe_ptr(),
+        destination_buffer.as_c_string_slice().unsafe_ptr(),
     )
     if status != 0:
         raise Error("Unable to rename path; errno ", get_errno())

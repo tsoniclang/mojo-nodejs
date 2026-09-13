@@ -41,7 +41,9 @@ struct DnsRequest(ImplicitlyCopyable):
                 "tsonic_node_dns_lookup_start",
                 OptionalPointer[NoneType, MutUntrackedOrigin],
             ](
-                native_input.as_c_string_slice().ptr().as_unsafe_any_origin(),
+                native_input.as_c_string_slice()
+                .unsafe_ptr()
+                .as_unsafe_any_origin(),
                 c_int(options.selected_family()),
                 c_int(options.selected_hints()),
                 c_int(options.selected_all()),
@@ -52,7 +54,9 @@ struct DnsRequest(ImplicitlyCopyable):
                 "tsonic_node_dns_default_query_start",
                 OptionalPointer[NoneType, MutUntrackedOrigin],
             ](
-                native_input.as_c_string_slice().ptr().as_unsafe_any_origin(),
+                native_input.as_c_string_slice()
+                .unsafe_ptr()
+                .as_unsafe_any_origin(),
                 kind,
             )
         if not handle:

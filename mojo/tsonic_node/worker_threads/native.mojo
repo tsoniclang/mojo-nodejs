@@ -149,9 +149,9 @@ def spawn_channel(
         "tsonic_node_worker_spawn",
         OptionalPointer[NoneType, MutUntrackedOrigin],
     ](
-        arguments.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        arguments.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
         c_size_t(arguments.byte_length()),
-        environment.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        environment.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
         c_size_t(environment.byte_length()),
         c_int(inherit_environment),
         Pointer(to=status),

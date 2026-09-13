@@ -79,7 +79,7 @@ def stat_if_present(
     var status = c_int(0)
     var native_path = path
     var path_pointer: OptionalPointer[c_char, ImmutAnyOrigin] = (
-        native_path.as_c_string_slice().ptr().as_unsafe_any_origin()
+        native_path.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin()
     )
     var value = external_call[
         "tsonic_node_fs_stat", OptionalPointer[NoneType, MutUntrackedOrigin]

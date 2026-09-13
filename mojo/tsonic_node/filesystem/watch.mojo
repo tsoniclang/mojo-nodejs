@@ -117,7 +117,7 @@ def _watch(
         "tsonic_node_fs_watch_new",
         OptionalPointer[NoneType, MutUntrackedOrigin],
     ](
-        native_path.as_c_string_slice().ptr(),
+        native_path.as_c_string_slice().unsafe_ptr(),
         c_int(Bool(stat)),
         UInt32(interval),
         c_int(options.recursive.value() if options.recursive else False),

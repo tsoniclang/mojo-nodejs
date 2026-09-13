@@ -84,9 +84,13 @@ def create_secure_context(
     var key_pointer = OptionalPointer[c_char, ImmutAnyOrigin]()
     var cert_pointer = OptionalPointer[c_char, ImmutAnyOrigin]()
     if options.key:
-        key_pointer = key.as_c_string_slice().ptr().as_unsafe_any_origin()
+        key_pointer = (
+            key.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin()
+        )
     if options.cert:
-        cert_pointer = cert.as_c_string_slice().ptr().as_unsafe_any_origin()
+        cert_pointer = (
+            cert.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin()
+        )
     var error = OptionalPointer[UInt8, MutUntrackedOrigin]()
     var handle = external_call[
         "tsonic_node_tls_context_create",
@@ -94,12 +98,12 @@ def create_secure_context(
     ](
         key_pointer,
         cert_pointer,
-        ca.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        ca.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
         c_int(Bool(options.ca)),
         pfx.unsafe_ptr(),
         c_size_t(len(pfx)),
         c_int(Bool(options.pfx)),
-        password.as_c_string_slice().ptr().as_unsafe_any_origin(),
+        password.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
         tls_version(options.min_version),
         tls_version(options.max_version),
         Pointer(to=error),

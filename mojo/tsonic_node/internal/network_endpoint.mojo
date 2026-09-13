@@ -51,7 +51,7 @@ struct NetworkEndpoint(ImplicitlyCopyable):
             "tsonic_node_net_endpoint_new",
             OptionalPointer[NoneType, MutUntrackedOrigin],
         ](
-            native_host.as_c_string_slice().ptr().as_unsafe_any_origin(),
+            native_host.as_c_string_slice().unsafe_ptr().as_unsafe_any_origin(),
             native_port,
             c_int(listener),
             native_backlog,

@@ -11,7 +11,7 @@ def read_link(path: String) raises -> String:
     var value = external_call[
         "tsonic_node_fs_readlink", OptionalPointer[Byte, MutUntrackedOrigin]
     ](
-        native_path.as_c_string_slice().ptr(),
+        native_path.as_c_string_slice().unsafe_ptr(),
         Pointer(to=length),
         Pointer(to=status),
     )

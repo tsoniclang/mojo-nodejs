@@ -221,19 +221,19 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
 
     def read_float_le(self, offset: Float64 = 0) raises -> Float64:
         return Float64(
-            bitcast[.float32](UInt32(self._read_uint(offset, 4, True)))
+            bitcast[DType.float32](UInt32(self._read_uint(offset, 4, True)))
         )
 
     def read_float_be(self, offset: Float64 = 0) raises -> Float64:
         return Float64(
-            bitcast[.float32](UInt32(self._read_uint(offset, 4, False)))
+            bitcast[DType.float32](UInt32(self._read_uint(offset, 4, False)))
         )
 
     def read_double_le(self, offset: Float64 = 0) raises -> Float64:
-        return bitcast[.float64](self._read_uint(offset, 8, True))
+        return bitcast[DType.float64](self._read_uint(offset, 8, True))
 
     def read_double_be(self, offset: Float64 = 0) raises -> Float64:
-        return bitcast[.float64](self._read_uint(offset, 8, False))
+        return bitcast[DType.float64](self._read_uint(offset, 8, False))
 
     def write_uint8(
         mut self, value: Float64, offset: Float64 = 0
@@ -299,7 +299,7 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         mut self, value: Float64, offset: Float64 = 0
     ) raises -> Float64:
         self._write_uint(
-            UInt64(bitcast[.uint32](Float32(value))), offset, 4, True
+            UInt64(bitcast[DType.uint32](Float32(value))), offset, 4, True
         )
         return Float64(offset + 4)
 
@@ -307,20 +307,20 @@ struct Buffer(Equatable, ImplicitlyCopyable, Sized):
         mut self, value: Float64, offset: Float64 = 0
     ) raises -> Float64:
         self._write_uint(
-            UInt64(bitcast[.uint32](Float32(value))), offset, 4, False
+            UInt64(bitcast[DType.uint32](Float32(value))), offset, 4, False
         )
         return Float64(offset + 4)
 
     def write_double_le(
         mut self, value: Float64, offset: Float64 = 0
     ) raises -> Float64:
-        self._write_uint(bitcast[.uint64](value), offset, 8, True)
+        self._write_uint(bitcast[DType.uint64](value), offset, 8, True)
         return Float64(offset + 8)
 
     def write_double_be(
         mut self, value: Float64, offset: Float64 = 0
     ) raises -> Float64:
-        self._write_uint(bitcast[.uint64](value), offset, 8, False)
+        self._write_uint(bitcast[DType.uint64](value), offset, 8, False)
         return Float64(offset + 8)
 
     def copy_bytes(self) -> List[Byte]:

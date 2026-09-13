@@ -83,12 +83,15 @@ def spawn_sync(
             native_arguments.append(
                 owned_arguments[index]
                 .as_c_string_slice()
-                .ptr()
+                .unsafe_ptr()
                 .as_unsafe_any_origin()
             )
         native_arguments.append(OptionalPointer[c_char, ImmutAnyOrigin]())
         _ = external_call["execvp", c_int](
-            owned_arguments[0].as_c_string_slice().ptr().as_unsafe_any_origin(),
+            owned_arguments[0]
+            .as_c_string_slice()
+            .unsafe_ptr()
+            .as_unsafe_any_origin(),
             native_arguments.unsafe_ptr(),
         )
         _report_exec_failure(control[1])

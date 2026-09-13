@@ -112,7 +112,7 @@ def main() raises:
         for timestamp in timestamps:
             assert_equal(
                 external_call["tsonic_node_fs_utimes", Int32](
-                    timestamp_path.as_c_string_slice().ptr(),
+                    timestamp_path.as_c_string_slice().unsafe_ptr(),
                     timestamp,
                     timestamp,
                 ),

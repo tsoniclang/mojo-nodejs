@@ -64,9 +64,7 @@ def _enqueue[
     mode: Int32,
     options: CodecOptions,
     callback: RaisingCallable[Tuple[JsValue, Optional[Result]], NoneType],
-    operation: def(
-        imm Buffer, imm Int32, imm CodecOptions
-    ) thin raises -> Result,
+    operation: def(Buffer, Int32, CodecOptions) thin raises -> Result,
 ) raises:
     pending_zlib.get()[].require_capacity()
     var output = Optional[Result]()

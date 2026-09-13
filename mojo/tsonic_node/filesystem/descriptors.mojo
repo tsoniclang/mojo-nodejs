@@ -12,8 +12,8 @@ def open_file(
     var native_path = path
     var native_flags = flags
     var descriptor = external_call["tsonic_node_fs_open", c_int](
-        native_path.as_c_string_slice().ptr(),
-        native_flags.as_c_string_slice().ptr(),
+        native_path.as_c_string_slice().unsafe_ptr(),
+        native_flags.as_c_string_slice().unsafe_ptr(),
         permissions,
     )
     if descriptor < 0:
@@ -119,7 +119,7 @@ def access(path: String, mode: Float64 = 0) raises:
     var native_path = path
     check_status(
         external_call["tsonic_node_fs_access", Int32](
-            native_path.as_c_string_slice().ptr(), permissions
+            native_path.as_c_string_slice().unsafe_ptr(), permissions
         ),
         "access",
     )
@@ -131,7 +131,7 @@ def chmod(path: String, mode: Float64) raises:
     var permissions = c_int(checked_integer(mode, 0o7777, "permission mode"))
     check_status(
         external_call["tsonic_node_fs_chmod", Int32](
-            native_path.as_c_string_slice().ptr(), permissions
+            native_path.as_c_string_slice().unsafe_ptr(), permissions
         ),
         "chmod",
     )
