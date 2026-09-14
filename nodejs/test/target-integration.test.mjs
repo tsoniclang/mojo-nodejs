@@ -54,9 +54,12 @@ export function main(): void {
   assert.deepEqual(result.diagnostics, []);
   const source = generatedProgram(result);
   assert.match(source, /from tsonic_node\.process import set_exit_code/u);
-  assert.match(source, /set_exit_code\(Optional\[Int32\]\(Int32\(2\)\)\)/u);
-  assert.match(source, /set_exit_code\(Optional\[Int32\]\(\)\)/u);
-  assert.doesNotMatch(source, /Variant\[tsonic_runtime\.Null, Float64\]/u);
+  assert.match(source, /Variant\[Null, Float64\]\(\s*Float64\(2\),?\s*\)/u);
+  assert.match(source, /Variant\[Null, Float64\]\(Null\(\)\)/u);
+  assert.equal(source.match(/\.isa\[Float64\]\(\)/gu)?.length, 2);
+  assert.equal(source.match(/Int32\([^\n]*\.unsafe_get\[Float64\]\(\)\)/gu)?.length, 2);
+  assert.equal(source.match(/= Optional\[Int32\]\(\)/gu)?.length, 2);
+  assert.doesNotMatch(source, /set_exit_code\(Variant/u);
   assert.equal(source.match(/\bset_exit_code\(/gu)?.length, 2);
 });
 
@@ -82,7 +85,7 @@ export function main(): void {}
   assert.deepEqual(result.diagnostics, []);
   const source = projectArtifactTexts(result).map(({ text }) => text).join("\n");
   assert.match(source, /from tsonic_node\.http import ServerResponse/u);
-  assert.match(source, /response\.set_status_code\(status_code\)/u);
+  assert.match(source, /response\.set_status_code\(Int32\(Float64\(status_code\)\)\)/u);
   assert.match(source, /from tsonic_node\.process import arguments/u);
   assert.match(source, /JsArray\[String\]/u);
   assert.match(source, /\.slice\(Float64\(2\)\)/u);
